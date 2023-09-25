@@ -8,7 +8,14 @@ module mkgridmapMod
 ! Module containing 2-d global surface boundary data information
 !
 ! !USES:
+
+#include <petsc/finclude/petscmat.h>
+#include <petsc/finclude/petscvec.h>
+
   use shr_kind_mod, only : r8 => shr_kind_r8
+  use petscmat
+  use petscvec
+  use petscsys
 
   implicit none
   private
@@ -35,6 +42,11 @@ module mkgridmapMod
      integer , pointer :: src_indx(:)   ! correpsonding column index
      integer , pointer :: dst_indx(:)   ! correpsonding row    index
      real(r8), pointer :: wovr(:)       ! wt of overlap input cell
+
+     ! PETSc dataset structure
+     Mat :: map_mat, map_frac_mat
+     Vec :: src_vec
+     Vec :: dst_vec
   end type gridmap_type
   public :: gridmap_type
 !
@@ -169,6 +181,11 @@ contains
     real(r8), parameter   :: tol = 1.0e-4_r8  ! tolerance for checking that mapping data
                                               ! are within expected bounds
 
+    integer            :: ni, no
+    Mat                :: temp_mat
+    PetscReal, pointer :: src_p(:), dst_p(:)
+    PetscErrorCode     :: ierr
+
     !--- formats ---
     character(*),parameter :: subName = '(gridmap_map_read) '
     character(*),parameter :: F00 = '("(gridmap_map_read) ",4a)'
@@ -298,6 +315,65 @@ contains
 
     gridmap%set = IsSet
 
+    ! Create PETSc-related data structure
+    PetscCallA(VecCreate(PETSC_COMM_WORLD, gridmap%src_vec, ierr))
+    PetscCallA(VecSetSizes(gridmap%src_vec, PETSC_DECIDE, gridmap%na, ierr))
+    PetscCallA(VecSetFromOptions(gridmap%src_vec, ierr))
+
+    PetscCallA(VecCreate(PETSC_COMM_WORLD, gridmap%dst_vec, ierr))
+    PetscCallA(VecSetSizes(gridmap%dst_vec, PETSC_DECIDE, gridmap%nb, ierr))
+    PetscCallA(VecSetFromOptions(gridmap%dst_vec, ierr))
+
+    !
+    ! map_mat: Create sparse matrix based on 'row', 'col', and 'S' values
+    !
+    PetscCallA(MatCreate(PETSC_COMM_WORLD, gridmap%map_mat, ierr))
+    PetscCall(MatSetsizes(gridmap%map_mat, PETSC_DECIDE, PETSC_DECIDE, gridmap%nb, gridmap%na, ierr))
+    PetscCall(MatSetFromOptions(gridmap%map_mat, ierr))
+
+    do n = 1, gridmap%ns
+       PetscCallA(MatSetValues(gridmap%map_mat, 1, gridmap%dst_indx(n) - 1, 1, gridmap%src_indx(n) - 1,
+       gridmap%wovr(n), INSERT_VALUES, ierr))
+    end do
+    PetscCallA(MatAssemblyBegin(gridmap%map_mat, MAT_FINAL_ASSEMBLY, ierr))
+    PetscCallA(MatAssemblyEnd(gridmap%map_mat, MAT_FINAL_ASSEMBLY, ierr))
+
+    !
+    ! map_frac_mat: Matrix in which each row of map_mat is normalized with frac_b(row)
+    !
+    PetscCallA(MatCreate(PETSC_COMM_WORLD, temp_mat, ierr))
+    PetscCall(MatSetsizes(temp_mat, PETSC_DECIDE, PETSC_DECIDE, gridmap%nb, gridmap%nb, ierr))
+    PetscCall(MatSetFromOptions(temp_mat, ierr))
+
+    PetscCallA(MatCreate(PETSC_COMM_WORLD, gridmap%map_frac_mat, ierr))
+    PetscCall(MatSetsizes(gridmap%map_frac_mat, PETSC_DECIDE, PETSC_DECIDE, gridmap%nb, gridmap%na, ierr))
+    PetscCall(MatSetFromOptions(gridmap%map_frac_mat, ierr))
+
+    ! Put 1.0 on src_vec
+    PetscCallA(VecGetArrayF90(gridmap%src_vec, src_p, ierr))
+    do ni = 1, gridmap%na
+       src_p(ni) = 1._r8
+    end do
+    PetscCallA(VecRestoreArrayF90(gridmap%src_vec, src_p, ierr))
+
+    ! dst_vec = map_mat * src_vec
+    PetscCallA(MatMult(gridmap%map_mat, gridmap%src_vec, gridmap%dst_vec, ierr))
+
+    ! Now, create a temporary matrix that has 1/dst_vec(:) as the diagonal
+    PetscCallA(VecGetArrayF90(gridmap%dst_vec, dst_p, ierr))
+    do no = 1, gridmap%nb
+       PetscCallA(MatSetValues(temp_mat, 1, no - 1, 1, no - 1, 1._r8/dst_p(no), INSERT_VALUES, ierr))
+    end do
+    PetscCallA(VecRestoreArrayF90(gridmap%dst_vec, dst_p, ierr))
+
+    ! map_frac_mat = temp_mat * map_mat
+    PetscCallA(MatAssemblyBegin(temp_mat, MAT_FINAL_ASSEMBLY, ierr))
+    PetscCallA(MatAssemblyEnd(temp_mat, MAT_FINAL_ASSEMBLY, ierr))
+
+    PetscCallA(MatMatMult(temp_mat, gridmap%map_mat, MAT_INITIAL_MATRIX, PETSC_DEFAULT_REAL, gridmap%map_frac_mat, ierr))
+
+    PetscCallA(MatDestroy(temp_mat, ierr))
+
   end subroutine gridmap_mapread
 
 !==========================================================================
@@ -400,9 +476,13 @@ contains
     real(r8):: wt,frac
     real(r8), allocatable :: sum_weights(:)      ! sum of weights on the output grid
     character(*),parameter :: subName = '(gridmap_areaave_default) '
+    PetscReal, pointer :: src_p(:), dst_p(:)
+    PetscErrorCode :: ierr
 !EOP
 !------------------------------------------------------------------------------
     call gridmap_checkifset( gridmap, subname )
+
+#if 0
     allocate(sum_weights(size(dst_array)))
     sum_weights = 0._r8
     dst_array = 0._r8
@@ -423,6 +503,24 @@ contains
     end where
 
     deallocate(sum_weights)
+#endif
+
+    PetscCallA(VecGetArrayF90(gridmap%src_vec, src_p, ierr))
+    do ni = 1, gridmap%na
+       src_p(ni) = src_array(ni)
+    end do
+    PetscCallA(VecRestoreArrayF90(gridmap%src_vec, src_p, ierr))
+
+    PetscCallA(MatMult(gridmap%map_frac_mat, gridmap%src_vec, gridmap%dst_vec, ierr))
+    PetscCallA(VecGetArrayF90(gridmap%dst_vec, dst_p, ierr))
+    do no = 1, gridmap%nb
+       frac = gridmap%frac_dst(no)
+       if (frac <= 0._r8) then
+          dst_p(no) = nodata
+       end if
+       dst_array(no) = dst_p(no)
+    end do
+    PetscCallA(VecRestoreArrayF90(gridmap%dst_vec, dst_p, ierr))
 
   end subroutine gridmap_areaave_default
 
@@ -656,6 +754,7 @@ contains
 ! !LOCAL VARIABLES:
     character(len=*), parameter :: subName = "gridmap_clean"
     integer ier    ! error flag
+    PetscErrorCode :: ierr
 !EOP
 !------------------------------------------------------------------------------
     if ( gridmap%set .eq. IsSet )then
@@ -674,6 +773,12 @@ contains
           write(6,*) SubName//' ERROR: deallocate gridmap'
           call abort()
        endif
+
+       PetscCallA(VecDestroy(gridmap%src_vec      , ierr))
+       PetscCallA(VecDestroy(gridmap%dst_vec      , ierr))
+       PetscCallA(MatDestroy(gridmap%map_mat      , ierr))
+       PetscCallA(MatDestroy(gridmap%map_frac_mat , ierr))
+
     else
        write(6,*) SubName//' Warning: calling '//trim(subName)//' on unallocated gridmap'
     end if
