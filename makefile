@@ -30,7 +30,12 @@ mksurfdat_petsc_obj = mksurfdat_petsc.o \
   mkncdio.o \
   shr_sys_mod.o \
   shr_log_mod.o \
-  mkgridmapMod.o
+  mkgridmapMod.o \
+  mkpftMod.o \
+  shr_string_mod.o \
+  shr_timer_mod.o \
+  fileutils.o \
+  shr_file_mod.o
 
 mksurfdat_petsc : $(mksurfdat_petsc_obj)
 	${FLINKER} -o mksurfdat_petsc $(mksurfdat_petsc_obj) ${PETSC_LIB} ${LIBS} ${FFLAGS} ${LDFLAGS}
@@ -46,6 +51,15 @@ mkvarctl.o :
 
 mkvarpar.o : \
   shr_const_mod.o
+
+mkpftMod.o : \
+  shr_kind_mod.o \
+  shr_sys_mod.o \
+  mkvarctl.o \
+  mkvarpar.o \
+  mkdomainMod.o \
+  shr_string_mod.o \
+  fileutils.o
 
 nanMod.o :
 
@@ -63,6 +77,7 @@ mkgridmapMod.o : \
 mksurfdat_petsc.o : \
   shr_kind_mod.o \
   mkdomainMod.o \
+  mkpftMod.o \
   mkvarctl.o
 
 shr_const_mod.o : \
@@ -76,4 +91,21 @@ shr_sys_mod.o : \
   shr_kind_mod.o \
   shr_log_mod.o
 
+shr_string_mod.o : \
+  shr_kind_mod.o \
+  shr_sys_mod.o \
+  shr_timer_mod.o \
+  shr_log_mod.o
 
+shr_timer_mod.o : \
+  shr_kind_mod.o \
+  shr_log_mod.o
+
+fileutils.o : \
+  shr_sys_mod.o \
+  shr_file_mod.o
+
+shr_file_mod.o : \
+  shr_kind_mod.o \
+  shr_sys_mod.o \
+  shr_log_mod.o
