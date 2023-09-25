@@ -2,3 +2,4 @@
 *.mod
 *namelist*
 mksurfdat_petsc
+*.log
