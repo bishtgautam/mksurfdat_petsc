@@ -20,6 +20,7 @@ program mksurfdat_petsc
   use mkvocefMod
   use mkSedMod
   use mksoilphosphorusMod
+  use mkutilsMod
   use petsc
   use fileutils
 
@@ -341,7 +342,7 @@ program mksurfdat_petsc
 
   call change_landuse( ldomain, dynpft=.false. )
 
-
+  ! Perform few sanity checks and update the values, if needed
   call check_and_update_values()
   
   ! ----------------------------------------------------------------------
@@ -655,7 +656,6 @@ contains
     implicit none
 
     deallocate(pctlnd_pft)
-    deallocate(pctpft_full)
 
   end subroutine deallocate_memory
 
@@ -732,6 +732,47 @@ contains
           pctgla(n) = pctgla(n) * 100._r8/suma
        end if
        
+    end do
+
+    call normalizencheck_landuse(ldomain)
+
+    ! Write out sum of PFT's
+
+    do k = natpft_lb,natpft_ub
+       suma = 0._r8
+       do n = 1,ns_o
+          suma = suma + pctnatpft(n,k)*pctnatveg(n)/100._r8
+       enddo
+       write(6,*) 'sum over domain of pft ',k,suma
+    enddo
+    write(6,*)
+
+    do k = cft_lb,cft_ub
+       suma = 0._r8
+       do n = 1,ns_o
+          suma = suma + pctcft(n,k)*pctcrop(n)/100._r8
+       enddo
+       write(6,*) 'sum over domain of cft ',k,suma
+    enddo
+    write(6,*)
+
+    ! Make final values of percent urban by class
+    ! This call needs to occur after all corrections are made to pcturb
+
+    call normalize_classes_by_gcell(urbn_classes, pcturb, urbn_classes_g)
+
+    ! Make glacier multiple elevation classes [pctglcmec,topoglcmec] from [fglacier] dataset
+    ! This call needs to occur after pctgla has been adjusted for the final time
+
+    if ( nglcec > 0 )then
+       write(6,*) 'error: add new code to extend for the case nglec > 0'
+       call abort()
+    end if
+
+    ! Determine fractional land from pft dataset
+
+    do n = 1,ns_o
+       landfrac_pft(n) = pctlnd_pft(n)/100._r8
     end do
 
   end subroutine check_and_update_values
