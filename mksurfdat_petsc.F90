@@ -18,6 +18,9 @@ program mksurfdat_petsc
 
 #include "petsc/finclude/petscsys.h"
 
+  integer  :: nsoicol                     ! number of model color classes
+  integer  :: nsoiord                     ! number of model order classes
+
   integer               :: ier              ! error status
   character(len=256)    :: fsurlog          ! output surface log file name
   character(len=256)    :: fsurdat          ! output surface data file name
@@ -225,7 +228,34 @@ program mksurfdat_petsc
   call mkwetlnd (ldomain, mapfname=map_fwetlnd, datfname=mksrf_fwetlnd, &
        ndiag=ndiag, zero_out=all_urban.or.all_veg.or.no_inlandwet, swmp_o=pctwet)
 
+  ! Make glacier fraction [pctgla] from [fglacier] dataset
+
+  call mkglacier (ldomain, mapfname=map_fglacier, datfname=mksrf_fglacier, &
+       ndiag=ndiag, zero_out=all_urban.or.all_veg, glac_o=pctgla)
+
+  ! Make soil texture [pctsand, pctclay]  [fsoitex]
+
+  call mksoiltex (ldomain, mapfname=map_fsoitex, datfname=mksrf_fsoitex, &
+       ndiag=ndiag, sand_o=pctsand, clay_o=pctclay)
+
+  ! Make soil color classes [soicol] [fsoicol]
+
+  call mksoilcol (ldomain, mapfname=map_fsoicol, datfname=mksrf_fsoicol, &
+       ndiag=ndiag, soil_color_o=soicol, nsoicol=nsoicol)
+
+  ! Make soil order classes [soiord] [fsoiord]
+
+  call mksoilord (ldomain, mapfname=map_fsoiord, datfname=mksrf_fsoiord, &
+       ndiag=ndiag, pctglac_o=pctgla, soil_order_o=soiord, nsoiord=nsoiord)
+
+  ! Make fmax [fmax] from [fmax] dataset
+
+  call mkfmax (ldomain, mapfname=map_fmax, datfname=mksrf_fmax, &
+       ndiag=ndiag, fmax_o=fmax)
+
+  ! ----------------------------------------------------------------------
   ! deallocate memory for all variables
+  ! ----------------------------------------------------------------------
   call deallocate_memory()
 
   ! Finalize PETSc
@@ -456,7 +486,54 @@ contains
                ero_c2(ns_o)                       , &
                ero_c3(ns_o)                       , &
                tillage(ns_o)                      , &
-               litho(ns_o)                        )
+               litho(ns_o)                        , &
+               fmax(ns_o)                           &
+               )
+
+    landfrac_pft(:)       = spval
+    pctlnd_pft(:)         = spval
+    pftdata_mask(:)       = -999
+    pctpft_full(:,:)      = spval
+    pctnatveg(:)          = spval
+    pctcrop(:)            = spval
+    pctnatpft(:,:)        = spval
+    pctcft(:,:)           = spval
+    pctgla(:)             = spval
+    pctlak(:)             = spval
+    pctwet(:)             = spval
+    pcturb(:)             = spval
+    urban_region(:)       = -999
+    urbn_classes(:,:)     = spval
+    urbn_classes_g(:,:)   = spval
+    pctsand(:,:)          = spval
+    pctclay(:,:)          = spval
+    soicol(:)             = -999
+    soiord(:)             = -999
+    gdp(:)                = spval
+    fpeat(:)              = spval
+    agfirepkmon(:)        = -999
+    topo_stddev(:)        = spval
+    slope(:)              = spval
+    vic_binfl(:)          = spval
+    vic_ws(:)             = spval
+    vic_dsmax(:)          = spval
+    vic_ds(:)             = spval
+    lakedepth(:)          = spval
+    f0(:)                 = spval
+    p3(:)                 = spval
+    zwt0(:)               = spval
+    apatiteP(:)           = spval
+    labileP(:)            = spval
+    occludedP(:)          = spval
+    secondaryP(:)         = spval
+    grvl(:,:)             = spval
+    slp10(:,:)            = spval
+    ero_c1(:)             = spval
+    ero_c2(:)             = spval
+    ero_c3(:)             = spval
+    tillage(:)            = spval
+    litho(:)              = spval
+    fmax(:)               = spval
 
   end subroutine allocate_memory
 
