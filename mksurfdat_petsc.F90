@@ -9,6 +9,7 @@ program mksurfdat_petsc
   use mkpftMod
   use mkvarctl
   use mkurbanparMod
+  use mkurbanparCommonMod
   use mkvarpar
   use mklanwatMod
   use mkgdpMod
@@ -277,6 +278,20 @@ program mksurfdat_petsc
        ndiag=ndiag, zero_out=all_veg, urbn_o=pcturb, urbn_classes_o=urbn_classes, &
        region_o=urban_region)
 
+  if ( .not. all_urban .and. .not. all_veg )then
+     call mkelev (ldomain, mapfname=map_furbtopo, datfname=mksrf_furbtopo, &
+          varname='TOPO_ICE', ndiag=ndiag, elev_o=elev)
+
+     where (elev .gt. elev_thresh)
+        pcturb = 0._r8
+     end where
+     deallocate(elev)
+  end if
+
+  ! Determine topography
+
+  call mkelev (ldomain, mapfname=map_flndtopo, datfname=mksrf_flndtopo, &
+       varname='TOPO', ndiag=ndiag, elev_o=topo)
   ! ----------------------------------------------------------------------
   ! deallocate memory for all variables
   ! ----------------------------------------------------------------------
@@ -511,7 +526,8 @@ contains
                ero_c3(ns_o)                       , &
                tillage(ns_o)                      , &
                litho(ns_o)                        , &
-               fmax(ns_o)                           &
+               fmax(ns_o)                         , &
+               topo(ns_o)                           &
                )
 
     landfrac_pft(:)       = spval
@@ -558,6 +574,12 @@ contains
     tillage(:)            = spval
     litho(:)              = spval
     fmax(:)               = spval
+    topo(:)               = spval
+
+    if ( .not. all_urban .and. .not. all_veg )then
+       allocate(elev(ns_o))
+       elev(:) = spval
+    end if
 
   end subroutine allocate_memory
 
