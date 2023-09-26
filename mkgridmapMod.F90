@@ -555,6 +555,8 @@ contains
     character(*),parameter :: subName = '(gridmap_areaave_srcmask) '
 !EOP
 !------------------------------------------------------------------------------
+    write(*,*)'stopping in gridmap_areaave_srcmask'
+    call exit(0)
     call gridmap_checkifset( gridmap, subname )
     ns = size(dst_array)
     allocate(wtnorm(ns)) 
@@ -623,6 +625,8 @@ contains
 !EOP
 !------------------------------------------------------------------------------
 
+    write(*,*)'stopping in gridmap_areaave_srcmask2'
+    call exit(0)
     call gridmap_checkifset( gridmap, subname )
     ns = size(dst_array)
     allocate(wtnorm(ns)) 

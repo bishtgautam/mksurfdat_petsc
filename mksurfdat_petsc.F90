@@ -4,6 +4,9 @@ program mksurfdat_petsc
   use mkdomainMod  , only : domain_type, domain_read_map, domain_read, &
        domain_write
   use mkpftMod     , only : mkpft
+  use mkglcmecMod
+  use mksoilMod
+  use mkpftMod
   use mkvarctl
   use petsc
   use fileutils
@@ -12,13 +15,15 @@ program mksurfdat_petsc
 
 #include "petsc/finclude/petscsys.h"
 
-  integer  :: ier                         ! error status
-  character(len=256) :: fsurlog           ! output surface log file name
-  PetscErrorCode :: ierr                  ! PETSc error status
-  integer :: ndiag
-  real(r8), allocatable  :: pctlnd_pft(:)      ! PFT data: % of gridcell for PFTs
-    real(r8), pointer      :: pctpft_full(:,:)   ! PFT data: % cover of each pft and cft on the vegetated landunits
-                                                 ! ('full' denotes inclusion of CFTs as well as natural PFTs in this array)
+  integer               :: ier              ! error status
+  character(len=256)    :: fsurlog          ! output surface log file name
+  character(len=256)    :: fsurdat          ! output surface data file name
+  character(len=256)    :: fdyndat          ! dynamic landuse data file name
+  PetscErrorCode        :: ierr             ! PETSc error status
+  integer               :: ndiag
+  real(r8), allocatable :: pctlnd_pft(:)    ! PFT data: % of gridcell for PFTs
+  real(r8), pointer     :: pctpft_full(:,:) ! PFT data: % cover of each pft and cft on the vegetated landunits
+                                            ! ('full' denotes inclusion of CFTs as well as natural PFTs in this array)
 
   type(domain_type) :: ldomain
 
@@ -26,10 +31,71 @@ program mksurfdat_petsc
        mksrf_fgrid,              &	
        mksrf_gridtype,           &
        mksrf_fvegtyp,            &
+       mksrf_fsoitex,            &
+       mksrf_forganic,           &
+       mksrf_fsoicol,            &
+       mksrf_fsoiord,            &
+       mksrf_fvocef,             &
+       mksrf_flakwat,            &
+       mksrf_fwetlnd,            &
+       mksrf_fglacier,           &
+       mksrf_furbtopo,           &
+       mksrf_flndtopo,           &
+       mksrf_fmax,               &
+       mksrf_furban,             &
+       mksrf_flai,               &
+       mksrf_fdynuse,            &
+       mksrf_fgdp,               &
+       mksrf_fpeat,              &
+       mksrf_fabm,               &
+       mksrf_ftopostats,         &
+       mksrf_fvic,               &
+       mksrf_fch4,               &
+       mksrf_fphosphorus,        &
+       mksrf_fgrvl,              &
+       mksrf_fslp10,             &
+       mksrf_fero,               &
+       nglcec,                   &
+       numpft,                   &
+       soil_color,               &
+       soil_order,               &
+       soil_sand,                &
+       soil_fmax,                &
+       soil_clay,                &
+       pft_idx,                  &
+       pft_frc,                  &
+       all_urban,                &
+       no_inlandwet,             &
        map_fpft,                 &
+       map_flakwat,              &
+       map_fwetlnd,              &
+       map_fglacier,             &
+       map_fsoitex,              &
+       map_fsoicol,              &
+       map_fsoiord,              &
+       map_furban,               &
+       map_furbtopo,             &
+       map_flndtopo,             &
+       map_fmax,                 &
+       map_forganic,             &
+       map_fvocef,               &
+       map_flai,                 &
+       map_fharvest,             &
+       map_fgdp,                 &
+       map_fpeat,                &
+       map_fabm,                 &
+       map_ftopostats,           &
+       map_fvic,                 &
+       map_fch4,                 &
+       map_fphosphorus,          &
+       map_fgrvl,                &
+       map_fslp10,               &
+       map_fero,                 &
        outnc_large_files,        &
        outnc_double,             &
        outnc_dims,               &
+       fsurdat,                  &
+       fdyndat,                  &   
        fsurlog
 
   ! Initialize PETSc
