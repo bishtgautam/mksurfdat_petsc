@@ -8,6 +8,7 @@ program mksurfdat_petsc
   use mksoilMod
   use mkpftMod
   use mkvarctl
+  use mkurbanparMod
   use petsc
   use fileutils
 
@@ -19,11 +20,15 @@ program mksurfdat_petsc
   character(len=256)    :: fsurlog          ! output surface log file name
   character(len=256)    :: fsurdat          ! output surface data file name
   character(len=256)    :: fdyndat          ! dynamic landuse data file name
+
+  logical :: all_veg ! if gridcell will be 100% vegetation land-cover
+
   PetscErrorCode        :: ierr             ! PETSc error status
   integer               :: ndiag
   real(r8), allocatable :: pctlnd_pft(:)    ! PFT data: % of gridcell for PFTs
   real(r8), pointer     :: pctpft_full(:,:) ! PFT data: % cover of each pft and cft on the vegetated landunits
                                             ! ('full' denotes inclusion of CFTs as well as natural PFTs in this array)
+  real(r8), allocatable  :: elevclass(:)       ! glacier_mec elevation classes
 
   type(domain_type) :: ldomain
 
@@ -103,8 +108,16 @@ program mksurfdat_petsc
 
   write(6,*) 'Attempting to initialize control settings .....'
 
+  ! Reads namelist
   call setup_namelist()
 
+  ! Initializes modules
+  call mksoilInit()
+  call mkpftInit(all_urban, all_veg)
+  allocate ( elevclass(nglcec+1) )
+  call mkglcmecInit (elevclass)
+  call mkurbanInit (mksrf_furban)
+  
   write(6,*)'calling domain_read'
   if ( .not. domain_read_map(ldomain, mksrf_fgrid) )then
      call domain_read(ldomain, mksrf_fgrid)

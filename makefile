@@ -37,10 +37,27 @@ mksurfdat_petsc_obj = mksurfdat_petsc.o \
   fileutils.o \
   shr_file_mod.o \
   mkglcmecMod.o \
-  mksoilMod.o
+  mksoilMod.o \
+  mkurbanparMod.o \
+  mkurbanparCommonMod.o \
+  mkindexmapMod.o \
 
 mksurfdat_petsc : $(mksurfdat_petsc_obj)
 	${FLINKER} -o mksurfdat_petsc $(mksurfdat_petsc_obj) ${PETSC_LIB} ${LIBS} ${FFLAGS} ${LDFLAGS}
+
+mkindexmapMod.o : \
+  shr_kind_mod.o \
+  mkncdio.o
+
+mkurbanparMod.o : \
+  shr_kind_mod.o \
+  shr_sys_mod.o \
+  mkindexmapMod.o \
+  mkurbanparCommonMod.o
+
+mkurbanparCommonMod.o : \
+  shr_kind_mod.o \
+  shr_sys_mod.o
 
 mksoilMod.o : \
   shr_kind_mod.o \
@@ -90,7 +107,9 @@ mksurfdat_petsc.o : \
   mkpftMod.o \
   mkglcmecMod.o \
   mksoilMod.o \
-  mkvarctl.o
+  mkvarctl.o \
+  mkurbanparMod.o \
+  mkurbanparCommonMod.o \
 
 shr_const_mod.o : \
   shr_kind_mod.o
