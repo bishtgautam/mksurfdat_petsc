@@ -9,6 +9,7 @@ program mksurfdat_petsc
   use mkpftMod
   use mkvarctl
   use mkurbanparMod
+  use mkvarpar
   use petsc
   use fileutils
 
@@ -25,10 +26,70 @@ program mksurfdat_petsc
 
   PetscErrorCode        :: ierr             ! PETSc error status
   integer               :: ndiag
-  real(r8), allocatable :: pctlnd_pft(:)    ! PFT data: % of gridcell for PFTs
-  real(r8), pointer     :: pctpft_full(:,:) ! PFT data: % cover of each pft and cft on the vegetated landunits
-                                            ! ('full' denotes inclusion of CFTs as well as natural PFTs in this array)
+
+  real(r8), allocatable  :: landfrac_pft(:)    ! PFT data: % land per gridcell
+  real(r8), allocatable  :: pctlnd_pft(:)      ! PFT data: % of gridcell for PFTs
+  real(r8), allocatable  :: pctlnd_pft_dyn(:)  ! PFT data: % of gridcell for dyn landuse PFTs
+  integer , allocatable  :: pftdata_mask(:)    ! mask indicating real or fake land type
+  real(r8), pointer      :: pctpft_full(:,:)   ! PFT data: % cover of each pft and cft on the vegetated landunits
+                                               ! ('full' denotes inclusion of CFTs as well as natural PFTs in this array)
+  real(r8), allocatable  :: pctnatveg(:)       ! percent of grid cell that is natural veg landunit
+  real(r8), allocatable  :: pctcrop(:)         ! percent of grid cell that is crop landunit
+  real(r8), allocatable  :: pctnatpft(:,:)     ! % of each pft on the natural veg landunit (adds to 100%)
+  real(r8), allocatable  :: pctcft(:,:)        ! % of each cft on the crop landunit (adds to 100%)
+  real(r8), pointer      :: harvest(:,:)       ! harvest data: normalized harvesting
+  real(r8), allocatable  :: pctgla(:)          ! percent of grid cell that is glacier
+  real(r8), allocatable  :: pctglc_gic(:)      ! percent of grid cell that is gic (% of glc landunit)
+  real(r8), allocatable  :: pctglc_icesheet(:) ! percent of grid cell that is ice sheet (% of glc landunit)
+  real(r8), allocatable  :: pctglcmec(:,:)     ! glacier_mec pct coverage in each class (% of landunit)
+  real(r8), allocatable  :: topoglcmec(:,:)    ! glacier_mec sfc elevation in each gridcell and class
+  real(r8), allocatable  :: pctglcmec_gic(:,:) ! GIC pct coverage in each class (% of landunit)
+  real(r8), allocatable  :: pctglcmec_icesheet(:,:) ! icesheet pct coverage in each class (% of landunit)
   real(r8), allocatable  :: elevclass(:)       ! glacier_mec elevation classes
+  real(r8), allocatable  :: pctlak(:)          ! percent of grid cell that is lake
+  real(r8), allocatable  :: pctwet(:)          ! percent of grid cell that is wetland
+  real(r8), allocatable  :: pcturb(:)          ! percent of grid cell that is urbanized (total across all urban classes)
+  real(r8), allocatable  :: urbn_classes(:,:)  ! percent cover of each urban class, as % of total urban area
+  real(r8), allocatable  :: urbn_classes_g(:,:)! percent cover of each urban class, as % of grid cell
+  real(r8), allocatable  :: elev(:)            ! glc elevation (m)
+  real(r8), allocatable  :: topo(:)            ! land elevation (m)
+  real(r8), allocatable  :: fmax(:)            ! fractional saturated area
+  integer , allocatable  :: soicol(:)          ! soil color
+  integer , allocatable  :: soiord(:)          ! soil order
+  real(r8), allocatable  :: pctsand(:,:)       ! soil texture: percent sand
+  real(r8), allocatable  :: pctclay(:,:)       ! soil texture: percent clay
+  real(r8), allocatable  :: ef1_btr(:)         ! Isoprene emission factor for broadleaf
+  real(r8), allocatable  :: ef1_fet(:)         ! Isoprene emission factor for fine/everg
+  real(r8), allocatable  :: ef1_fdt(:)         ! Isoprene emission factor for fine/dec
+  real(r8), allocatable  :: ef1_shr(:)         ! Isoprene emission factor for shrubs
+  real(r8), allocatable  :: ef1_grs(:)         ! Isoprene emission factor for grasses
+  real(r8), allocatable  :: ef1_crp(:)         ! Isoprene emission factor for crops
+  real(r8), allocatable  :: organic(:,:)       ! organic matter density (kg/m3)
+  real(r8), allocatable  :: gdp(:)             ! GDP (x1000 1995 US$/capita)
+  real(r8), allocatable  :: fpeat(:)           ! peatland fraction of gridcell
+  integer , allocatable  :: agfirepkmon(:)     ! agricultural fire peak month
+  integer , allocatable  :: urban_region(:)    ! urban region ID
+  real(r8), allocatable  :: topo_stddev(:)     ! standard deviation of elevation (m)
+  real(r8), allocatable  :: slope(:)           ! topographic slope (degrees)
+  real(r8), allocatable  :: vic_binfl(:)       ! VIC b parameter (unitless)
+  real(r8), allocatable  :: vic_ws(:)          ! VIC Ws parameter (unitless)
+  real(r8), allocatable  :: vic_dsmax(:)       ! VIC Dsmax parameter (mm/day)
+  real(r8), allocatable  :: vic_ds(:)          ! VIC Ds parameter (unitless)
+  real(r8), allocatable  :: lakedepth(:)       ! lake depth (m)
+  real(r8), allocatable  :: f0(:)              ! max fractional inundated area (unitless)
+  real(r8), allocatable  :: p3(:)              ! coefficient for qflx_surf_lag for finundated (s/mm)
+  real(r8), allocatable  :: zwt0(:)            ! decay factor for finundated (m)
+  real(r8), allocatable  :: apatiteP(:)        ! apptite phosphorus
+  real(r8), allocatable  :: labileP(:)         ! labile phosphorus
+  real(r8), allocatable  :: occludedP(:)       ! occluded phosphorus
+  real(r8), allocatable  :: secondaryP(:)      ! secondaryP phosphorus
+  real(r8), allocatable  :: grvl(:,:)          ! soil gravel content (percent)
+  real(r8), allocatable  :: slp10(:,:)         ! slope percentile (km/km)
+  real(r8), allocatable  :: ero_c1(:)          ! ELM-Erosion c1 parameter (unitless)
+  real(r8), allocatable  :: ero_c2(:)          ! ELM-Erosion c2 parameter (unitless)
+  real(r8), allocatable  :: ero_c3(:)          ! ELM-Erosion c3 parameter (unitless)
+  real(r8), allocatable  :: tillage(:)         ! conserved tillage fraction (fraction)
+  real(r8), allocatable  :: litho(:)           ! lithology erodiblity index (unitless)
 
   type(domain_type) :: ldomain
 
@@ -345,8 +406,49 @@ contains
 
     ns_o = ldomain%ns
 
-    allocate(pctlnd_pft(ns_o))
-    allocate(pctpft_full(ns_o,0:numpft))
+    allocate ( landfrac_pft(ns_o)                 , &
+               pctlnd_pft(ns_o)                   , &
+               pftdata_mask(ns_o)                 , &
+               pctpft_full(ns_o,0:numpft)         , &
+               pctnatveg(ns_o)                    , &
+               pctcrop(ns_o)                      , &
+               pctnatpft(ns_o,natpft_lb:natpft_ub), &
+               pctcft(ns_o,cft_lb:cft_ub)         , &
+               pctgla(ns_o)                       , &
+               pctlak(ns_o)                       , &
+               pctwet(ns_o)                       , &
+               pcturb(ns_o)                       , &
+               urban_region(ns_o)                 , &
+               urbn_classes(ns_o,numurbl)         , &
+               urbn_classes_g(ns_o,numurbl)       , &
+               pctsand(ns_o,nlevsoi)              , &
+               pctclay(ns_o,nlevsoi)              , &
+               soicol(ns_o)                       , &
+               soiord(ns_o)                       , &
+               gdp(ns_o)                          , &
+               fpeat(ns_o)                        , &
+               agfirepkmon(ns_o)                  , &
+               topo_stddev(ns_o)                  , &
+               slope(ns_o)                        , &
+               vic_binfl(ns_o)                    , &
+               vic_ws(ns_o)                       , &
+               vic_dsmax(ns_o)                    , &
+               vic_ds(ns_o)                       , &
+               lakedepth(ns_o)                    , &
+               f0(ns_o)                           , &
+               p3(ns_o)                           , &
+               zwt0(ns_o)                         , &
+               apatiteP(ns_o)                     , &
+               labileP(ns_o)                      , &
+               occludedP(ns_o)                    , &
+               secondaryP(ns_o)                   , &
+               grvl(ns_o,nlevsoi)                 , &
+               slp10(ns_o,nlevslp)                , &
+               ero_c1(ns_o)                       , &
+               ero_c2(ns_o)                       , &
+               ero_c3(ns_o)                       , &
+               tillage(ns_o)                      , &
+               litho(ns_o)                        )
 
   end subroutine allocate_memory
 
