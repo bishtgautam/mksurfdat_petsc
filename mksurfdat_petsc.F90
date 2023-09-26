@@ -15,6 +15,11 @@ program mksurfdat_petsc
   use mkgdpMod
   use mkpeatMod
   use mkagfirepkmonthMod
+  use mkVICparamsMod
+  use mkCH4inversionMod
+  use mkvocefMod
+  use mkSedMod
+  use mksoilphosphorusMod
   use petsc
   use fileutils
 
@@ -292,6 +297,46 @@ program mksurfdat_petsc
 
   call mkelev (ldomain, mapfname=map_flndtopo, datfname=mksrf_flndtopo, &
        varname='TOPO', ndiag=ndiag, elev_o=topo)
+
+  ! Make VIC parameters [binfl, ws, dsmax, ds] from [fvic]
+
+  call mkVICparams (ldomain, mapfname=map_fvic, datfname=mksrf_fvic, ndiag=ndiag, &
+       binfl_o=vic_binfl, ws_o=vic_ws, dsmax_o=vic_dsmax, ds_o=vic_ds)
+
+  ! Make lake depth [lakedepth] from [flakwat]
+
+  call mklakparams (ldomain, mapfname=map_flakwat, datfname=mksrf_flakwat, ndiag=ndiag, &
+       lakedepth_o=lakedepth)
+
+  ! Make inversion-derived CH4 parameters [f0, p3, zwt0] from [fch4]
+
+  call mkCH4inversion (ldomain, mapfname=map_fch4, datfname=mksrf_fch4, ndiag=ndiag, &
+       f0_o=f0, p3_o=p3, zwt0_o=zwt0)
+
+  ! Make organic matter density [organic] [forganic]
+
+  call mkorganic (ldomain, mapfname=map_forganic, datfname=mksrf_forganic, &
+       ndiag=ndiag, organic_o=organic)
+
+  ! Make VOC emission factors for isoprene &
+  ! [ef1_btr,ef1_fet,ef1_fdt,ef1_shr,ef1_grs,ef1_crp]
+
+  call mkvocef (ldomain, mapfname=map_fvocef, datfname=mksrf_fvocef, ndiag=ndiag, &
+       ef_btr_o=ef1_btr, ef_fet_o=ef1_fet, ef_fdt_o=ef1_fdt,  &
+       ef_shr_o=ef1_shr, ef_grs_o=ef1_grs, ef_crp_o=ef1_crp)
+
+  call mksoilphosphorus (ldomain, mapfname=map_fphosphorus, datfname=mksrf_fphosphorus, &
+       ndiag=ndiag, apatiteP_o=apatiteP, labileP_o=labileP, occludedP_o=occludedP, &
+       secondaryP_o=secondaryP)
+
+  call mkgrvl(ldomain, mapfname=map_fgrvl, datfname=mksrf_fgrvl, ndiag=ndiag, grvl_o=grvl) 
+
+  call mkslp10(ldomain, mapfname=map_fslp10, datfname=mksrf_fslp10, ndiag=ndiag, slp10_o=slp10)
+
+  call mkEROparams(ldomain, mapfname=map_fero, datfname=mksrf_fero, ndiag=ndiag, &
+       ero_c1_o=ero_c1, ero_c2_o=ero_c2, ero_c3_o=ero_c3, tillage_o=tillage, &
+       litho_o=litho)
+
   ! ----------------------------------------------------------------------
   ! deallocate memory for all variables
   ! ----------------------------------------------------------------------
@@ -483,51 +528,58 @@ contains
 
     ns_o = ldomain%ns
 
-    allocate ( landfrac_pft(ns_o)                 , &
-               pctlnd_pft(ns_o)                   , &
-               pftdata_mask(ns_o)                 , &
-               pctpft_full(ns_o,0:numpft)         , &
-               pctnatveg(ns_o)                    , &
-               pctcrop(ns_o)                      , &
-               pctnatpft(ns_o,natpft_lb:natpft_ub), &
-               pctcft(ns_o,cft_lb:cft_ub)         , &
-               pctgla(ns_o)                       , &
-               pctlak(ns_o)                       , &
-               pctwet(ns_o)                       , &
-               pcturb(ns_o)                       , &
-               urban_region(ns_o)                 , &
-               urbn_classes(ns_o,numurbl)         , &
-               urbn_classes_g(ns_o,numurbl)       , &
-               pctsand(ns_o,nlevsoi)              , &
-               pctclay(ns_o,nlevsoi)              , &
-               soicol(ns_o)                       , &
-               soiord(ns_o)                       , &
-               gdp(ns_o)                          , &
-               fpeat(ns_o)                        , &
-               agfirepkmon(ns_o)                  , &
-               topo_stddev(ns_o)                  , &
-               slope(ns_o)                        , &
-               vic_binfl(ns_o)                    , &
-               vic_ws(ns_o)                       , &
-               vic_dsmax(ns_o)                    , &
-               vic_ds(ns_o)                       , &
-               lakedepth(ns_o)                    , &
-               f0(ns_o)                           , &
-               p3(ns_o)                           , &
-               zwt0(ns_o)                         , &
-               apatiteP(ns_o)                     , &
-               labileP(ns_o)                      , &
-               occludedP(ns_o)                    , &
-               secondaryP(ns_o)                   , &
-               grvl(ns_o,nlevsoi)                 , &
-               slp10(ns_o,nlevslp)                , &
-               ero_c1(ns_o)                       , &
-               ero_c2(ns_o)                       , &
-               ero_c3(ns_o)                       , &
-               tillage(ns_o)                      , &
-               litho(ns_o)                        , &
-               fmax(ns_o)                         , &
-               topo(ns_o)                           &
+    allocate ( landfrac_pft(ns_o)                  , &
+               pctlnd_pft(ns_o)                    , &
+               pftdata_mask(ns_o)                  , &
+               pctpft_full(ns_o,0:numpft)          , &
+               pctnatveg(ns_o)                     , &
+               pctcrop(ns_o)                       , &
+               pctnatpft(ns_o,natpft_lb:natpft_ub) , &
+               pctcft(ns_o,cft_lb:cft_ub)          , &
+               pctgla(ns_o)                        , &
+               pctlak(ns_o)                        , &
+               pctwet(ns_o)                        , &
+               pcturb(ns_o)                        , &
+               urban_region(ns_o)                  , &
+               urbn_classes(ns_o,numurbl)          , &
+               urbn_classes_g(ns_o,numurbl)        , &
+               pctsand(ns_o,nlevsoi)               , &
+               pctclay(ns_o,nlevsoi)               , &
+               soicol(ns_o)                        , &
+               soiord(ns_o)                        , &
+               gdp(ns_o)                           , &
+               fpeat(ns_o)                         , &
+               agfirepkmon(ns_o)                   , &
+               topo_stddev(ns_o)                   , &
+               slope(ns_o)                         , &
+               vic_binfl(ns_o)                     , &
+               vic_ws(ns_o)                        , &
+               vic_dsmax(ns_o)                     , &
+               vic_ds(ns_o)                        , &
+               lakedepth(ns_o)                     , &
+               f0(ns_o)                            , &
+               p3(ns_o)                            , &
+               zwt0(ns_o)                          , &
+               apatiteP(ns_o)                      , &
+               labileP(ns_o)                       , &
+               occludedP(ns_o)                     , &
+               secondaryP(ns_o)                    , &
+               grvl(ns_o,nlevsoi)                  , &
+               slp10(ns_o,nlevslp)                 , &
+               ero_c1(ns_o)                        , &
+               ero_c2(ns_o)                        , &
+               ero_c3(ns_o)                        , &
+               tillage(ns_o)                       , &
+               litho(ns_o)                         , &
+               fmax(ns_o)                          , &
+               topo(ns_o)                          , &
+               organic(ns_o,nlevsoi)               , &
+               ef1_btr(ns_o)                       , & 
+               ef1_fet(ns_o)                       , & 
+               ef1_fdt(ns_o)                       , & 
+               ef1_shr(ns_o)                       , & 
+               ef1_grs(ns_o)                       , & 
+               ef1_crp(ns_o)                         &
                )
 
     landfrac_pft(:)       = spval
@@ -575,6 +627,13 @@ contains
     litho(:)              = spval
     fmax(:)               = spval
     topo(:)               = spval
+    organic(:,:)          = spval
+    ef1_btr(:) = 0._r8
+    ef1_fet(:) = 0._r8
+    ef1_fdt(:) = 0._r8
+    ef1_shr(:) = 0._r8
+    ef1_grs(:) = 0._r8
+    ef1_crp(:) = 0._r8
 
     if ( .not. all_urban .and. .not. all_veg )then
        allocate(elev(ns_o))

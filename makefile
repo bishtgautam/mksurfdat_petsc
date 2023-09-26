@@ -46,11 +46,40 @@ mksurfdat_petsc_obj = mksurfdat_petsc.o \
   mkchecksMod.o \
   mkgdpMod.o \
   mkpeatMod.o \
-  mkagfirepkmonthMod.o
-
+  mkagfirepkmonthMod.o \
+  mkVICparamsMod.o \
+  mkCH4inversionMod.o \
+  mkvocefMod.o \
+  mkSedMod.o \
+  mksoilphosphorusMod.o
 
 mksurfdat_petsc : $(mksurfdat_petsc_obj)
 	${FLINKER} -o mksurfdat_petsc $(mksurfdat_petsc_obj) ${PETSC_LIB} ${LIBS} ${FFLAGS} ${LDFLAGS}
+
+mkSedMod.o : \
+  shr_kind_mod.o \
+  shr_sys_mod.o \
+  mkdomainMod.o
+
+mksoilphosphorusMod.o : \
+  shr_kind_mod.o \
+  shr_sys_mod.o \
+  mkdomainMod.o
+
+mkvocefMod.o : \
+  shr_kind_mod.o \
+  shr_sys_mod.o \
+  mkdomainMod.o
+
+mkVICparamsMod.o : \
+  shr_kind_mod.o \
+  shr_sys_mod.o \
+  mkdomainMod.o
+
+mkCH4inversionMod : \
+  shr_kind_mod.o \
+  shr_sys_mod.o \
+  mkdomainMod.o
 
 mkindexmapMod.o : \
   shr_kind_mod.o \
@@ -130,7 +159,12 @@ mksurfdat_petsc.o : \
   mklanwatMod.o \
   mkgdpMod.o \
   mkpeatMod.o \
-  mkagfirepkmonthMod.o
+  mkagfirepkmonthMod.o \
+  mkVICparamsMod.o \
+  mkCH4inversionMod.o \
+  mkvocefMod.o \
+  mkSedMod.o \
+  mksoilphosphorusMod.o
 
 mklanwatMod.o	: \
   shr_kind_mod.o \
