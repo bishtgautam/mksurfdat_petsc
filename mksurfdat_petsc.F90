@@ -157,11 +157,68 @@ contains
     implicit none
 
     ! Default settings
-    mksrf_gridtype = 'global'
-    mksrf_fgrid    = ' '
+    mksrf_gridtype    = 'global'
+
+    mksrf_fgrid       = ' '
+    mksrf_fvegtyp     = ' '
+    mksrf_fsoitex     = ' '
+    mksrf_forganic    = ' '
+    mksrf_fsoicol     = ' '
+    mksrf_fsoiord     = ' '
+    mksrf_fvocef      = ' '
+    mksrf_flakwat     = ' '
+    mksrf_fwetlnd     = ' '
+    mksrf_fglacier    = ' '
+    mksrf_furbtopo    = ' '
+    mksrf_flndtopo    = ' '
+    mksrf_fmax        = ' '
+    mksrf_furban      = ' '
+    mksrf_flai        = ' '
+    mksrf_fdynuse     = ' '
+    mksrf_fgdp        = ' '
+    mksrf_fpeat       = ' '
+    mksrf_fabm        = ' '
+    mksrf_ftopostats  = ' '
+    mksrf_fvic        = ' '
+    mksrf_fch4        = ' '
+    mksrf_fphosphorus = ' '
+    mksrf_fgrvl       = ' '
+    mksrf_fslp10      = ' '
+    mksrf_fero        = ' '
+
+    map_flakwat     = ' '
+    map_fwetlnd     = ' '
+    map_fglacier    = ' '
+    map_fsoitex     = ' '
+    map_fsoicol     = ' '
+    map_fsoiord     = ' '
+    map_furban      = ' '
+    map_furbtopo    = ' '
+    map_flndtopo    = ' '
+    map_fmax        = ' '
+    map_forganic    = ' '
+    map_fvocef      = ' '
+    map_flai        = ' '
+    map_fharvest    = ' '
+    map_fgdp        = ' '
+    map_fpeat       = ' '
+    map_fabm        = ' '
+    map_ftopostats  = ' '
+    map_fvic        = ' '
+    map_fch4        = ' '
+    map_fphosphorus = ' '
+    map_fgrvl       = ' '
+    map_fslp10      = ' '
+    map_fero        = ' '
+
     fsurlog        = ' '
     map_fpft       = ' '
     mksrf_fvegtyp  = ' '
+
+    outnc_large_files = .false.
+    outnc_double      = .true.
+    all_urban         = .false.
+    no_inlandwet      = .true.
 
     read(5, elmexp, iostat=ier)
     if (ier /= 0) then
@@ -169,14 +226,84 @@ contains
        call abort()
     endif
 
-    call check_namelist_variable(mksrf_fgrid   , 'mksrf_fgrid')
-    call check_namelist_variable(map_fpft      , 'map_fpft')
-    call check_namelist_variable(mksrf_fvegtyp , 'mksrf_fvegtyp')
+    call check_namelist_variable(mksrf_fgrid       ,'mksrf_fgrid'       )
+    call check_namelist_variable(mksrf_fvegtyp     ,'mksrf_fvegtyp'     )
+    call check_namelist_variable(mksrf_fsoitex     ,'mksrf_fsoitex'     )
+    call check_namelist_variable(mksrf_forganic    ,'mksrf_forganic'    )
+    call check_namelist_variable(mksrf_fsoicol     ,'mksrf_fsoicol'     )
+    call check_namelist_variable(mksrf_fsoiord     ,'mksrf_fsoiord'     )
+    call check_namelist_variable(mksrf_fvocef      ,'mksrf_fvocef'      )
+    call check_namelist_variable(mksrf_flakwat     ,'mksrf_flakwat'     )
+    call check_namelist_variable(mksrf_fwetlnd     ,'mksrf_fwetlnd'     )
+    call check_namelist_variable(mksrf_fglacier    ,'mksrf_fglacier'    )
+    call check_namelist_variable(mksrf_furbtopo    ,'mksrf_furbtopo'    )
+    call check_namelist_variable(mksrf_flndtopo    ,'mksrf_flndtopo'    )
+    call check_namelist_variable(mksrf_fmax        ,'mksrf_fmax'        )
+    call check_namelist_variable(mksrf_furban      ,'mksrf_furban'      )
+    call check_namelist_variable(mksrf_flai        ,'mksrf_flai'        )
+    call check_namelist_variable(mksrf_fgdp        ,'mksrf_fgdp'        )
+    call check_namelist_variable(mksrf_fpeat       ,'mksrf_fpeat'       )
+    call check_namelist_variable(mksrf_fabm        ,'mksrf_fabm'        )
+    call check_namelist_variable(mksrf_ftopostats  ,'mksrf_ftopostats'  )
+    call check_namelist_variable(mksrf_fvic        ,'mksrf_fvic'        )
+    call check_namelist_variable(mksrf_fch4        ,'mksrf_fch4'        )
+    call check_namelist_variable(mksrf_fphosphorus ,'mksrf_fphosphorus' )
+    call check_namelist_variable(mksrf_fgrvl       ,'mksrf_fgrvl'       )
+    call check_namelist_variable(mksrf_fslp10      ,'mksrf_fslp10'      )
+    call check_namelist_variable(mksrf_fero        ,'mksrf_fero'        )
+
+    call check_namelist_variable(map_flakwat       ,'map_flakwat'       )
+    call check_namelist_variable(map_fwetlnd       ,'map_fwetlnd'       )
+    call check_namelist_variable(map_fglacier      ,'map_fglacier'      )
+    call check_namelist_variable(map_fsoitex       ,'map_fsoitex'       )
+    call check_namelist_variable(map_fsoicol       ,'map_fsoicol'       )
+    call check_namelist_variable(map_fsoiord       ,'map_fsoiord'       )
+    call check_namelist_variable(map_furban        ,'map_furban'        )
+    call check_namelist_variable(map_furbtopo      ,'map_furbtopo'      )
+    call check_namelist_variable(map_flndtopo      ,'map_flndtopo'      )
+    call check_namelist_variable(map_fmax          ,'map_fmax'          )
+    call check_namelist_variable(map_forganic      ,'map_forganic'      )
+    call check_namelist_variable(map_fvocef        ,'map_fvocef'        )
+    call check_namelist_variable(map_flai          ,'map_flai'          )
+    call check_namelist_variable(map_fharvest      ,'map_fharvest'      )
+    call check_namelist_variable(map_fgdp          ,'map_fgdp'          )
+    call check_namelist_variable(map_fpeat         ,'map_fpeat'         )
+    call check_namelist_variable(map_fabm          ,'map_fabm'          )
+    call check_namelist_variable(map_ftopostats    ,'map_ftopostats'    )
+    call check_namelist_variable(map_fvic          ,'map_fvic'          )
+    call check_namelist_variable(map_fch4          ,'map_fch4'          )
+    call check_namelist_variable(map_fphosphorus   ,'map_fphosphorus'   )
+    call check_namelist_variable(map_fgrvl         ,'map_fgrvl'         )
+    call check_namelist_variable(map_fslp10        ,'map_fslp10'        )
+    call check_namelist_variable(map_fero          ,'map_fero'          )
 
     call check_namelist_variable(fsurlog, 'fsurlog')
     ndiag = getavu()
     call opnfil(fsurlog, ndiag, 'f')
-    
+
+
+    if (trim(mksrf_gridtype) == 'global' .or. &
+         trim(mksrf_gridtype) == 'regional') then
+       write(6,*)'mksrf_gridtype = ',trim(mksrf_gridtype)
+    else
+       write(6,*)'mksrf_gridtype = ',trim(mksrf_gridtype)
+       write (6,*)'illegal mksrf_gridtype, must be global or regional '
+       call abort()
+    endif
+
+    if ( outnc_large_files )then
+       write(6,*)'Output file in NetCDF 64-bit large_files format'
+    end if
+    if ( outnc_double )then
+       write(6,*)'Output ALL data in file as 64-bit'
+    end if
+    if ( all_urban )then
+       write(6,*) 'Output ALL data in file as 100% urban'
+    end if
+    if ( no_inlandwet )then
+       write(6,*) 'Set wetland to 0% over land'
+    end if
+
   end subroutine setup_namelist
 
   !-----------------------------------------------------------------------
@@ -199,7 +326,7 @@ contains
     implicit none
 
     type(domain_type) :: ldomain
-    
+
     integer :: ns_o
     integer :: ier
 
@@ -207,7 +334,7 @@ contains
 
     allocate(pctlnd_pft(ns_o))
     allocate(pctpft_full(ns_o,0:numpft))
-    
+
   end subroutine allocate_memory
 
   !-----------------------------------------------------------------------
@@ -217,7 +344,7 @@ contains
 
     deallocate(pctlnd_pft)
     deallocate(pctpft_full)
-    
+
   end subroutine deallocate_memory
 
 end program mksurfdat_petsc
