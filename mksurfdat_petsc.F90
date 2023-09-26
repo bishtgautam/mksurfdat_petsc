@@ -11,6 +11,9 @@ program mksurfdat_petsc
   use mkurbanparMod
   use mkvarpar
   use mklanwatMod
+  use mkgdpMod
+  use mkpeatMod
+  use mkagfirepkmonthMod
   use petsc
   use fileutils
 
@@ -252,6 +255,27 @@ program mksurfdat_petsc
 
   call mkfmax (ldomain, mapfname=map_fmax, datfname=mksrf_fmax, &
        ndiag=ndiag, fmax_o=fmax)
+
+  ! Make GDP data [gdp] from [gdp]
+
+  call mkgdp (ldomain, mapfname=map_fgdp, datfname=mksrf_fgdp, &
+       ndiag=ndiag, gdp_o=gdp)
+
+  ! Make peat data [fpeat] from [peatf]
+
+  call mkpeat (ldomain, mapfname=map_fpeat, datfname=mksrf_fpeat, &
+       ndiag=ndiag, peat_o=fpeat)
+
+  ! Make agricultural fire peak month data [abm] from [abm]
+
+  call mkagfirepkmon (ldomain, mapfname=map_fabm, datfname=mksrf_fabm, &
+       ndiag=ndiag, agfirepkmon_o=agfirepkmon)
+
+  ! Make urban fraction [pcturb] from [furban] dataset
+
+  call mkurban (ldomain, mapfname=map_furban, datfname=mksrf_furban, &
+       ndiag=ndiag, zero_out=all_veg, urbn_o=pcturb, urbn_classes_o=urbn_classes, &
+       region_o=urban_region)
 
   ! ----------------------------------------------------------------------
   ! deallocate memory for all variables

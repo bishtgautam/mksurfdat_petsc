@@ -43,7 +43,11 @@ mksurfdat_petsc_obj = mksurfdat_petsc.o \
   mkindexmapMod.o \
   mklanwatMod.o \
   mkdiagnosticsMod.o \
-  mkchecksMod.o
+  mkchecksMod.o \
+  mkgdpMod.o \
+  mkpeatMod.o \
+  mkagfirepkmonthMod.o
+
 
 mksurfdat_petsc : $(mksurfdat_petsc_obj)
 	${FLINKER} -o mksurfdat_petsc $(mksurfdat_petsc_obj) ${PETSC_LIB} ${LIBS} ${FFLAGS} ${LDFLAGS}
@@ -93,6 +97,16 @@ mkpftMod.o : \
 
 nanMod.o :
 
+mkpeatMod.o : \
+  shr_kind_mod.o \
+  shr_sys_mod.o \
+  mkdomainMod.o
+
+mkagfirepkmonthMod.o : \
+  shr_kind_mod.o \
+  shr_sys_mod.o \
+  mkdomainMod.o
+
 mkdomainMod.o : \
   shr_kind_mod.o \
   mkvarpar.o \
@@ -113,7 +127,10 @@ mksurfdat_petsc.o : \
   mkvarctl.o \
   mkurbanparMod.o \
   mkurbanparCommonMod.o \
-  mklanwatMod.o
+  mklanwatMod.o \
+  mkgdpMod.o \
+  mkpeatMod.o \
+  mkagfirepkmonthMod.o
 
 mklanwatMod.o	: \
   shr_kind_mod.o \
@@ -125,6 +142,11 @@ mklanwatMod.o	: \
 mkchecksMod.o : \
   shr_kind_mod.o \
   shr_sys_mod.o
+
+mkgdpMod.o : \
+  shr_kind_mod.o \
+  shr_sys_mod.o \
+  mkdomainMod.o
 
 mkdiagnosticsMod.o : \
   shr_kind_mod.o
