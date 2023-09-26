@@ -337,6 +337,10 @@ program mksurfdat_petsc
        ero_c1_o=ero_c1, ero_c2_o=ero_c2, ero_c3_o=ero_c3, tillage_o=tillage, &
        litho_o=litho)
 
+  ! Do landuse changes such as for the poles, etc.
+
+  call change_landuse( ldomain, dynpft=.false. )
+
   ! ----------------------------------------------------------------------
   ! deallocate memory for all variables
   ! ----------------------------------------------------------------------
