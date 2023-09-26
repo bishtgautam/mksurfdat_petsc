@@ -327,6 +327,7 @@ contains
     !
     ! map_mat: Create sparse matrix based on 'row', 'col', and 'S' values
     !
+    write(6,*) "* creating map_mat"
     PetscCallA(MatCreate(PETSC_COMM_WORLD, gridmap%map_mat, ierr))
     PetscCall(MatSetsizes(gridmap%map_mat, PETSC_DECIDE, PETSC_DECIDE, gridmap%nb, gridmap%na, ierr))
     PetscCall(MatSetFromOptions(gridmap%map_mat, ierr))
@@ -341,6 +342,7 @@ contains
     !
     ! map_frac_mat: Matrix in which each row of map_mat is normalized with frac_b(row)
     !
+    write(6,*) "* creating map_frac_mat"
     PetscCallA(MatCreate(PETSC_COMM_WORLD, temp_mat, ierr))
     PetscCall(MatSetsizes(temp_mat, PETSC_DECIDE, PETSC_DECIDE, gridmap%nb, gridmap%nb, ierr))
     PetscCall(MatSetFromOptions(temp_mat, ierr))
