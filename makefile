@@ -41,6 +41,9 @@ mksurfdat_petsc_obj = mksurfdat_petsc.o \
   mkurbanparMod.o \
   mkurbanparCommonMod.o \
   mkindexmapMod.o \
+  mklanwatMod.o \
+  mkdiagnosticsMod.o \
+  mkchecksMod.o
 
 mksurfdat_petsc : $(mksurfdat_petsc_obj)
 	${FLINKER} -o mksurfdat_petsc $(mksurfdat_petsc_obj) ${PETSC_LIB} ${LIBS} ${FFLAGS} ${LDFLAGS}
@@ -110,6 +113,21 @@ mksurfdat_petsc.o : \
   mkvarctl.o \
   mkurbanparMod.o \
   mkurbanparCommonMod.o \
+  mklanwatMod.o
+
+mklanwatMod.o	: \
+  shr_kind_mod.o \
+  shr_sys_mod.o \
+  mkdomainMod.o \
+  mkdiagnosticsMod.o \
+  mkchecksMod.o
+
+mkchecksMod.o : \
+  shr_kind_mod.o \
+  shr_sys_mod.o
+
+mkdiagnosticsMod.o : \
+  shr_kind_mod.o
 
 shr_const_mod.o : \
   shr_kind_mod.o

@@ -10,6 +10,7 @@ program mksurfdat_petsc
   use mkvarctl
   use mkurbanparMod
   use mkvarpar
+  use mklanwatMod
   use petsc
   use fileutils
 
@@ -216,6 +217,13 @@ program mksurfdat_petsc
   call mkpft(ldomain, mapfname=map_fpft, fpft=mksrf_fvegtyp, &
        ndiag=ndiag, pctlnd_o=pctlnd_pft, pctpft_o=pctpft_full )
 
+  ! Make inland water [pctlak, pctwet] [flakwat] [fwetlnd]
+
+  call mklakwat (ldomain, mapfname=map_flakwat, datfname=mksrf_flakwat, &
+       ndiag=ndiag, zero_out=all_urban.or.all_veg, lake_o=pctlak)
+
+  call mkwetlnd (ldomain, mapfname=map_fwetlnd, datfname=mksrf_fwetlnd, &
+       ndiag=ndiag, zero_out=all_urban.or.all_veg.or.no_inlandwet, swmp_o=pctwet)
 
   ! deallocate memory for all variables
   call deallocate_memory()
