@@ -341,6 +341,9 @@ program mksurfdat_petsc
 
   call change_landuse( ldomain, dynpft=.false. )
 
+
+  call check_and_update_values()
+  
   ! ----------------------------------------------------------------------
   ! deallocate memory for all variables
   ! ----------------------------------------------------------------------
@@ -655,6 +658,83 @@ contains
     deallocate(pctpft_full)
 
   end subroutine deallocate_memory
+
+  !-----------------------------------------------------------------------
+
+  subroutine check_and_update_values()
+
+    implicit none
+
+    integer :: k, n, ns_o
+    real(r8) :: suma
+    character(len=32) :: subname = 'perform_sanity_check'
+
+    ns_o = ldomain%ns
+
+    do n = 1,ns_o
+
+       ! Assume wetland and/or lake when dataset landmask implies ocean 
+       ! (assume medium soil color (15), soil order(15) and loamy texture).
+       
+       ! Also set pftdata_mask here
+       ! Note that pctpft_full is NOT adjusted here, so that we still have information
+       ! about the landunit breakdown into PFTs (pctnatveg and pctcrop will later become 0
+       ! due to wetland and lake adding to 100%).
+       
+       if (pctlnd_pft(n) < 1.e-6_r8) then
+          pftdata_mask(n)  = 0
+          soicol(n)        = 15
+          soiord(n)        = 15
+          pctwet(n)        = 100._r8 - pctlak(n)
+          pcturb(n)        = 0._r8
+          pctgla(n)        = 0._r8
+          pctsand(n,:)     = 43._r8
+          pctclay(n,:)     = 18._r8
+          organic(n,:)   = 0._r8
+          grvl(n,:)        = 0._r8
+          slp10(n,:)       = 0._r8
+          ero_c1(n)        = 0._r8
+          ero_c2(n)        = 0._r8
+          ero_c3(n)        = 0._r8
+          tillage(n)       = 0._r8
+          litho(n)         = 0._r8
+       else
+          pftdata_mask(n) = 1
+       end if
+
+       ! Truncate all percentage fields on output grid. This is needed to
+       ! insure that wt is zero (not a very small number such as
+       ! 1e-16) where it really should be zero
+       
+       do k = 1,nlevsoi
+          pctsand(n,k) = float(nint(pctsand(n,k)))
+          pctclay(n,k) = float(nint(pctclay(n,k)))
+          grvl(n,k)    = float(nint(grvl(n,k)))
+       end do
+       pctlak(n) = float(nint(pctlak(n)))
+       pctwet(n) = float(nint(pctwet(n)))
+       pctgla(n) = float(nint(pctgla(n)))
+       
+       ! Make sure sum of land cover types does not exceed 100. If it does,
+       ! subtract excess from most dominant land cover.
+       
+       suma = pctlak(n) + pctwet(n) + pcturb(n) + pctgla(n)
+       if (suma > 250._r4) then
+          write (6,*) subname, ' error: sum of pctlak, pctwet,', &
+               'pcturb and pctgla is greater than 250%'
+          write (6,*)'n,pctlak,pctwet,pcturb,pctgla= ', &
+               n,pctlak(n),pctwet(n),pcturb(n),pctgla(n)
+          call abort()
+       else if (suma > 100._r4) then
+          pctlak(n) = pctlak(n) * 100._r8/suma
+          pctwet(n) = pctwet(n) * 100._r8/suma
+          pcturb(n) = pcturb(n) * 100._r8/suma
+          pctgla(n) = pctgla(n) * 100._r8/suma
+       end if
+       
+    end do
+
+  end subroutine check_and_update_values
 
   !-----------------------------------------------------------------------
   !BOP
