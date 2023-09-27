@@ -3,3 +3,5 @@
 *namelist*
 mksurfdat_petsc
 *.log
+*.nc
+*.bin*
