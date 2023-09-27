@@ -555,11 +555,16 @@ contains
     real(r8):: wt
     real(r8), allocatable :: wtnorm(:)
     character(*),parameter :: subName = '(gridmap_areaave_srcmask) '
+    PetscReal, pointer :: src_p(:), dst_p(:), vec_p(:), wtnorm_p(:)
+    Vec                :: ones_vec, wtnorm_vec
+    Mat                :: new_wt_mat
+    PetscErrorCode     :: ierr
 !EOP
-!------------------------------------------------------------------------------
-    write(*,*)'stopping in gridmap_areaave_srcmask'
-    call exit(0)
+    !------------------------------------------------------------------------------
+
     call gridmap_checkifset( gridmap, subname )
+
+#if 0
     ns = size(dst_array)
     allocate(wtnorm(ns)) 
     wtnorm(:) = 0._r8
@@ -588,6 +593,65 @@ contains
     end where
 
     deallocate(wtnorm)
+
+#endif
+
+    ! Create a temporary matrix and two temporary vectors
+    PetscCallA(MatDuplicate(gridmap%map_mat, MAT_SHARE_NONZERO_PATTERN, new_wt_mat, ierr))
+    PetscCallA(VecDuplicate(gridmap%src_vec, ones_vec, ierr))
+    PetscCallA(VecDuplicate(gridmap%dst_vec, wtnorm_vec, ierr))
+
+    ! Create a matrix in which weights are multiplied by the mask of source grids
+    do n = 1, gridmap%ns
+
+       ni = gridmap%src_indx(n)
+       no = gridmap%dst_indx(n)
+
+       if (mask_src(ni) > 0._r8) then
+          wt = gridmap%wovr(n) * mask_src(ni)
+       else
+          wt = 0._r8
+       end if
+       PetscCallA(MatSetValues(new_wt_mat, 1, no - 1, 1, ni - 1, wt, INSERT_VALUES, ierr))
+
+    end do
+
+    ! Fill in the source vector and a temporary vector
+    PetscCallA(VecGetArrayF90(gridmap%src_vec, src_p, ierr))
+    PetscCallA(VecGetArrayF90(ones_vec, vec_p, ierr))
+    do ni = 1, gridmap%na
+       src_p(ni) = src_array(ni)
+       vec_p(ni) = 1._r8
+    end do
+    PetscCallA(VecRestoreArrayF90(gridmap%src_vec, src_p, ierr))
+    PetscCallA(VecRestoreArrayF90(ones_vec, vec_p, ierr))
+
+    PetscCallA(MatAssemblyBegin(new_wt_mat, MAT_FINAL_ASSEMBLY, ierr))
+    PetscCallA(MatAssemblyEnd(new_wt_mat, MAT_FINAL_ASSEMBLY, ierr))
+
+    ! Do two matrix-vector products:
+    ! 1. wtnorm_vec = new_wt_mat * ones
+    ! 2. dst_vec    =  new_wt_mat * src_vec
+    PetscCallA(MatMult(new_wt_mat, ones_vec, wtnorm_vec, ierr))
+    PetscCallA(MatMult(new_wt_mat, gridmap%src_vec, gridmap%dst_vec, ierr))
+
+    ! Now, normalize each value in the destination vector by the value in wtnorm vector
+    PetscCallA(VecGetArrayF90(gridmap%dst_vec, dst_p, ierr))
+    PetscCallA(VecGetArrayF90(wtnorm_vec, wtnorm_p, ierr))
+    do no = 1, gridmap%nb
+       if (wtnorm_p(no) > 0._r8) then
+          dst_array(no) = dst_p(no)/wtnorm_p(no)
+       else
+          dst_array(no) = nodata
+       end if
+    end do
+    PetscCallA(VecRestoreArrayF90(gridmap%dst_vec, dst_p, ierr))
+    PetscCallA(VecRestoreArrayF90(wtnorm_vec, wtnorm_p, ierr))
+
+    ! Delete the temporary matrix and vectors
+    PetscCallA(MatDestroy(new_wt_mat, ierr))
+    PetscCallA(VecDestroy(ones_vec, ierr))
+    PetscCallA(VecDestroy(wtnorm_vec, ierr))
 
   end subroutine gridmap_areaave_srcmask
 

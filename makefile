@@ -51,10 +51,39 @@ mksurfdat_petsc_obj = mksurfdat_petsc.o \
   mkCH4inversionMod.o \
   mkvocefMod.o \
   mkSedMod.o \
-  mksoilphosphorusMod.o
+  mksoilphosphorusMod.o \
+  mkfileMod.o \
+  mkharvestMod.o \
+  mklaiMod.o
 
 mksurfdat_petsc : $(mksurfdat_petsc_obj)
 	${FLINKER} -o mksurfdat_petsc $(mksurfdat_petsc_obj) ${PETSC_LIB} ${LIBS} ${FFLAGS} ${LDFLAGS}
+
+mkfileMod.o : \
+  shr_kind_mod.o \
+  shr_sys_mod.o \
+  fileutils.o \
+  mkvarpar.o \
+  mkvarctl.o \
+  mkurbanparMod.o \
+  mkglcmecMod.o \
+  mkpftMod.o \
+  mksoilMod.o \
+  mkSedMod.o \
+  mkharvestMod.o \
+  mkncdio.o \
+  mkdomainMod.o \
+
+mklaiMod.o : \
+  shr_kind_mod.o \
+  shr_sys_mod.o \
+  mkdomainMod.o \
+  mkvarctl.o
+
+mkharvestMod.o : \
+  shr_kind_mod.o \
+  shr_sys_mod.o \
+  mkdomainMod.o
 
 mkSedMod.o : \
   shr_kind_mod.o \
@@ -164,7 +193,10 @@ mksurfdat_petsc.o : \
   mkCH4inversionMod.o \
   mkvocefMod.o \
   mkSedMod.o \
-  mksoilphosphorusMod.o
+  mksoilphosphorusMod.o \
+  mkfileMod.o \
+  mkharvestMod.o \
+  mklaiMod.o
 
 mklanwatMod.o	: \
   shr_kind_mod.o \

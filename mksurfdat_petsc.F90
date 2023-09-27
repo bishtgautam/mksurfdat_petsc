@@ -346,6 +346,12 @@ program mksurfdat_petsc
   call check_and_update_values()
   
   ! ----------------------------------------------------------------------
+  ! write out the netcdf file
+  ! ----------------------------------------------------------------------
+
+  call write_surface_dataset()
+
+  ! ----------------------------------------------------------------------
   ! deallocate memory for all variables
   ! ----------------------------------------------------------------------
   call deallocate_memory()
@@ -656,6 +662,23 @@ contains
     implicit none
 
     deallocate(pctlnd_pft)
+    deallocate ( organic )
+    deallocate ( ef1_btr, ef1_fet, ef1_fdt, ef1_shr, ef1_grs, ef1_crp )
+    if ( nglcec > 0 ) deallocate ( pctglcmec, topoglcmec)
+    if ( nglcec > 0 ) deallocate ( pctglc_gic, pctglc_icesheet)
+    deallocate ( elevclass )
+    deallocate ( fmax )
+    deallocate ( pctsand, pctclay )
+    deallocate ( soicol )
+    deallocate ( soiord )
+    deallocate ( gdp, fpeat, agfirepkmon )
+    deallocate ( topo_stddev, slope )
+    deallocate ( vic_binfl, vic_ws, vic_dsmax, vic_ds )
+    deallocate ( lakedepth )
+    deallocate ( f0, p3, zwt0 )
+    deallocate ( apatiteP, labileP, occludedP, secondaryP )
+    deallocate ( grvl, slp10 )
+    deallocate ( ero_c1, ero_c2, ero_c3, tillage, litho )
 
   end subroutine deallocate_memory
 
@@ -1150,6 +1173,247 @@ contains
     end if
 
   end subroutine normalizencheck_landuse
+
+
+  ! ----------------------------------------------------------------------
+  subroutine write_surface_dataset()
+
+    use mkfileMod
+    use mklaiMod
+    use mkncdio            , only : check_ret
+
+    implicit none
+
+    include 'netcdf.inc'
+
+    integer :: n
+    integer :: ns_o
+    integer  :: ncid                        ! netCDF id
+    integer  :: omode                       ! netCDF output mode
+    integer  :: varid                       ! netCDF variable id
+    integer  :: ndims                       ! netCDF number of dimensions
+    integer  :: beg(4),len(4),dimids(4)     ! netCDF dimension sizes 
+    integer  :: ret                         ! netCDF return status
+    character(len=32) :: subname = 'write_surface_dataset'
+
+    ns_o = ldomain%ns
+    
+    ! ----------------------------------------------------------------------
+    ! Create surface dataset
+    ! ----------------------------------------------------------------------
+
+    ! Create netCDF surface dataset.  
+
+    if (fsurdat == ' ') then
+       write(6,*)' must specify fsurdat in namelist'
+       stop
+    end if
+
+    call mkfile(ldomain, trim(fsurdat), dynlanduse = .false.)
+
+    call domain_write(ldomain, fsurdat)
+
+    call check_ret(nf_open(trim(fsurdat), nf_write, ncid), subname)
+    call check_ret(nf_set_fill (ncid, nf_nofill, omode), subname)
+
+    ! Write fields OTHER THAN lai, sai, heights, and urban parameters to netcdf surface dataset
+
+    call check_ret(nf_inq_varid(ncid, 'natpft', varid), subname)
+    call check_ret(nf_put_var_int(ncid, varid, (/(n,n=natpft_lb,natpft_ub)/)), subname)
+
+    if (num_cft > 0) then
+       call check_ret(nf_inq_varid(ncid, 'cft', varid), subname)
+       call check_ret(nf_put_var_int(ncid, varid, (/(n,n=cft_lb,cft_ub)/)), subname)
+    end if
+
+    call check_ret(nf_inq_varid(ncid, 'PFTDATA_MASK', varid), subname)
+    call check_ret(nf_put_var_int(ncid, varid, pftdata_mask), subname)
+
+    call check_ret(nf_inq_varid(ncid, 'LANDFRAC_PFT', varid), subname)
+    call check_ret(nf_put_var_double(ncid, varid, landfrac_pft), subname)
+
+    call check_ret(nf_inq_varid(ncid, 'mxsoil_color', varid), subname)
+    call check_ret(nf_put_var_int(ncid, varid, nsoicol), subname)
+
+    call check_ret(nf_inq_varid(ncid, 'SOIL_COLOR', varid), subname)
+    call check_ret(nf_put_var_int(ncid, varid, soicol), subname)
+ 
+    call check_ret(nf_inq_varid(ncid, 'mxsoil_order', varid), subname)
+    call check_ret(nf_put_var_int(ncid, varid, nsoiord), subname)
+
+    call check_ret(nf_inq_varid(ncid, 'SOIL_ORDER', varid), subname)
+    call check_ret(nf_put_var_int(ncid, varid, soiord), subname) 
+
+    call check_ret(nf_inq_varid(ncid, 'PCT_SAND', varid), subname)
+    call check_ret(nf_put_var_double(ncid, varid, pctsand), subname)
+
+    call check_ret(nf_inq_varid(ncid, 'PCT_CLAY', varid), subname)
+    call check_ret(nf_put_var_double(ncid, varid, pctclay), subname)
+
+    call check_ret(nf_inq_varid(ncid, 'PCT_WETLAND', varid), subname)
+    call check_ret(nf_put_var_double(ncid, varid, pctwet), subname)
+
+    call check_ret(nf_inq_varid(ncid, 'PCT_LAKE', varid), subname)
+    call check_ret(nf_put_var_double(ncid, varid, pctlak), subname)
+
+    call check_ret(nf_inq_varid(ncid, 'PCT_GLACIER', varid), subname)
+    call check_ret(nf_put_var_double(ncid, varid, pctgla), subname)
+
+    if ( nglcec > 0 )then
+       write(6,*)'error: add new code to support nglec > 0'
+       call abort()
+    end if
+
+    call check_ret(nf_inq_varid(ncid, 'TOPO', varid), subname)
+    call check_ret(nf_put_var_double(ncid, varid, topo), subname)
+
+    call check_ret(nf_inq_varid(ncid, 'PCT_URBAN', varid), subname)
+    call check_ret(nf_put_var_double(ncid, varid, urbn_classes_g), subname)
+
+    call check_ret(nf_inq_varid(ncid, 'PCT_NATVEG', varid), subname)
+    call check_ret(nf_put_var_double(ncid, varid, pctnatveg), subname)
+
+    call check_ret(nf_inq_varid(ncid, 'PCT_CROP', varid), subname)
+    call check_ret(nf_put_var_double(ncid, varid, pctcrop), subname)
+
+    call check_ret(nf_inq_varid(ncid, 'PCT_NAT_PFT', varid), subname)
+    call check_ret(nf_put_var_double(ncid, varid, pctnatpft), subname)
+
+    if (num_cft > 0) then
+       call check_ret(nf_inq_varid(ncid, 'PCT_CFT', varid), subname)
+       call check_ret(nf_put_var_double(ncid, varid, pctcft), subname)
+    end if
+
+    call check_ret(nf_inq_varid(ncid, 'FMAX', varid), subname)
+    call check_ret(nf_put_var_double(ncid, varid, fmax), subname)
+
+    call check_ret(nf_inq_varid(ncid, 'gdp', varid), subname)
+    call check_ret(nf_put_var_double(ncid, varid, gdp), subname)
+
+    call check_ret(nf_inq_varid(ncid, 'peatf', varid), subname)
+    call check_ret(nf_put_var_double(ncid, varid, fpeat), subname)
+
+    call check_ret(nf_inq_varid(ncid, 'abm', varid), subname)
+    call check_ret(nf_put_var_int(ncid, varid, agfirepkmon), subname)
+
+    call check_ret(nf_inq_varid(ncid, 'SLOPE', varid), subname)
+    call check_ret(nf_put_var_double(ncid, varid, slope), subname)
+
+    call check_ret(nf_inq_varid(ncid, 'STD_ELEV', varid), subname)
+    call check_ret(nf_put_var_double(ncid, varid, topo_stddev), subname)
+
+    call check_ret(nf_inq_varid(ncid, 'binfl', varid), subname)
+    call check_ret(nf_put_var_double(ncid, varid, vic_binfl), subname)
+
+    call check_ret(nf_inq_varid(ncid, 'Ws', varid), subname)
+    call check_ret(nf_put_var_double(ncid, varid, vic_ws), subname)
+
+    call check_ret(nf_inq_varid(ncid, 'Dsmax', varid), subname)
+    call check_ret(nf_put_var_double(ncid, varid, vic_dsmax), subname)
+
+    call check_ret(nf_inq_varid(ncid, 'Ds', varid), subname)
+    call check_ret(nf_put_var_double(ncid, varid, vic_ds), subname)
+
+    call check_ret(nf_inq_varid(ncid, 'LAKEDEPTH', varid), subname)
+    call check_ret(nf_put_var_double(ncid, varid, lakedepth), subname)
+
+    call check_ret(nf_inq_varid(ncid, 'F0', varid), subname)
+    call check_ret(nf_put_var_double(ncid, varid, f0), subname)
+
+    call check_ret(nf_inq_varid(ncid, 'P3', varid), subname)
+    call check_ret(nf_put_var_double(ncid, varid, p3), subname)
+
+    call check_ret(nf_inq_varid(ncid, 'ZWT0', varid), subname)
+    call check_ret(nf_put_var_double(ncid, varid, zwt0), subname)
+
+    call check_ret(nf_inq_varid(ncid, 'EF1_BTR', varid), subname)
+    call check_ret(nf_put_var_double(ncid, varid, ef1_btr), subname)
+
+    call check_ret(nf_inq_varid(ncid, 'EF1_FET', varid), subname)
+    call check_ret(nf_put_var_double(ncid, varid, ef1_fet), subname)
+
+    call check_ret(nf_inq_varid(ncid, 'EF1_FDT', varid), subname)
+    call check_ret(nf_put_var_double(ncid, varid, ef1_fdt), subname)
+
+    call check_ret(nf_inq_varid(ncid, 'EF1_SHR', varid), subname)
+    call check_ret(nf_put_var_double(ncid, varid, ef1_shr), subname)
+
+    call check_ret(nf_inq_varid(ncid, 'EF1_GRS', varid), subname)
+    call check_ret(nf_put_var_double(ncid, varid, ef1_grs), subname)
+
+    call check_ret(nf_inq_varid(ncid, 'EF1_CRP', varid), subname)
+    call check_ret(nf_put_var_double(ncid, varid, ef1_crp), subname)
+
+    call check_ret(nf_inq_varid(ncid, 'ORGANIC', varid), subname)
+    call check_ret(nf_put_var_double(ncid, varid, organic), subname)
+
+    call check_ret(nf_inq_varid(ncid, 'URBAN_REGION_ID', varid), subname)
+    call check_ret(nf_put_var_int(ncid, varid, urban_region), subname)
+
+    call check_ret(nf_inq_varid(ncid, 'APATITE_P', varid), subname)
+    call check_ret(nf_put_var_double(ncid, varid, apatiteP), subname)
+
+    call check_ret(nf_inq_varid(ncid, 'LABILE_P', varid), subname)
+    call check_ret(nf_put_var_double(ncid, varid, labileP), subname)
+
+    call check_ret(nf_inq_varid(ncid, 'OCCLUDED_P', varid), subname)
+    call check_ret(nf_put_var_double(ncid, varid, occludedP), subname)
+
+    call check_ret(nf_inq_varid(ncid, 'SECONDARY_P', varid), subname)
+    call check_ret(nf_put_var_double(ncid, varid, secondaryP), subname)
+
+    call check_ret(nf_inq_varid(ncid, 'PCT_GRVL', varid), subname)
+    call check_ret(nf_put_var_double(ncid, varid, grvl), subname) 
+
+    call check_ret(nf_inq_varid(ncid, 'SLP_P10', varid), subname)
+    call check_ret(nf_put_var_double(ncid, varid, slp10), subname)
+
+    call check_ret(nf_inq_varid(ncid, 'parEro_c1', varid), subname)
+    call check_ret(nf_put_var_double(ncid, varid, ero_c1), subname)
+
+    call check_ret(nf_inq_varid(ncid, 'parEro_c2', varid), subname)
+    call check_ret(nf_put_var_double(ncid, varid, ero_c2), subname)
+
+    call check_ret(nf_inq_varid(ncid, 'parEro_c3', varid), subname)
+    call check_ret(nf_put_var_double(ncid, varid, ero_c3), subname)
+
+    call check_ret(nf_inq_varid(ncid, 'Tillage', varid), subname)
+    call check_ret(nf_put_var_double(ncid, varid, tillage), subname)
+
+    call check_ret(nf_inq_varid(ncid, 'Litho', varid), subname)
+    call check_ret(nf_put_var_double(ncid, varid, litho), subname)
+
+    ! Synchronize the disk copy of a netCDF dataset with in-memory buffers
+
+    call check_ret(nf_sync(ncid), subname)
+
+    ! ----------------------------------------------------------------------
+    ! Make Urban Parameters from raw input data and write to surface dataset 
+    ! Write to netcdf file is done inside mkurbanpar routine
+    ! ----------------------------------------------------------------------
+
+    write(6,*)'calling mkurbanpar'
+    call mkurbanpar(datfname=mksrf_furban, ncido=ncid, region_o=urban_region, &
+         urbn_classes_gcell_o=urbn_classes_g)
+
+    ! ----------------------------------------------------------------------
+    ! Make LAI and SAI from 1/2 degree data and write to surface dataset 
+    ! Write to netcdf file is done inside mklai routine
+    ! ----------------------------------------------------------------------
+
+    write(6,*)'calling mklai'
+    call mklai(ldomain, mapfname=map_flai, datfname=mksrf_flai, &
+         ndiag=ndiag, ncido=ncid )
+
+    ! Close surface dataset
+
+    call check_ret(nf_close(ncid), subname)
+
+    write (6,'(72a1)') ("-",n=1,60)
+    write (6,*)' land model surface data set successfully created for ', &
+         'grid of size ',ns_o
+
+  end subroutine write_surface_dataset
 
 end program mksurfdat_petsc
 
