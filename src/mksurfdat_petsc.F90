@@ -4,6 +4,7 @@ program mksurfdat_petsc
   use mkdomainMod  , only : domain_type, domain_read_map, domain_read, &
        domain_write
   use mkpftMod     , only : mkpft
+  use mkdomainPIOMod, only : domain_pio_type, domain_read_map_pio
   use mkglcmecMod
   use mksoilMod
   use mkpftMod
@@ -23,10 +24,12 @@ program mksurfdat_petsc
   use mkutilsMod
   use petsc
   use fileutils
+  use spmdMod
 
   implicit none
 
 #include "petsc/finclude/petscsys.h"
+
 
   integer  :: nsoicol                     ! number of model color classes
   integer  :: nsoiord                     ! number of model order classes
@@ -46,7 +49,7 @@ program mksurfdat_petsc
   real(r8), allocatable  :: pctlnd_pft_dyn(:)  ! PFT data: % of gridcell for dyn landuse PFTs
   integer , allocatable  :: pftdata_mask(:)    ! mask indicating real or fake land type
   real(r8), pointer      :: pctpft_full(:,:)   ! PFT data: % cover of each pft and cft on the vegetated landunits
-                                               ! ('full' denotes inclusion of CFTs as well as natural PFTs in this array)
+  ! ('full' denotes inclusion of CFTs as well as natural PFTs in this array)
   real(r8), allocatable  :: pctnatveg(:)       ! percent of grid cell that is natural veg landunit
   real(r8), allocatable  :: pctcrop(:)         ! percent of grid cell that is crop landunit
   real(r8), allocatable  :: pctnatpft(:,:)     ! % of each pft on the natural veg landunit (adds to 100%)
@@ -106,6 +109,7 @@ program mksurfdat_petsc
   real(r8), allocatable  :: litho(:)           ! lithology erodiblity index (unitless)
 
   type(domain_type) :: ldomain
+  type(domain_pio_type) :: ldomain_pio
 
   namelist /elmexp/              &
        mksrf_fgrid,              &	
@@ -181,7 +185,13 @@ program mksurfdat_petsc
   ! Initialize PETSc
   PetscCallA(PetscInitialize(ierr))
 
-  write(6,*) 'Attempting to initialize control settings .....'
+  mpicom = PETSC_COMM_WORLD
+
+  PetscCallMPIA(MPI_Comm_size(PETSC_COMM_WORLD,npes,ierr))
+  PetscCallMPIA(MPI_Comm_rank(PETSC_COMM_WORLD,iam,ierr))
+  masterproc = (iam == 0)
+
+  if (masterproc) write(6,*) 'Attempting to initialize control settings .....'
 
   ! Reads namelist
   call setup_namelist()
@@ -192,8 +202,15 @@ program mksurfdat_petsc
   allocate ( elevclass(nglcec+1) )
   call mkglcmecInit (elevclass)
   call mkurbanInit (mksrf_furban)
-  
-  write(6,*)'calling domain_read'
+
+  if (.not. domain_read_map_pio(ldomain_pio, mksrf_fgrid)) then
+     if (masterproc) then
+        write(6,*)'domain_read_map_pio returned FALSE. Add code to support this case'
+        call abort()
+     end if
+  endif
+
+  if (masterproc) write(6,*)'calling domain_read'
   if ( .not. domain_read_map(ldomain, mksrf_fgrid) )then
      call domain_read(ldomain, mksrf_fgrid)
   end if
@@ -344,7 +361,7 @@ program mksurfdat_petsc
 
   ! Perform few sanity checks and update the values, if needed
   call check_and_update_values()
-  
+
   ! ----------------------------------------------------------------------
   ! write out the netcdf file
   ! ----------------------------------------------------------------------
@@ -430,89 +447,141 @@ contains
     all_urban         = .false.
     no_inlandwet      = .true.
 
-    read(5, elmexp, iostat=ier)
-    if (ier /= 0) then
-       write(6,*)'error: namelist input resulted in error code ',ier
-       call abort()
-    endif
+    if (masterproc) then
+       read(5, elmexp, iostat=ier)
+       if (ier /= 0) then
+          write(6,*)'error: namelist input resulted in error code ',ier
+          call abort()
+       endif
 
-    call check_namelist_variable(mksrf_fgrid       ,'mksrf_fgrid'       )
-    call check_namelist_variable(mksrf_fvegtyp     ,'mksrf_fvegtyp'     )
-    call check_namelist_variable(mksrf_fsoitex     ,'mksrf_fsoitex'     )
-    call check_namelist_variable(mksrf_forganic    ,'mksrf_forganic'    )
-    call check_namelist_variable(mksrf_fsoicol     ,'mksrf_fsoicol'     )
-    call check_namelist_variable(mksrf_fsoiord     ,'mksrf_fsoiord'     )
-    call check_namelist_variable(mksrf_fvocef      ,'mksrf_fvocef'      )
-    call check_namelist_variable(mksrf_flakwat     ,'mksrf_flakwat'     )
-    call check_namelist_variable(mksrf_fwetlnd     ,'mksrf_fwetlnd'     )
-    call check_namelist_variable(mksrf_fglacier    ,'mksrf_fglacier'    )
-    call check_namelist_variable(mksrf_furbtopo    ,'mksrf_furbtopo'    )
-    call check_namelist_variable(mksrf_flndtopo    ,'mksrf_flndtopo'    )
-    call check_namelist_variable(mksrf_fmax        ,'mksrf_fmax'        )
-    call check_namelist_variable(mksrf_furban      ,'mksrf_furban'      )
-    call check_namelist_variable(mksrf_flai        ,'mksrf_flai'        )
-    call check_namelist_variable(mksrf_fgdp        ,'mksrf_fgdp'        )
-    call check_namelist_variable(mksrf_fpeat       ,'mksrf_fpeat'       )
-    call check_namelist_variable(mksrf_fabm        ,'mksrf_fabm'        )
-    call check_namelist_variable(mksrf_ftopostats  ,'mksrf_ftopostats'  )
-    call check_namelist_variable(mksrf_fvic        ,'mksrf_fvic'        )
-    call check_namelist_variable(mksrf_fch4        ,'mksrf_fch4'        )
-    call check_namelist_variable(mksrf_fphosphorus ,'mksrf_fphosphorus' )
-    call check_namelist_variable(mksrf_fgrvl       ,'mksrf_fgrvl'       )
-    call check_namelist_variable(mksrf_fslp10      ,'mksrf_fslp10'      )
-    call check_namelist_variable(mksrf_fero        ,'mksrf_fero'        )
+       call check_namelist_variable(mksrf_fgrid       ,'mksrf_fgrid'       )
+       call check_namelist_variable(mksrf_fvegtyp     ,'mksrf_fvegtyp'     )
+       call check_namelist_variable(mksrf_fsoitex     ,'mksrf_fsoitex'     )
+       call check_namelist_variable(mksrf_forganic    ,'mksrf_forganic'    )
+       call check_namelist_variable(mksrf_fsoicol     ,'mksrf_fsoicol'     )
+       call check_namelist_variable(mksrf_fsoiord     ,'mksrf_fsoiord'     )
+       call check_namelist_variable(mksrf_fvocef      ,'mksrf_fvocef'      )
+       call check_namelist_variable(mksrf_flakwat     ,'mksrf_flakwat'     )
+       call check_namelist_variable(mksrf_fwetlnd     ,'mksrf_fwetlnd'     )
+       call check_namelist_variable(mksrf_fglacier    ,'mksrf_fglacier'    )
+       call check_namelist_variable(mksrf_furbtopo    ,'mksrf_furbtopo'    )
+       call check_namelist_variable(mksrf_flndtopo    ,'mksrf_flndtopo'    )
+       call check_namelist_variable(mksrf_fmax        ,'mksrf_fmax'        )
+       call check_namelist_variable(mksrf_furban      ,'mksrf_furban'      )
+       call check_namelist_variable(mksrf_flai        ,'mksrf_flai'        )
+       call check_namelist_variable(mksrf_fgdp        ,'mksrf_fgdp'        )
+       call check_namelist_variable(mksrf_fpeat       ,'mksrf_fpeat'       )
+       call check_namelist_variable(mksrf_fabm        ,'mksrf_fabm'        )
+       call check_namelist_variable(mksrf_ftopostats  ,'mksrf_ftopostats'  )
+       call check_namelist_variable(mksrf_fvic        ,'mksrf_fvic'        )
+       call check_namelist_variable(mksrf_fch4        ,'mksrf_fch4'        )
+       call check_namelist_variable(mksrf_fphosphorus ,'mksrf_fphosphorus' )
+       call check_namelist_variable(mksrf_fgrvl       ,'mksrf_fgrvl'       )
+       call check_namelist_variable(mksrf_fslp10      ,'mksrf_fslp10'      )
+       call check_namelist_variable(mksrf_fero        ,'mksrf_fero'        )
 
-    call check_namelist_variable(map_flakwat       ,'map_flakwat'       )
-    call check_namelist_variable(map_fwetlnd       ,'map_fwetlnd'       )
-    call check_namelist_variable(map_fglacier      ,'map_fglacier'      )
-    call check_namelist_variable(map_fsoitex       ,'map_fsoitex'       )
-    call check_namelist_variable(map_fsoicol       ,'map_fsoicol'       )
-    call check_namelist_variable(map_fsoiord       ,'map_fsoiord'       )
-    call check_namelist_variable(map_furban        ,'map_furban'        )
-    call check_namelist_variable(map_furbtopo      ,'map_furbtopo'      )
-    call check_namelist_variable(map_flndtopo      ,'map_flndtopo'      )
-    call check_namelist_variable(map_fmax          ,'map_fmax'          )
-    call check_namelist_variable(map_forganic      ,'map_forganic'      )
-    call check_namelist_variable(map_fvocef        ,'map_fvocef'        )
-    call check_namelist_variable(map_flai          ,'map_flai'          )
-    call check_namelist_variable(map_fharvest      ,'map_fharvest'      )
-    call check_namelist_variable(map_fgdp          ,'map_fgdp'          )
-    call check_namelist_variable(map_fpeat         ,'map_fpeat'         )
-    call check_namelist_variable(map_fabm          ,'map_fabm'          )
-    call check_namelist_variable(map_ftopostats    ,'map_ftopostats'    )
-    call check_namelist_variable(map_fvic          ,'map_fvic'          )
-    call check_namelist_variable(map_fch4          ,'map_fch4'          )
-    call check_namelist_variable(map_fphosphorus   ,'map_fphosphorus'   )
-    call check_namelist_variable(map_fgrvl         ,'map_fgrvl'         )
-    call check_namelist_variable(map_fslp10        ,'map_fslp10'        )
-    call check_namelist_variable(map_fero          ,'map_fero'          )
+       call check_namelist_variable(map_flakwat       ,'map_flakwat'       )
+       call check_namelist_variable(map_fwetlnd       ,'map_fwetlnd'       )
+       call check_namelist_variable(map_fglacier      ,'map_fglacier'      )
+       call check_namelist_variable(map_fsoitex       ,'map_fsoitex'       )
+       call check_namelist_variable(map_fsoicol       ,'map_fsoicol'       )
+       call check_namelist_variable(map_fsoiord       ,'map_fsoiord'       )
+       call check_namelist_variable(map_furban        ,'map_furban'        )
+       call check_namelist_variable(map_furbtopo      ,'map_furbtopo'      )
+       call check_namelist_variable(map_flndtopo      ,'map_flndtopo'      )
+       call check_namelist_variable(map_fmax          ,'map_fmax'          )
+       call check_namelist_variable(map_forganic      ,'map_forganic'      )
+       call check_namelist_variable(map_fvocef        ,'map_fvocef'        )
+       call check_namelist_variable(map_flai          ,'map_flai'          )
+       call check_namelist_variable(map_fharvest      ,'map_fharvest'      )
+       call check_namelist_variable(map_fgdp          ,'map_fgdp'          )
+       call check_namelist_variable(map_fpeat         ,'map_fpeat'         )
+       call check_namelist_variable(map_fabm          ,'map_fabm'          )
+       call check_namelist_variable(map_ftopostats    ,'map_ftopostats'    )
+       call check_namelist_variable(map_fvic          ,'map_fvic'          )
+       call check_namelist_variable(map_fch4          ,'map_fch4'          )
+       call check_namelist_variable(map_fphosphorus   ,'map_fphosphorus'   )
+       call check_namelist_variable(map_fgrvl         ,'map_fgrvl'         )
+       call check_namelist_variable(map_fslp10        ,'map_fslp10'        )
+       call check_namelist_variable(map_fero          ,'map_fero'          )
 
-    call check_namelist_variable(fsurlog, 'fsurlog')
-    ndiag = getavu()
-    call opnfil(fsurlog, ndiag, 'f')
+       call check_namelist_variable(fsurlog, 'fsurlog')
+       ndiag = getavu()
+       call opnfil(fsurlog, ndiag, 'f')
 
+       if (trim(mksrf_gridtype) == 'global' .or. &
+            trim(mksrf_gridtype) == 'regional') then
+          write(6,*)'mksrf_gridtype = ',trim(mksrf_gridtype)
+       else
+          write(6,*)'mksrf_gridtype = ',trim(mksrf_gridtype)
+          write (6,*)'illegal mksrf_gridtype, must be global or regional '
+          call abort()
+       endif
 
-    if (trim(mksrf_gridtype) == 'global' .or. &
-         trim(mksrf_gridtype) == 'regional') then
-       write(6,*)'mksrf_gridtype = ',trim(mksrf_gridtype)
-    else
-       write(6,*)'mksrf_gridtype = ',trim(mksrf_gridtype)
-       write (6,*)'illegal mksrf_gridtype, must be global or regional '
-       call abort()
-    endif
+       if ( outnc_large_files )then
+          write(6,*)'Output file in NetCDF 64-bit large_files format'
+       end if
+       if ( outnc_double )then
+          write(6,*)'Output ALL data in file as 64-bit'
+       end if
+       if ( all_urban )then
+          write(6,*) 'Output ALL data in file as 100% urban'
+       end if
+       if ( no_inlandwet )then
+          write(6,*) 'Set wetland to 0% over land'
+       end if
 
-    if ( outnc_large_files )then
-       write(6,*)'Output file in NetCDF 64-bit large_files format'
     end if
-    if ( outnc_double )then
-       write(6,*)'Output ALL data in file as 64-bit'
-    end if
-    if ( all_urban )then
-       write(6,*) 'Output ALL data in file as 100% urban'
-    end if
-    if ( no_inlandwet )then
-       write(6,*) 'Set wetland to 0% over land'
-    end if
+
+    call mpi_bcast(mksrf_fgrid       , len(mksrf_fgrid)       , MPI_CHARACTER, 0, PETSC_COMM_WORLD, ier) 
+    call mpi_bcast(mksrf_fvegtyp     , len(mksrf_fvegtyp)     , MPI_CHARACTER, 0, PETSC_COMM_WORLD, ier) 
+    call mpi_bcast(mksrf_fsoitex     , len(mksrf_fsoitex)     , MPI_CHARACTER, 0, PETSC_COMM_WORLD, ier) 
+    call mpi_bcast(mksrf_forganic    , len(mksrf_forganic)    , MPI_CHARACTER, 0, PETSC_COMM_WORLD, ier) 
+    call mpi_bcast(mksrf_fsoicol     , len(mksrf_fsoicol)     , MPI_CHARACTER, 0, PETSC_COMM_WORLD, ier) 
+    call mpi_bcast(mksrf_fsoiord     , len(mksrf_fsoiord)     , MPI_CHARACTER, 0, PETSC_COMM_WORLD, ier) 
+    call mpi_bcast(mksrf_fvocef      , len(mksrf_fvocef)      , MPI_CHARACTER, 0, PETSC_COMM_WORLD, ier) 
+    call mpi_bcast(mksrf_flakwat     , len(mksrf_flakwat)     , MPI_CHARACTER, 0, PETSC_COMM_WORLD, ier) 
+    call mpi_bcast(mksrf_fwetlnd     , len(mksrf_fwetlnd)     , MPI_CHARACTER, 0, PETSC_COMM_WORLD, ier) 
+    call mpi_bcast(mksrf_fglacier    , len(mksrf_fglacier)    , MPI_CHARACTER, 0, PETSC_COMM_WORLD, ier) 
+    call mpi_bcast(mksrf_furbtopo    , len(mksrf_furbtopo)    , MPI_CHARACTER, 0, PETSC_COMM_WORLD, ier) 
+    call mpi_bcast(mksrf_flndtopo    , len(mksrf_flndtopo)    , MPI_CHARACTER, 0, PETSC_COMM_WORLD, ier) 
+    call mpi_bcast(mksrf_fmax        , len(mksrf_fmax)        , MPI_CHARACTER, 0, PETSC_COMM_WORLD, ier) 
+    call mpi_bcast(mksrf_furban      , len(mksrf_furban)      , MPI_CHARACTER, 0, PETSC_COMM_WORLD, ier) 
+    call mpi_bcast(mksrf_flai        , len(mksrf_flai)        , MPI_CHARACTER, 0, PETSC_COMM_WORLD, ier) 
+    call mpi_bcast(mksrf_fgdp        , len(mksrf_fgdp)        , MPI_CHARACTER, 0, PETSC_COMM_WORLD, ier) 
+    call mpi_bcast(mksrf_fpeat       , len(mksrf_fpeat)       , MPI_CHARACTER, 0, PETSC_COMM_WORLD, ier) 
+    call mpi_bcast(mksrf_fabm        , len(mksrf_fabm)        , MPI_CHARACTER, 0, PETSC_COMM_WORLD, ier) 
+    call mpi_bcast(mksrf_ftopostats  , len(mksrf_ftopostats)  , MPI_CHARACTER, 0, PETSC_COMM_WORLD, ier) 
+    call mpi_bcast(mksrf_fvic        , len(mksrf_fvic)        , MPI_CHARACTER, 0, PETSC_COMM_WORLD, ier) 
+    call mpi_bcast(mksrf_fch4        , len(mksrf_fch4)        , MPI_CHARACTER, 0, PETSC_COMM_WORLD, ier) 
+    call mpi_bcast(mksrf_fphosphorus , len(mksrf_fphosphorus) , MPI_CHARACTER, 0, PETSC_COMM_WORLD, ier) 
+    call mpi_bcast(mksrf_fgrvl       , len(mksrf_fgrvl)       , MPI_CHARACTER, 0, PETSC_COMM_WORLD, ier) 
+    call mpi_bcast(mksrf_fslp10      , len(mksrf_fslp10)      , MPI_CHARACTER, 0, PETSC_COMM_WORLD, ier) 
+    call mpi_bcast(mksrf_fero        , len(mksrf_fero)        , MPI_CHARACTER, 0, PETSC_COMM_WORLD, ier) 
+    call mpi_bcast(map_flakwat       , len(map_flakwat)       , MPI_CHARACTER, 0, PETSC_COMM_WORLD, ier) 
+    call mpi_bcast(map_fwetlnd       , len(map_fwetlnd)       , MPI_CHARACTER, 0, PETSC_COMM_WORLD, ier) 
+    call mpi_bcast(map_fglacier      , len(map_fglacier)      , MPI_CHARACTER, 0, PETSC_COMM_WORLD, ier) 
+    call mpi_bcast(map_fsoitex       , len(map_fsoitex)       , MPI_CHARACTER, 0, PETSC_COMM_WORLD, ier) 
+    call mpi_bcast(map_fsoicol       , len(map_fsoicol)       , MPI_CHARACTER, 0, PETSC_COMM_WORLD, ier) 
+    call mpi_bcast(map_fsoiord       , len(map_fsoiord)       , MPI_CHARACTER, 0, PETSC_COMM_WORLD, ier) 
+    call mpi_bcast(map_furban        , len(map_furban)        , MPI_CHARACTER, 0, PETSC_COMM_WORLD, ier) 
+    call mpi_bcast(map_furbtopo      , len(map_furbtopo)      , MPI_CHARACTER, 0, PETSC_COMM_WORLD, ier) 
+    call mpi_bcast(map_flndtopo      , len(map_flndtopo)      , MPI_CHARACTER, 0, PETSC_COMM_WORLD, ier) 
+    call mpi_bcast(map_fmax          , len(map_fmax)          , MPI_CHARACTER, 0, PETSC_COMM_WORLD, ier) 
+    call mpi_bcast(map_forganic      , len(map_forganic)      , MPI_CHARACTER, 0, PETSC_COMM_WORLD, ier) 
+    call mpi_bcast(map_fvocef        , len(map_fvocef)        , MPI_CHARACTER, 0, PETSC_COMM_WORLD, ier) 
+    call mpi_bcast(map_flai          , len(map_flai)          , MPI_CHARACTER, 0, PETSC_COMM_WORLD, ier) 
+    call mpi_bcast(map_fharvest      , len(map_fharvest)      , MPI_CHARACTER, 0, PETSC_COMM_WORLD, ier) 
+    call mpi_bcast(map_fgdp          , len(map_fgdp)          , MPI_CHARACTER, 0, PETSC_COMM_WORLD, ier) 
+    call mpi_bcast(map_fpeat         , len(map_fpeat)         , MPI_CHARACTER, 0, PETSC_COMM_WORLD, ier) 
+    call mpi_bcast(map_fabm          , len(map_fabm)          , MPI_CHARACTER, 0, PETSC_COMM_WORLD, ier) 
+    call mpi_bcast(map_ftopostats    , len(map_ftopostats)    , MPI_CHARACTER, 0, PETSC_COMM_WORLD, ier) 
+    call mpi_bcast(map_fvic          , len(map_fvic)          , MPI_CHARACTER, 0, PETSC_COMM_WORLD, ier) 
+    call mpi_bcast(map_fch4          , len(map_fch4)          , MPI_CHARACTER, 0, PETSC_COMM_WORLD, ier) 
+    call mpi_bcast(map_fphosphorus   , len(map_fphosphorus)   , MPI_CHARACTER, 0, PETSC_COMM_WORLD, ier) 
+    call mpi_bcast(map_fgrvl         , len(map_fgrvl)         , MPI_CHARACTER, 0, PETSC_COMM_WORLD, ier) 
+    call mpi_bcast(map_fslp10        , len(map_fslp10)        , MPI_CHARACTER, 0, PETSC_COMM_WORLD, ier) 
+    call mpi_bcast(map_fero          , len(map_fero)          , MPI_CHARACTER, 0, PETSC_COMM_WORLD, ier) 
 
   end subroutine setup_namelist
 
@@ -543,58 +612,58 @@ contains
     ns_o = ldomain%ns
 
     allocate ( landfrac_pft(ns_o)                  , &
-               pctlnd_pft(ns_o)                    , &
-               pftdata_mask(ns_o)                  , &
-               pctpft_full(ns_o,0:numpft)          , &
-               pctnatveg(ns_o)                     , &
-               pctcrop(ns_o)                       , &
-               pctnatpft(ns_o,natpft_lb:natpft_ub) , &
-               pctcft(ns_o,cft_lb:cft_ub)          , &
-               pctgla(ns_o)                        , &
-               pctlak(ns_o)                        , &
-               pctwet(ns_o)                        , &
-               pcturb(ns_o)                        , &
-               urban_region(ns_o)                  , &
-               urbn_classes(ns_o,numurbl)          , &
-               urbn_classes_g(ns_o,numurbl)        , &
-               pctsand(ns_o,nlevsoi)               , &
-               pctclay(ns_o,nlevsoi)               , &
-               soicol(ns_o)                        , &
-               soiord(ns_o)                        , &
-               gdp(ns_o)                           , &
-               fpeat(ns_o)                         , &
-               agfirepkmon(ns_o)                   , &
-               topo_stddev(ns_o)                   , &
-               slope(ns_o)                         , &
-               vic_binfl(ns_o)                     , &
-               vic_ws(ns_o)                        , &
-               vic_dsmax(ns_o)                     , &
-               vic_ds(ns_o)                        , &
-               lakedepth(ns_o)                     , &
-               f0(ns_o)                            , &
-               p3(ns_o)                            , &
-               zwt0(ns_o)                          , &
-               apatiteP(ns_o)                      , &
-               labileP(ns_o)                       , &
-               occludedP(ns_o)                     , &
-               secondaryP(ns_o)                    , &
-               grvl(ns_o,nlevsoi)                  , &
-               slp10(ns_o,nlevslp)                 , &
-               ero_c1(ns_o)                        , &
-               ero_c2(ns_o)                        , &
-               ero_c3(ns_o)                        , &
-               tillage(ns_o)                       , &
-               litho(ns_o)                         , &
-               fmax(ns_o)                          , &
-               topo(ns_o)                          , &
-               organic(ns_o,nlevsoi)               , &
-               ef1_btr(ns_o)                       , & 
-               ef1_fet(ns_o)                       , & 
-               ef1_fdt(ns_o)                       , & 
-               ef1_shr(ns_o)                       , & 
-               ef1_grs(ns_o)                       , & 
-               ef1_crp(ns_o)                         &
-               )
+         pctlnd_pft(ns_o)                    , &
+         pftdata_mask(ns_o)                  , &
+         pctpft_full(ns_o,0:numpft)          , &
+         pctnatveg(ns_o)                     , &
+         pctcrop(ns_o)                       , &
+         pctnatpft(ns_o,natpft_lb:natpft_ub) , &
+         pctcft(ns_o,cft_lb:cft_ub)          , &
+         pctgla(ns_o)                        , &
+         pctlak(ns_o)                        , &
+         pctwet(ns_o)                        , &
+         pcturb(ns_o)                        , &
+         urban_region(ns_o)                  , &
+         urbn_classes(ns_o,numurbl)          , &
+         urbn_classes_g(ns_o,numurbl)        , &
+         pctsand(ns_o,nlevsoi)               , &
+         pctclay(ns_o,nlevsoi)               , &
+         soicol(ns_o)                        , &
+         soiord(ns_o)                        , &
+         gdp(ns_o)                           , &
+         fpeat(ns_o)                         , &
+         agfirepkmon(ns_o)                   , &
+         topo_stddev(ns_o)                   , &
+         slope(ns_o)                         , &
+         vic_binfl(ns_o)                     , &
+         vic_ws(ns_o)                        , &
+         vic_dsmax(ns_o)                     , &
+         vic_ds(ns_o)                        , &
+         lakedepth(ns_o)                     , &
+         f0(ns_o)                            , &
+         p3(ns_o)                            , &
+         zwt0(ns_o)                          , &
+         apatiteP(ns_o)                      , &
+         labileP(ns_o)                       , &
+         occludedP(ns_o)                     , &
+         secondaryP(ns_o)                    , &
+         grvl(ns_o,nlevsoi)                  , &
+         slp10(ns_o,nlevslp)                 , &
+         ero_c1(ns_o)                        , &
+         ero_c2(ns_o)                        , &
+         ero_c3(ns_o)                        , &
+         tillage(ns_o)                       , &
+         litho(ns_o)                         , &
+         fmax(ns_o)                          , &
+         topo(ns_o)                          , &
+         organic(ns_o,nlevsoi)               , &
+         ef1_btr(ns_o)                       , & 
+         ef1_fet(ns_o)                       , & 
+         ef1_fdt(ns_o)                       , & 
+         ef1_shr(ns_o)                       , & 
+         ef1_grs(ns_o)                       , & 
+         ef1_crp(ns_o)                         &
+         )
 
     landfrac_pft(:)       = spval
     pctlnd_pft(:)         = spval
@@ -698,12 +767,12 @@ contains
 
        ! Assume wetland and/or lake when dataset landmask implies ocean 
        ! (assume medium soil color (15), soil order(15) and loamy texture).
-       
+
        ! Also set pftdata_mask here
        ! Note that pctpft_full is NOT adjusted here, so that we still have information
        ! about the landunit breakdown into PFTs (pctnatveg and pctcrop will later become 0
        ! due to wetland and lake adding to 100%).
-       
+
        if (pctlnd_pft(n) < 1.e-6_r8) then
           pftdata_mask(n)  = 0
           soicol(n)        = 15
@@ -728,7 +797,7 @@ contains
        ! Truncate all percentage fields on output grid. This is needed to
        ! insure that wt is zero (not a very small number such as
        ! 1e-16) where it really should be zero
-       
+
        do k = 1,nlevsoi
           pctsand(n,k) = float(nint(pctsand(n,k)))
           pctclay(n,k) = float(nint(pctclay(n,k)))
@@ -737,10 +806,10 @@ contains
        pctlak(n) = float(nint(pctlak(n)))
        pctwet(n) = float(nint(pctwet(n)))
        pctgla(n) = float(nint(pctgla(n)))
-       
+
        ! Make sure sum of land cover types does not exceed 100. If it does,
        ! subtract excess from most dominant land cover.
-       
+
        suma = pctlak(n) + pctwet(n) + pcturb(n) + pctgla(n)
        if (suma > 250._r4) then
           write (6,*) subname, ' error: sum of pctlak, pctwet,', &
@@ -754,7 +823,7 @@ contains
           pcturb(n) = pcturb(n) * 100._r8/suma
           pctgla(n) = pctgla(n) * 100._r8/suma
        end if
-       
+
     end do
 
     call normalizencheck_landuse(ldomain)
@@ -1197,7 +1266,7 @@ contains
     character(len=32) :: subname = 'write_surface_dataset'
 
     ns_o = ldomain%ns
-    
+
     ! ----------------------------------------------------------------------
     ! Create surface dataset
     ! ----------------------------------------------------------------------
@@ -1237,7 +1306,7 @@ contains
 
     call check_ret(nf_inq_varid(ncid, 'SOIL_COLOR', varid), subname)
     call check_ret(nf_put_var_int(ncid, varid, soicol), subname)
- 
+
     call check_ret(nf_inq_varid(ncid, 'mxsoil_order', varid), subname)
     call check_ret(nf_put_var_int(ncid, varid, nsoiord), subname)
 
