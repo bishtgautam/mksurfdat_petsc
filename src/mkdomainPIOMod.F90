@@ -107,6 +107,8 @@ contains
   !----------------------------------------------------------------------------
   subroutine read_float_or_double(domain, pioIoSystem, ncid, varname, dataBuffer1d, dataBuffer2d)
 
+    use pio, only : PIO_DOUBLE
+    !
     implicit none
 
     type(domain_pio_type) , intent(inout)        :: domain
@@ -116,6 +118,7 @@ contains
     real(r8)              , intent(out), pointer :: dataBuffer1d(:)
     real(r8)              , intent(out), pointer :: dataBuffer2d(:,:)
 
+    real, pointer      :: dataBuffer1DFloat(:), dataBuffer2DFloat(:,:)
     type(var_desc_t)   :: varid
     type(io_desc_t)    :: iodescNCells
     integer            :: vartype
@@ -130,9 +133,27 @@ contains
 
     ! Read the variable
     if (domain%is_2d) then
-       call PIO_read_darray(ncid, varid, iodescNCells, dataBuffer2d, ier)
+
+       if (vartype == PIO_DOUBLE) then
+          call PIO_read_darray(ncid, varid, iodescNCells, dataBuffer2d, ier)
+       else
+          allocate(dataBuffer2DFloat(domain%begi:domain%endi, domain%begj:domain%endj))
+          call PIO_read_darray(ncid, varid, iodescNCells, dataBuffer2DFloat, ier)
+          dataBuffer2D = dble(dataBuffer2DFloat)
+          deallocate(dataBuffer2DFloat)
+       end if
     else
-       call PIO_read_darray(ncid, varid, iodescNCells, dataBuffer1d, ier)
+
+       if (vartype == PIO_DOUBLE) then
+          call PIO_read_darray(ncid, varid, iodescNCells, dataBuffer1d, ier)
+          allocate(dataBuffer2DFloat(domain%begi:domain%endi, domain%begj:domain%endj))
+       else
+          allocate(dataBuffer1DFloat(domain%begs:domain%ends))
+          call PIO_read_darray(ncid, varid, iodescNCells, dataBuffer1DFloat, ier)
+          dataBuffer1D = dble(dataBuffer1DFloat)
+          deallocate(dataBuffer1DFloat)
+
+       end if
     end if
 
     ! Delete decomposition
