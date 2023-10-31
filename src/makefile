@@ -38,6 +38,7 @@ mksurfdat_petsc_obj = mksurfdat_petsc.o \
   shr_log_mod.o \
   mkgridmapMod.o \
   mkpftMod.o \
+  mkpftPIOMod.o \
   shr_string_mod.o \
   shr_timer_mod.o \
   fileutils.o \
@@ -160,6 +161,15 @@ mkpftMod.o : \
   mkvarctl.o \
   mkvarpar.o \
   mkdomainMod.o \
+  shr_string_mod.o \
+  fileutils.o
+
+mkpftPIOMod.o : \
+  shr_kind_mod.o \
+  shr_sys_mod.o \
+  mkvarctl.o \
+  mkvarpar.o \
+  mkdomainPIOMod.o \
   shr_string_mod.o \
   fileutils.o
 

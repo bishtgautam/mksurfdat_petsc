@@ -4,10 +4,11 @@ program mksurfdat_petsc
   use mkdomainMod  , only : domain_type, domain_read_map, domain_read, &
        domain_write
   use mkpftMod     , only : mkpft
-  use mkdomainPIOMod, only : domain_pio_type, domain_read_map_pio
+  use mkdomainPIOMod, only : domain_pio_type, domain_read_map_pio, domain_read_pio
   use mkglcmecMod
   use mksoilMod
   use mkpftMod
+  use mkpftPIOMod, only : mkpftPIO
   use mkvarctl
   use mkurbanparMod
   use mkurbanparCommonMod
@@ -245,6 +246,8 @@ program mksurfdat_petsc
   ! Make PFTs [pctpft_full] from dataset [fvegtyp]
 
   call mkpft(ldomain, mapfname=map_fpft, fpft=mksrf_fvegtyp, &
+       ndiag=ndiag, pctlnd_o=pctlnd_pft, pctpft_o=pctpft_full )
+  call mkpftPIO(ldomain_pio, mapfname=map_fpft, fpft=mksrf_fvegtyp, &
        ndiag=ndiag, pctlnd_o=pctlnd_pft, pctpft_o=pctpft_full )
 
   ! Make inland water [pctlak, pctwet] [flakwat] [fwetlnd]
