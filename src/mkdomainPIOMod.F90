@@ -66,6 +66,10 @@ module mkdomainPIOMod
 
   public domain_read_pio
   public domain_read_map_pio
+  public domain_clean_pio
+
+  character*16,parameter :: set   = 'domain_set      '
+  character*16,parameter :: unset = 'NOdomain_unsetNO'
 
   real(r8) :: flandmin = 0.001            !minimum land frac for land cell
 
@@ -507,6 +511,7 @@ contains
     else
        call domain_init_pio_2d (domain)
     end if
+    domain%set = set
     
   end subroutine domain_init_pio
 
@@ -720,6 +725,55 @@ contains
 
   end function domain_read_map_pio
 
-  !----------------------------------------------------------------------------
+  !------------------------------------------------------------------------------
+  subroutine domain_clean_pio(domain)
+    !
+    implicit none
+    type(domain_pio_type) :: domain        ! domain datatype
+    !
+    integer ier
+    !
+
+    if (domain%set == set) then
+       write(6,*) 'domain_clean: cleaning '
+
+       if (domain%is_2d) then
+
+          deallocate(domain%mask2d, &
+               domain%frac2d, &
+               domain%latc2d, &
+               domain%lonc2d, &
+               domain%lats2d, &
+               domain%latn2d, &
+               domain%lonw2d, &
+               domain%lone2d, &
+               domain%area2d, &
+               domain%compdof, stat=ier)
+       else
+
+          deallocate(domain%mask1d, &
+               domain%frac1d, &
+               domain%latc1d, &
+               domain%lonc1d, &
+               domain%lats1d, &
+               domain%latn1d, &
+               domain%lonw1d, &
+               domain%lone1d, &
+               domain%area1d, &
+               domain%compdof, stat=ier)
+       end if
+
+       if (ier /= 0) then
+          write(6,*) 'domain_clean ERROR'
+          call abort()
+       endif
+
+    else
+       write(6,*) 'domain_clean WARN: clean domain unecessary '
+    endif
+
+    domain%set = unset
+
+  end subroutine domain_clean_pio
 
 end module mkdomainPIOMod
