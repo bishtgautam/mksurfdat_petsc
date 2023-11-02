@@ -245,8 +245,8 @@ program mksurfdat_petsc
 
   ! Make PFTs [pctpft_full] from dataset [fvegtyp]
 
-  call mkpft(ldomain, mapfname=map_fpft, fpft=mksrf_fvegtyp, &
-       ndiag=ndiag, pctlnd_o=pctlnd_pft, pctpft_o=pctpft_full )
+  !call mkpft(ldomain, mapfname=map_fpft, fpft=mksrf_fvegtyp, &
+  !     ndiag=ndiag, pctlnd_o=pctlnd_pft, pctpft_o=pctpft_full )
   call mkpftPIO(ldomain_pio, mapfname=map_fpft, fpft=mksrf_fvegtyp, &
        ndiag=ndiag, pctlnd_o=pctlnd_pft, pctpft_o=pctpft_full )
 

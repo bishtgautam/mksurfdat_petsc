@@ -45,8 +45,10 @@ contains
 
   subroutine mkpftPIO(ldomain_pio, mapfname, fpft, ndiag, pctlnd_o, pctpft_o)
 
-    use mkdomainPIOMod, only : domain_pio_type, domain_read_pio
+    use mkdomainPIOMod, only : domain_pio_type, domain_read_pio, domain_clean_pio
     use mkvarpar      , only : numstdpft, numstdcft
+    use mkgridmapMod
+    use pio
 
     implicit none
     type(domain_pio_type) , intent(inout) :: ldomain_pio
@@ -56,22 +58,34 @@ contains
     real(r8)              , intent(out)   :: pctlnd_o(:)           ! output grid:%land/gridcell
     real(r8)              , pointer       :: pctpft_o(:,:)         ! PFT cover (% of vegetated area)
 
-    type(domain_pio_type)    :: tdomain_pio     ! local domain
-    !type(gridmap_type)    :: tgridmap           ! local gridmap
-    real(r8), allocatable :: pctpft_i(:,:)      ! input grid: PFT percent
-    integer  :: numpft_i                        ! num of plant types input data
-    real(r8) :: sum_fldo                        ! global sum of dummy output fld
-    real(r8) :: sum_fldi                        ! global sum of dummy input fld
-    real(r8) :: wst(0:numpft)                   ! as pft_o at specific no
-    real(r8) :: wst_sum                         ! sum of %pft
-    real(r8) :: gpft_o(0:numpft)                ! output grid: global area pfts
-    real(r8) :: garea_o                         ! output grid: global area
-    real(r8) :: gpft_i(0:numpft)                ! input grid: global area pfts
-    real(r8) :: garea_i                         ! input grid: global area
-    integer  :: k,n,m,ni,no,ns_i,ns_o_loc       ! indices
-    integer  :: ncid,dimid,varid                ! input netCDF id's
-    integer  :: ier                             ! error status
-    real(r8) :: relerr = 0.00001                ! max error: sum overlap wts ne 1
+    type(domain_pio_type) :: tdomain_pio     ! local domain
+    type(gridmap_type)    :: tgridmap           ! local gridmap
+    real(r8) , pointer    :: pctpft_i(:,:,:)      ! input grid: PFT percent
+    integer               :: numpft_i                        ! num of plant types input data
+    real(r8)              :: sum_fldo                        ! global sum of dummy output fld
+    real(r8)              :: sum_fldi                        ! global sum of dummy input fld
+    real(r8)              :: wst(0:numpft)                   ! as pft_o at specific no
+    real(r8)              :: wst_sum                         ! sum of %pft
+    real(r8)              :: gpft_o(0:numpft)                ! output grid: global area pfts
+    real(r8)              :: garea_o                         ! output grid: global area
+    real(r8)              :: gpft_i(0:numpft)                ! input grid: global area pfts
+    real(r8)              :: garea_i                         ! input grid: global area
+    integer               :: k,n,m,ni,no,ns_i,ns_loc_o       ! indices
+    integer               :: dimid                           ! input netCDF id's
+    type(var_desc_t)      :: varid
+    integer               :: ier                             ! error status
+    real(r8)              :: relerr = 0.00001                ! max error: sum overlap wts ne 1
+
+    type(file_desc_t)     :: ncid
+    type(iosystem_desc_t) :: pioIoSystem
+    type(io_desc_t)       :: iodescNCells
+    real     , pointer    :: dataBufferReal(:,:,:)
+    real(r8) , pointer    :: pctpft_1d(:)
+    integer  , pointer    :: dataBuffer_int(:,:,:)
+    integer  , pointer    :: compdof(:)
+    integer  , pointer    :: var_dim_ids(:), dim_glb(:)
+    integer               :: count, i, j, vartype, ierr
+    integer               :: dim_idx(3,2)
 
     character(len=35)  veg(0:maxpft)            ! vegetation types
     character(len=32) :: subname = 'mkpft'
@@ -122,12 +136,264 @@ contains
        call abort()
     end if
 
-    ns_o_loc = ldomain_pio%ns_loc
-
     if (.not. use_input_pft) then
+
+       ! Obtain input grid info
        call domain_read_pio(tdomain_pio, fpft)
+
+       call OpenFilePIO(fpft, pioIoSystem, ncid)
+
+       call read_float_or_double_3d(tdomain_pio, pioIoSystem, ncid, 'PCT_PFT', 0, dim_idx, pctpft_i)
+
+       call PIO_closefile(ncid)
+       call PIO_finalize(pioIoSystem, ierr)
+
     end if
 
+
+    if ( zero_out ) then
+
+       pctpft_o(:,:) = 0._r8
+       pctlnd_o(:)   = 100._r8
+
+    else if ( use_input_pft ) then
+
+       write(6,*) subname//': extend the code for the case use_input_pft = .true.'
+       call abort()
+
+    else
+
+       ! Read the map
+       call gridmap_mapread(tgridmap, mapfname)
+
+       ns_loc_o = ldomain_pio%ns_loc
+
+       do no = 1, ns_loc_o
+          pctlnd_o(no)     = tgridmap%frac_dst(no) * 100._r8
+       end do
+
+       if (ldomain_pio%is_2d) then
+          write(6,*)'Extend code to support 2D output grid'
+          call abort()
+       else
+          do no = 1, ns_loc_o
+             ldomain_pio%frac1d(ldomain_pio%begs + no - 1) = tgridmap%frac_dst(no)
+          end do
+       end if
+
+       allocate(pctpft_1d(ns_loc_o))
+
+       do m = 0, numpft
+          count = 0
+          do j = dim_idx(2,1), dim_idx(2,2)
+             do i = dim_idx(1,1), dim_idx(1,2)
+                count = count + 1
+                pctpft_1d(count) = pctpft_i(i,j,m)
+             end do
+          end do
+
+          call gridmap_areaave(tgridmap, pctpft_1d(:), pctpft_o(:,m),  nodata=0._r8)
+
+          do no = 1, ns_loc_o
+             if (pctlnd_o(no) < 1.0e-6) then
+                if (m == 0) then
+                   pctpft_o(no,m) = 100._r8
+                else
+                   pctpft_o(no,m) = 0._r8
+                end if
+             else
+             end if
+          end do
+       end do
+
+       deallocate(pctpft_1d)
+
+    end if
+
+    ! Error check: percents should sum to 100 for land grid cells
+
+    if ( .not. zero_out) then
+       do no = 1,ns_loc_o
+          wst_sum = 0.
+          do m = 0,numpft
+             wst_sum = wst_sum + pctpft_o(no,m)
+          enddo
+          if (abs(wst_sum-100._r8) > 0.00001_r8) then
+             write (6,*) subname//'error: pft = ', &
+                  (pctpft_o(no,m), m = 0, numpft), &
+                  ' do not sum to 100. at no = ',no,' but to ', wst_sum
+             stop
+          end if
+       end do
+    end if
+
+    ! Deallocate memory
+    call domain_clean_pio(tdomain_pio)
+    if ( .not. zero_out .and. .not. use_input_pft) then
+       call gridmap_clean(tgridmap)
+    end if
+
+    write (6,*) 'Successfully made PFTs'
+    write (6,*)
+
   end subroutine mkpftPIO
+
+  !-----------------------------------------------------------------------
+  subroutine check_ret(ret, calling)
+    !
+    ! !DESCRIPTION:
+    ! Check return status from netcdf call
+    !
+    ! !ARGUMENTS:
+    use pio, only : PIO_NOERR, PIO_STRERROR
+    implicit none
+    integer, intent(in) :: ret
+    character(len=*)    :: calling
+    !
+    integer             :: ier
+    character(len=256)  :: errmsg
+
+    if (ret /= PIO_NOERR) then
+       ier = PIO_STRERROR(ret, errmsg)
+       write(6,*)'netcdf error from ',trim(calling), ' rcode = ', ret, &
+            ' error = ', trim(errmsg)
+       call abort()
+    end if
+
+  end subroutine check_ret
+
+  !-----------------------------------------------------------------------
+  subroutine OpenFilePIO(fname, pioIoSystem, ncid)
+
+    use petsc
+    use spmdMod, only : iam, npes, masterproc, mpicom
+    use pio
+
+    implicit none
+
+    character (len=*)     :: fname
+    type(file_desc_t)     :: ncid
+    type(iosystem_desc_t) :: pioIoSystem
+    !
+    integer               :: niotasks
+    integer               :: numAggregator
+    integer               :: stride
+    integer               :: optBase
+    integer               :: iotype
+    integer               :: retVal, ier
+    character(len= 32)    :: subname = 'OpenFilePIO'
+
+    stride        = 1
+    numAggregator = 0
+    iotype        = PIO_iotype_pnetcdf
+    niotasks      = npes
+
+    if (npes == 1) then
+       optBase = 0
+    else
+       optBase = 1
+    end if
+
+    call PIO_init(iam,     & ! MPI rank
+         MPI_COMM_WORLD,   & ! MPI communicator
+         niotasks,         & ! Number of iotasks (ntasks/stride)
+         numAggregator,    & ! number of aggregators to use
+         stride,           & ! stride
+         PIO_rearr_subset, & ! do not use any form of rearrangement
+         pioIoSystem,      & ! iosystem
+         optBase)
+
+    call check_ret(PIO_openfile(pioIoSystem, ncid, iotype, trim(fname), PIO_NOWRITE), subname)
+
+  end subroutine OpenFilePIO
+
+  !-----------------------------------------------------------------------
+  subroutine read_float_or_double_3d(domain, pioIoSystem, ncid, varname, start_id_for_dim3, dim_idx, data3d)
+
+    use mkdomainPIOMod
+    use pio
+
+    implicit none
+
+    type(domain_pio_type) , intent(in)           :: domain
+    type(iosystem_desc_t) , intent(in)           :: pioIoSystem
+    type(file_desc_t)     , intent(in)           :: ncid
+    character(len=*)      , intent(in)           :: varname
+    integer                                      :: start_id_for_dim3
+    integer               , intent(out)          :: dim_idx(3,2)
+    real(r8)              , pointer, intent(out) :: data3d(:,:,:)
+    !
+    type(var_desc_t)                             :: varid
+    type(io_desc_t)                              :: iodescNCells
+    integer                                      :: ndims, idim
+    integer                                      :: begi, endi, begj, endj, begk, endk
+    integer                                      :: numi, numj, numk
+    integer                                      :: i, j, k, count
+    integer                                      :: vartype
+    integer                                      :: ierr
+    integer               , pointer              :: var_dim_ids(:), dim_glb(:), compdof(:)
+    real                  , pointer              :: dataReal3d(:,:,:)
+    character(len=32)                            :: subname = 'read_float_or_double_3d'
+
+    call check_ret(PIO_inq_varid(ncid, varname, varid), subname)
+
+    call check_ret(PIO_inq_varndims(ncid, varid, ndims), subname)
+    if (ndims /= 3) then
+       write(6,*)trim(varname),' is not a 3D variable.'
+       call abort()
+    end if
+
+    allocate(var_dim_ids(ndims))
+    allocate(dim_glb(ndims))
+
+    call check_ret(PIO_inq_vardimid(ncid, varid, var_dim_ids), subname)
+
+    do idim = 1, ndims
+       call check_ret(PIO_inq_dimlen(ncid, var_dim_ids(idim), dim_glb(idim)), subname)
+    end do
+
+    call check_ret(PIO_inq_vartype(ncid, varid, vartype), subname)
+
+    begi = domain%begi
+    endi = domain%endi
+    begj = domain%begj
+    endj = domain%endj
+    begk = start_id_for_dim3
+    endk = start_id_for_dim3 + dim_glb(3) - 1
+
+    dim_idx(1,1) = begi; dim_idx(1,2) = endi
+    dim_idx(2,1) = begj; dim_idx(2,2) = endj
+    dim_idx(3,1) = begk; dim_idx(3,2) = endk
+
+    numi = domain%endi - domain%begi + 1
+    numj = domain%endj - domain%begj + 1
+    numk = dim_glb(3)
+
+    allocate(compdof(numi * numj * numk))
+
+    count = 0;
+    do k = 1, numk
+       do j = 1, numj
+          do i = 1, numi
+             count = count + 1
+             compdof(count) = (domain%begi - 1) + i + (j-1)*dim_glb(1) + (k-1)*dim_glb(1)*dim_glb(2)
+          end do
+       end do
+    end do
+
+    call PIO_initdecomp(pioIoSystem, vartype, dim_glb, compdof, iodescNCells)
+
+    allocate(data3d(begi:endi, begj:endj, begk:endk))
+
+    if (vartype == PIO_REAL) then
+       allocate(dataReal3d(begi:endi, begj:endj, begk:endk))
+       call PIO_read_darray(ncid, varid, iodescNCells, dataReal3d, ierr)
+       data3d = dble(dataReal3d)
+       deallocate(dataReal3d)
+    else
+       call PIO_read_darray(ncid, varid, iodescNCells, data3d, ierr)
+    end if
+
+  end subroutine read_float_or_double_3d
 
 end module mkpftPIOMod
