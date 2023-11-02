@@ -207,6 +207,7 @@ mksurfdat_petsc.o : \
   mkdomainMod.o \
   mkdomainPIOMod.o \
   mkpftMod.o \
+  mkpftPIOMod.o \
   mkglcmecMod.o \
   mksoilMod.o \
   mkvarctl.o \
