@@ -5,3 +5,4 @@ mksurfdat_petsc
 *.log
 *.nc
 *.bin*
+io_perf_summary*
