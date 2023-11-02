@@ -666,8 +666,16 @@ contains
 
     domain%ni_loc = -9999
     domain%nj_loc = -9999
+    domain%ns_loc = -9999
     domain%ni_glb = -9999
     domain%nj_glb = -9999
+    domain%ns_glb = -9999
+    domain%begi   = 0
+    domain%endi   = 0
+    domain%begj   = 0
+    domain%endj   = 0
+    domain%begs   = 0
+    domain%ends   = 0
     domain%is_2d = .false.
 
     call check_ret(PIO_openfile(pioIoSystem, ncid, iotype, trim(fname), PIO_NOWRITE), subname)
