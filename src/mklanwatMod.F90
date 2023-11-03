@@ -25,6 +25,7 @@ module mklanwatMod
 
 ! !PUBLIC MEMBER FUNCTIONS:
   public mklakwat           ! make % lake
+  public mklakwat_pio       ! make % lake PIO version
   public mkwetlnd           ! make % wetland
   public mklakparams        ! make lake parameters
 
@@ -220,6 +221,123 @@ subroutine mklakwat(ldomain, mapfname, datfname, ndiag, zero_out, lake_o)
   call shr_sys_flush(6)
 
 end subroutine mklakwat
+
+!-----------------------------------------------------------------------
+subroutine mklakwat_pio(ldomain_pio, mapfname, datfname, ndiag, zero_out, lake_o)
+!
+! !DESCRIPTION:
+! make %lake
+!
+! !USES:
+  use mkdomainPIOMod, only : domain_pio_type, domain_clean_pio, domain_read_pio
+  use mkgridmapMod
+  use mkvarpar
+  use mkvarctl
+  use mkncdio
+  use pio
+  use piofileutils
+  use utils
+!
+! !ARGUMENTS:
+
+  implicit none
+  type(domain_pio_type), intent(in) :: ldomain_pio
+  character(len=*)  , intent(in) :: mapfname  ! input mapping file name
+  character(len=*)  , intent(in) :: datfname  ! input data file name
+  integer           , intent(in) :: ndiag     ! unit number for diag out
+  logical           , intent(in) :: zero_out  ! if should zero glacier out
+  real(r8)          , intent(out):: lake_o(:) ! output grid: %lake
+  !
+  type(gridmap_type)    :: tgridmap
+  type(domain_pio_type)    :: tdomain_pio            ! local domain
+  real(r8) :: sum_fldi                        ! global sum of dummy input fld
+  real(r8) :: sum_fldo                        ! global sum of dummy output fld
+  real(r8) :: glake_i                         ! input  grid: global lake
+  real(r8) :: garea_i                         ! input  grid: global area
+  real(r8) :: glake_o                         ! output grid: global lake
+  real(r8) :: garea_o                         ! output grid: global area
+  integer  :: ni,no,k,n,m
+  integer  :: ns_loc_i,ns_loc_o               !  indices
+  integer  :: dimid,varid                     ! input netCDF id's
+  integer  :: ier                             ! error status
+  real(r8) :: relerr = 0.00001                ! max error: sum overlap wts ne 1
+  character(len=32) :: subname = 'mklakwat'
+
+  type(file_desc_t)     :: ncid
+  type(iosystem_desc_t) :: pioIoSystem
+  type(io_desc_t)       :: iodescNCells
+  real(r8) , pointer    :: lake2d_i(:,:)
+  real(r8) , pointer    :: lake1d_i(:)
+  integer               :: ierr
+  integer               :: dim_idx(2,2)
+
+    !-----------------------------------------------------------------------
+
+  write (6,*) 'Attempting to make %lake and %wetland .....'
+  call shr_sys_flush(6)
+
+  ! -----------------------------------------------------------------
+  ! Read input file
+  ! -----------------------------------------------------------------
+
+  ! Obtain input grid info, read local fields
+
+  call domain_read_pio(tdomain_pio, datfname)
+
+  if ( .not. zero_out )then
+
+     write(6,*)'Open lake file: ', trim(datfname)
+
+     ! Read the input domain
+     call domain_read_pio(tdomain_pio, datfname)
+
+     ! Open the netcdf file
+     call OpenFilePIO(datfname, pioIoSystem, ncid)
+
+     ! Read the variable
+     call read_float_or_double_2d(tdomain_pio, pioIoSystem, ncid, 'PCT_LAKE', dim_idx, lake2d_i)
+
+     call PIO_closefile(ncid)
+     call PIO_finalize(pioIoSystem, ierr)
+
+     ! Area-average percent cover on input grid to output grid
+     ! and correct according to land landmask
+     ! Note that percent cover is in terms of total grid area.
+
+     call gridmap_mapread(tgridmap, mapfname )
+
+     ! Convert 2D vector to 1D vector
+     ns_loc_i = (dim_idx(1,2) - dim_idx(1,1) + 1) * (dim_idx(2,2) - dim_idx(2,1) + 1)
+
+     allocate(lake1d_i(ns_loc_i))
+
+     call convert_2d_to_1d_array(dim_idx, lake2d_i, lake1d_i)
+
+     ! Determine lake_o on output grid
+
+     call gridmap_areaave(tgridmap, lake1d_i(:), lake_o, nodata=0._r8)
+
+     ns_loc_o = ldomain_pio%ns_loc
+     do no = 1, ns_loc_o
+        if (lake_o(no) < 1._r8) lake_o(no) = 0._r8
+     end do
+
+  end if
+
+  ! Deallocate dynamic memory
+
+  call domain_clean_pio(tdomain_pio)
+  if ( .not. zero_out )then
+     call gridmap_clean(tgridmap)
+     deallocate (lake2d_i)
+     deallocate (lake1d_i)
+  end if
+
+  write (6,*) 'Successfully made %lake'
+  write (6,*)
+  call shr_sys_flush(6)
+
+end subroutine mklakwat_pio
 
 !-----------------------------------------------------------------------
 !BOP
