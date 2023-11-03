@@ -61,7 +61,7 @@ contains
 
     type(domain_pio_type) :: tdomain_pio     ! local domain
     type(gridmap_type)    :: tgridmap           ! local gridmap
-    real(r8) , pointer    :: pctpft_i(:,:,:)      ! input grid: PFT percent
+    real(r8) , pointer    :: pctpft3d_i(:,:,:)      ! input grid: PFT percent
     integer               :: numpft_i                        ! num of plant types input data
     real(r8)              :: sum_fldo                        ! global sum of dummy output fld
     real(r8)              :: sum_fldi                        ! global sum of dummy input fld
@@ -81,7 +81,7 @@ contains
     type(iosystem_desc_t) :: pioIoSystem
     type(io_desc_t)       :: iodescNCells
     real     , pointer    :: dataBufferReal(:,:,:)
-    real(r8) , pointer    :: pctpft_1d(:)
+    real(r8) , pointer    :: pctpft1d_i(:)
     integer  , pointer    :: dataBuffer_int(:,:,:)
     integer  , pointer    :: compdof(:)
     integer  , pointer    :: var_dim_ids(:), dim_glb(:)
@@ -144,7 +144,7 @@ contains
 
        call OpenFilePIO(fpft, pioIoSystem, ncid)
 
-       call read_float_or_double_3d(tdomain_pio, pioIoSystem, ncid, 'PCT_PFT', 0, dim_idx, pctpft_i)
+       call read_float_or_double_3d(tdomain_pio, pioIoSystem, ncid, 'PCT_PFT', 0, dim_idx, pctpft3d_i)
 
        call PIO_closefile(ncid)
        call PIO_finalize(pioIoSystem, ierr)
@@ -182,18 +182,18 @@ contains
           end do
        end if
 
-       allocate(pctpft_1d(ns_loc_o))
+       allocate(pctpft1d_i(ns_loc_o))
 
        do m = 0, numpft
           count = 0
           do j = dim_idx(2,1), dim_idx(2,2)
              do i = dim_idx(1,1), dim_idx(1,2)
                 count = count + 1
-                pctpft_1d(count) = pctpft_i(i,j,m)
+                pctpft1d_i(count) = pctpft3d_i(i,j,m)
              end do
           end do
 
-          call gridmap_areaave(tgridmap, pctpft_1d(:), pctpft_o(:,m),  nodata=0._r8)
+          call gridmap_areaave(tgridmap, pctpft1d_i(:), pctpft_o(:,m),  nodata=0._r8)
 
           do no = 1, ns_loc_o
              if (pctlnd_o(no) < 1.0e-6) then
@@ -207,8 +207,8 @@ contains
           end do
        end do
 
-       deallocate(pctpft_i)
-       deallocate(pctpft_1d)
+       deallocate(pctpft3d_i)
+       deallocate(pctpft1d_i)
 
     end if
 
