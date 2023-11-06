@@ -174,7 +174,8 @@ mkpftPIOMod.o : \
   mkdomainPIOMod.o \
   shr_string_mod.o \
   piofileutils.o \
-  fileutils.o
+  fileutils.o \
+  utils.o
 
 nanMod.o :
 
