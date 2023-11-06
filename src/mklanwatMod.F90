@@ -27,6 +27,7 @@ module mklanwatMod
   public mklakwat           ! make % lake
   public mklakwat_pio       ! make % lake PIO version
   public mkwetlnd           ! make % wetland
+  public mkwetlnd_pio       ! make % wetland PIO version
   public mklakparams        ! make lake parameters
 
 !EOP
@@ -525,6 +526,132 @@ subroutine mkwetlnd(ldomain, mapfname, datfname, ndiag, zero_out, swmp_o)
   call shr_sys_flush(6)
 
 end subroutine mkwetlnd
+
+!-----------------------------------------------------------------------
+subroutine mkwetlnd_pio(ldomain_pio, mapfname, datfname, ndiag, zero_out, swmp_o)
+  !
+  ! !DESCRIPTION:
+  ! make %wetland
+  !
+  ! !USES:
+  use mkdomainPIOMod, only : domain_pio_type, domain_clean_pio, domain_read_pio
+  use mkgridmapMod
+  use mkvarpar
+  use mkvarctl
+  use mkncdio
+  use pio
+  use piofileutils
+  use utils
+  !
+  ! !ARGUMENTS:
+
+  implicit none
+  type(domain_pio_type), intent(in) :: ldomain_pio
+  character(len=*)  , intent(in) :: mapfname  ! input mapping file name
+  character(len=*)  , intent(in) :: datfname  ! input data file name
+  integer           , intent(in) :: ndiag     ! unit number for diag out
+  logical           , intent(in) :: zero_out  ! if should zero glacier out
+  real(r8)          , intent(out):: swmp_o(:) ! output grid: %wetland
+  !
+  ! !CALLED FROM:
+  ! subroutine mksrfdat in module mksrfdatMod
+  !
+  ! !REVISION HISTORY:
+  ! Author: Mariana Vertenstein
+  !
+  !
+  ! !LOCAL VARIABLES:
+  !EOP
+  type(gridmap_type)    :: tgridmap
+  type(domain_pio_type)    :: tdomain_pio            ! local domain
+  real(r8), allocatable :: swmp_i(:)          ! input grid: percent swamp
+  real(r8) :: sum_fldi                        ! global sum of dummy input fld
+  real(r8) :: sum_fldo                        ! global sum of dummy output fld
+  real(r8) :: gswmp_i                         ! input  grid: global swamp
+  real(r8) :: garea_i                         ! input  grid: global area
+  real(r8) :: gswmp_o                         ! output grid: global swamp
+  real(r8) :: garea_o                         ! output grid: global area
+  integer  :: ni,no,k
+  integer  :: ns_loc_i,ns_loc_o               ! indices
+  integer  :: dimid,varid                     ! input netCDF id's
+  integer  :: ier                             ! error status
+  real(r8) :: relerr = 0.00001                ! max error: sum overlap wts ne 1
+  character(len=32) :: subname = 'mkwetlnd_pio'
+
+  type(file_desc_t)     :: ncid
+  type(iosystem_desc_t) :: pioIoSystem
+  type(io_desc_t)       :: iodescNCells
+  real(r8) , pointer    :: swmp2d_i(:,:)
+  real(r8) , pointer    :: swmp1d_i(:)
+  integer               :: ierr
+  integer               :: dim_idx(2,2)
+  !-----------------------------------------------------------------------
+
+  write (6,*) 'Attempting to make %wetland .....'
+  call shr_sys_flush(6)
+  write(*,*)'mapfname:' ,trim(mapfname)
+  write(*,*)'datfname:' ,trim(datfname)
+
+  ! -----------------------------------------------------------------
+  ! Read input file
+  ! -----------------------------------------------------------------
+
+  ! Obtain input grid info, read local fields
+
+  if ( .not. zero_out )then
+
+     write(6,*)'Open wetland file: ', trim(datfname)
+
+     ! Read the input domain
+     call domain_read_pio(tdomain_pio, datfname)
+
+     ! Open the netcdf file
+     call OpenFilePIO(datfname, pioIoSystem, ncid)
+
+     ! Read the variable
+     call read_float_or_double_2d(tdomain_pio, pioIoSystem, ncid, 'PCT_WETLAND', dim_idx, swmp2d_i)
+
+     call PIO_closefile(ncid)
+     call PIO_finalize(pioIoSystem, ierr)
+
+     ! Area-average percent cover on input grid to output grid
+     ! and correct according to land landmask
+     ! Note that percent cover is in terms of total grid area.
+
+     call gridmap_mapread(tgridmap, mapfname )
+
+     ! Convert 2D vector to 1D vector
+     ns_loc_i = (dim_idx(1,2) - dim_idx(1,1) + 1) * (dim_idx(2,2) - dim_idx(2,1) + 1)
+
+     allocate(swmp1d_i(ns_loc_i))
+
+     call convert_2d_to_1d_array(dim_idx, swmp2d_i, swmp1d_i)
+
+     ! Determine swmp_o on output grid
+
+     call gridmap_areaave(tgridmap, swmp1d_i(:), swmp_o, nodata=0._r8)
+
+     ns_loc_o = ldomain_pio%ns_loc
+     do no = 1,ns_loc_o
+        if (swmp_o(no) < 1._r8) swmp_o(no) = 0._r8
+     enddo
+
+  end if
+
+  ! Deallocate dynamic memory
+
+  call domain_clean_pio(tdomain_pio)
+  if ( .not. zero_out )then
+     call gridmap_clean(tgridmap)
+     deallocate (swmp2d_i)
+     deallocate (swmp1d_i)
+  end if
+
+  write (6,*) 'Successfully made %wetland'
+  write (6,*)
+  call shr_sys_flush(6)
+
+end subroutine mkwetlnd_pio
 
 !-----------------------------------------------------------------------
 !BOP
