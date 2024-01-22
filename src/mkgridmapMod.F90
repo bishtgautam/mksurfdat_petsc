@@ -333,8 +333,7 @@ contains
     PetscCall(MatSetFromOptions(gridmap%map_mat, ierr))
 
     do n = 1, gridmap%ns
-       PetscCallA(MatSetValues(gridmap%map_mat, 1, gridmap%dst_indx(n) - 1, 1, gridmap%src_indx(n) - 1,
-       gridmap%wovr(n), INSERT_VALUES, ierr))
+       PetscCallA(MatSetValues(gridmap%map_mat, 1, gridmap%dst_indx(n) - 1, 1, gridmap%src_indx(n) - 1, gridmap%wovr(n), INSERT_VALUES, ierr))
     end do
     PetscCallA(MatAssemblyBegin(gridmap%map_mat, MAT_FINAL_ASSEMBLY, ierr))
     PetscCallA(MatAssemblyEnd(gridmap%map_mat, MAT_FINAL_ASSEMBLY, ierr))
