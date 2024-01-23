@@ -21,6 +21,7 @@ module mkurbanparMod
 ! !PUBLIC MEMBER FUNCTIONS:
    public :: mkurbanInit
    public :: mkurban
+   public :: mkurban_pio
    public :: mkurbanpar
 
    ! The following could be private, but because there are associated test routines in a
@@ -313,6 +314,126 @@ subroutine mkurban(ldomain, mapfname, datfname, ndiag, zero_out, &
   
 end subroutine mkurban
 !-----------------------------------------------------------------------
+
+subroutine mkurban_pio(ldomain_pio, mapfname, datfname, ndiag, zero_out, &
+                   urbn_o, urbn_classes_o, region_o)
+  !
+  ! !DESCRIPTION:
+  ! make total percent urban, breakdown into urban classes, and region ID on the output grid
+  !
+  ! urbn_classes_o(n, i) gives the percent of the urban area in grid cell n that is in class #i.
+  ! This is normalized so that sum(urbn_classes_o(n,:)) = 100 for all n, even for grid
+  ! cells where urbn_o(n) = 0 (in the case where urbn_o(n) = 0, we come up with an
+  ! arbitrary assignment of urban into the different classes).
+  !
+  ! See comments under the normalize_urbn_by_tot subroutine for how urbn_classes_o is
+  ! determined when the total % urban is 0, according to the input data. Note that this
+  ! also applies when all_urban=.true., for points that have 0 urban according to the input
+  ! data.
+  !
+  ! !USES:
+  use mkdomainPIOMod, only : domain_pio_type, domain_read_pio, domain_clean_pio
+   use mkgridmapMod
+   use mkindexmapMod, only : get_dominant_indices
+   use mkurbanparCommonMod, only : mkurban_pct, mkurban_pct_diagnostics, MIN_DENS
+   use mkutilsMod  , only : normalize_classes_by_gcell
+   use mkvarctl    , only : all_urban
+   use mkvarpar
+   use mkncdio
+   use mkdataPIOMod
+!
+! !ARGUMENTS:
+   implicit none
+   type(domain_pio_type), intent(in) :: ldomain_pio
+   character(len=*) , intent(in) :: mapfname            ! input mapping file name
+   character(len=*) , intent(in) :: datfname            ! input data file name
+   integer          , intent(in) :: ndiag               ! unit number for diag out
+   logical          , intent(in) :: zero_out            ! if should zero urban out
+   real(r8)         , intent(out):: urbn_o(:)           ! output grid: total % urban
+   real(r8)         , intent(out):: urbn_classes_o(:,:) ! output grid: breakdown of total urban into each class
+                                                        ! (dimensions: (ldomain%ns, numurbl))
+   integer          , intent(out):: region_o(:)         ! output grid: region ID
+   !
+   ! !CALLED FROM:
+   ! subroutine mksrfdat in module mksrfdatMod
+   !
+   ! !REVISION HISTORY:
+   ! Author: Bill Sacks
+   !
+   !
+   ! !LOCAL VARIABLES:
+   !EOP
+   real(r8), allocatable :: urbn_classes_gcell_i(:,:) ! input grid: percent urban in each density class
+                                                      ! (% of total grid cell area)
+   real(r8), allocatable :: urbn_classes_gcell_o(:,:) ! output grid: percent urban in each density class
+                                                      ! (% of total grid cell area)
+   integer , allocatable :: region_i(:)               ! input grid: region ID
+   real(r8), allocatable :: gar_i(:)                  ! input grid: global area of each urban region ID
+   real(r8), allocatable :: gar_o(:)                  ! output grid: global area of each urban region ID
+   integer  :: ni,no,ns_loc_o,k                             ! indices
+   integer  :: ncid,dimid,varid                       ! input netCDF id's
+   integer  :: dimlen                                 ! netCDF dimension length
+   integer  :: max_region                             ! maximum region index
+   integer  :: ier                                    ! error status
+
+   character(len=*), parameter :: subname = 'mkurban'
+!-----------------------------------------------------------------------
+   
+   write (6,*) 'Attempting to make %urban .....'
+   write(*,*)'mapfname:' ,trim(mapfname)
+   write(*,*)'datfname:' ,trim(datfname)
+ 
+   ! Obtain input grid info, read local fields
+
+   ns_loc_o = ldomain_pio%ns_loc
+   allocate(urbn_classes_gcell_o(ns_loc_o, numurbl))
+
+   call mkdata_double_3d_pio(ldomain_pio, mapfname=mapfname, datfname=datfname, varname='PCT_URBAN', &
+        data_descrip='%urban', ndiag=ndiag, zero_out=zero_out, nodata_value=0._r8, start_id_for_dim3=1, &
+        data_o=urbn_classes_gcell_o, max_valid_value=100.000001_r8)
+
+   ! Determine total % urban
+   do no = 1, ns_loc_o
+      urbn_o(no) = sum(urbn_classes_gcell_o(no,:))
+   end do
+
+   call normalize_urbn_by_tot(urbn_classes_gcell_o, urbn_o, urbn_classes_o)
+
+   ! Handle special cases
+
+   ! Note that, for all these adjustments of total urban %, we do not change anything
+   ! about the breakdown into the different urban classes. In particular: when urbn_o is
+   ! set to 0 for a point, the breakdown into the different urban classes is maintained
+   ! as it was before.
+   if (all_urban) then
+      urbn_o(:) = 100._r8
+   else if (zero_out) then
+      urbn_o(:) = 0._r8
+   else
+      ! Set points to 0% if they fall below a given threshold
+      do no = 1, ns_loc_o
+         if (urbn_o(no) < MIN_DENS) then
+            urbn_o(no) = 0._r8
+         end if
+      end do
+   end if
+
+   ! Print diagnostics
+   ! First, recompute urbn_classes_gcell_o, based on any changes we have made to urbn_o
+   ! while handling special cases
+   call normalize_classes_by_gcell(urbn_classes_o, urbn_o, urbn_classes_gcell_o)
+
+   write (6,*) 'Successfully made %urban'
+
+   ! TODO: Determine dominant region for each output cell
+   !write(6,*) 'Attempting to make urban region .....'
+   !write (6,*) 'Successfully made urban region'
+   !write (6,*)
+
+   ! Deallocate dynamic memory & other clean up
+   deallocate (urbn_classes_gcell_o)
+  
+ end subroutine mkurban_pio
 
 !------------------------------------------------------------------------------
 !BOP

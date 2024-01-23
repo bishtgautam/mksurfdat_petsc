@@ -26,6 +26,7 @@ program mksurfdat_petsc
   use petsc
   use fileutils
   use spmdMod
+  use mkdataPIOMod
 
   implicit none
 
@@ -244,23 +245,30 @@ program mksurfdat_petsc
   ! ----------------------------------------------------------------------
 
   ! Make PFTs [pctpft_full] from dataset [fvegtyp]
+#if 0
 
-  !call mkpft(ldomain, mapfname=map_fpft, fpft=mksrf_fvegtyp, &
-  !     ndiag=ndiag, pctlnd_o=pctlnd_pft, pctpft_o=pctpft_full )
-  call mkpftPIO(ldomain_pio, mapfname=map_fpft, fpft=mksrf_fvegtyp, &
+  call mkpft(ldomain, mapfname=map_fpft, fpft=mksrf_fvegtyp, &
        ndiag=ndiag, pctlnd_o=pctlnd_pft, pctpft_o=pctpft_full )
+  !call mkpftPIO(ldomain_pio, mapfname=map_fpft, fpft=mksrf_fvegtyp, &
+  !     ndiag=ndiag, pctlnd_o=pctlnd_pft, pctpft_o=pctpft_full )
 
   ! Make inland water [pctlak, pctwet] [flakwat] [fwetlnd]
 
-  call mklakwat (ldomain, mapfname=map_flakwat, datfname=mksrf_flakwat, &
+  !call mklakwat (ldomain, mapfname=map_flakwat, datfname=mksrf_flakwat, &
+  !     ndiag=ndiag, zero_out=all_urban.or.all_veg, lake_o=pctlak)
+  call mklakwat_pio (ldomain_pio, mapfname=map_flakwat, datfname=mksrf_flakwat, &
        ndiag=ndiag, zero_out=all_urban.or.all_veg, lake_o=pctlak)
 
-  call mkwetlnd (ldomain, mapfname=map_fwetlnd, datfname=mksrf_fwetlnd, &
+  !call mkwetlnd (ldomain, mapfname=map_fwetlnd, datfname=mksrf_fwetlnd, &
+  !     ndiag=ndiag, zero_out=all_urban.or.all_veg.or.no_inlandwet, swmp_o=pctwet)
+  call mkwetlnd_pio (ldomain_pio, mapfname=map_fwetlnd, datfname=mksrf_fwetlnd, &
        ndiag=ndiag, zero_out=all_urban.or.all_veg.or.no_inlandwet, swmp_o=pctwet)
 
   ! Make glacier fraction [pctgla] from [fglacier] dataset
 
-  call mkglacier (ldomain, mapfname=map_fglacier, datfname=mksrf_fglacier, &
+  !call mkglacier (ldomain, mapfname=map_fglacier, datfname=mksrf_fglacier, &
+  !     ndiag=ndiag, zero_out=all_urban.or.all_veg, glac_o=pctgla)
+  call mkglacier_pio (ldomain_pio, mapfname=map_fglacier, datfname=mksrf_fglacier, &
        ndiag=ndiag, zero_out=all_urban.or.all_veg, glac_o=pctgla)
 
   ! Make soil texture [pctsand, pctclay]  [fsoitex]
@@ -280,29 +288,50 @@ program mksurfdat_petsc
 
   ! Make fmax [fmax] from [fmax] dataset
 
-  call mkfmax (ldomain, mapfname=map_fmax, datfname=mksrf_fmax, &
-       ndiag=ndiag, fmax_o=fmax)
+  !call mkfmax (ldomain, mapfname=map_fmax, datfname=mksrf_fmax, &
+  !     ndiag=ndiag, fmax_o=fmax)
+  call mkdata_double_2d_pio(ldomain_pio, mapfname=map_fmax, datfname=mksrf_fmax, varname='FMAX', &
+       data_descrip='%fmax', ndiag=ndiag, zero_out=.false., nodata_value=0.365783_r8, data_o=fmax, &
+       threshold_o=0._r8)
 
   ! Make GDP data [gdp] from [gdp]
 
-  call mkgdp (ldomain, mapfname=map_fgdp, datfname=mksrf_fgdp, &
-       ndiag=ndiag, gdp_o=gdp)
+  !call mkgdp (ldomain, mapfname=map_fgdp, datfname=mksrf_fgdp, &
+  !     ndiag=ndiag, gdp_o=gdp)
+  call mkdata_double_2d_pio(ldomain_pio, mapfname=map_fgdp, datfname=mksrf_fgdp, varname='gdp', &
+       data_descrip='GDP', ndiag=ndiag, zero_out=.false., nodata_value=0._r8, data_o=gdp, &
+       min_valid_value=0._r8)
 
   ! Make peat data [fpeat] from [peatf]
 
-  call mkpeat (ldomain, mapfname=map_fpeat, datfname=mksrf_fpeat, &
-       ndiag=ndiag, peat_o=fpeat)
+  !call mkpeat (ldomain, mapfname=map_fpeat, datfname=mksrf_fpeat, &
+  !     ndiag=ndiag, peat_o=fpeat)
+  call mkdata_double_2d_pio(ldomain_pio, mapfname=map_fpeat, datfname=mksrf_fpeat, varname='peatf', &
+       data_descrip='peatf', ndiag=ndiag, zero_out=.false., nodata_value=0._r8, data_o=fpeat, &
+       min_valid_value=0._r8, max_valid_value=100.000001_r8)
 
   ! Make agricultural fire peak month data [abm] from [abm]
 
   call mkagfirepkmon (ldomain, mapfname=map_fabm, datfname=mksrf_fabm, &
        ndiag=ndiag, agfirepkmon_o=agfirepkmon)
+  !call mkdata_integer_2d_pio(ldomain_pio, mapfname=map_fabm, datfname=mksrf_fabm, varname='abm', &
+  !     data_descrip='peatf', ndiag=ndiag, zero_out=.false., nodata_value=0._r8, data_o=agfirepkmon, &
+  !     min_valid_value=1, max_valid_value=13)
 
   ! Make urban fraction [pcturb] from [furban] dataset
 
-  call mkurban (ldomain, mapfname=map_furban, datfname=mksrf_furban, &
+  !call mkurban (ldomain, mapfname=map_furban, datfname=mksrf_furban, &
+  !     ndiag=ndiag, zero_out=all_veg, urbn_o=pcturb, urbn_classes_o=urbn_classes, &
+  !     region_o=urban_region)
+#endif
+
+  call mkurban_pio (ldomain_pio, mapfname=map_furban, datfname=mksrf_furban, &
        ndiag=ndiag, zero_out=all_veg, urbn_o=pcturb, urbn_classes_o=urbn_classes, &
        region_o=urban_region)
+  !call mkdata_double_3d_pio(ldomain_pio, mapfname=map_furban, datfname=mksrf_furban, varname='PCT_URBAN', &
+  !     data_descrip='%urban', ndiag=ndiag, zero_out=all_veg, nodata_value=0._r8, data_o=pcturb, &
+  !     max_valid_value=100.000001_r8)
+  call exit(0)
 
   if ( .not. all_urban .and. .not. all_veg )then
      call mkelev (ldomain, mapfname=map_furbtopo, datfname=mksrf_furbtopo, &

@@ -72,7 +72,7 @@ contains
     real(r8)              :: garea_o                         ! output grid: global area
     real(r8)              :: gpft_i(0:numpft)                ! input grid: global area pfts
     real(r8)              :: garea_i                         ! input grid: global area
-    integer               :: k,n,m,ni,no,ns_i,ns_loc_o       ! indices
+    integer               :: k,n,m,ni,no,ns_loc_i,ns_loc_o   ! indices
     integer               :: dimid                           ! input netCDF id's
     type(var_desc_t)      :: varid
     integer               :: ier                             ! error status
@@ -183,7 +183,8 @@ contains
           end do
        end if
 
-       allocate(pctpft1d_i(ns_loc_o))
+       ns_loc_i = (dim_idx(1,2) - dim_idx(1,1) + 1) * (dim_idx(2,2) - dim_idx(2,1) + 1)
+       allocate(pctpft1d_i(ns_loc_i))
 
        do m = 0, numpft
 

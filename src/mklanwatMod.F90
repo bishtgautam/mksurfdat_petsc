@@ -289,9 +289,6 @@ subroutine mklakwat_pio(ldomain_pio, mapfname, datfname, ndiag, zero_out, lake_o
 
      write(6,*)'Open lake file: ', trim(datfname)
 
-     ! Read the input domain
-     call domain_read_pio(tdomain_pio, datfname)
-
      ! Open the netcdf file
      call OpenFilePIO(datfname, pioIoSystem, ncid)
 
