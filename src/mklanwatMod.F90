@@ -309,7 +309,7 @@ subroutine mklakwat_pio(ldomain_pio, mapfname, datfname, ndiag, zero_out, lake_o
 
      allocate(lake1d_i(ns_loc_i))
 
-     call convert_2d_to_1d_array(dim_idx, lake2d_i, lake1d_i)
+     call convert_2d_to_1d_array(dim_idx(1,1), dim_idx(1,2), dim_idx(2,1), dim_idx(2,2), lake2d_i, lake1d_i)
 
      ! Determine lake_o on output grid
 
@@ -622,7 +622,7 @@ subroutine mkwetlnd_pio(ldomain_pio, mapfname, datfname, ndiag, zero_out, swmp_o
 
      allocate(swmp1d_i(ns_loc_i))
 
-     call convert_2d_to_1d_array(dim_idx, swmp2d_i, swmp1d_i)
+     call convert_2d_to_1d_array(dim_idx(1,1), dim_idx(1,2), dim_idx(2,1), dim_idx(2,2), swmp2d_i, swmp1d_i)
 
      ! Determine swmp_o on output grid
 
@@ -829,7 +829,7 @@ subroutine mklakparams_pio(ldomain_pio, mapfname, datfname, ndiag, lakedepth_o)
   ! Convert 2D vector to 1D vector
   ns_loc_i = (dim_idx(1,2) - dim_idx(1,1) + 1) * (dim_idx(2,2) - dim_idx(2,1) + 1)
   allocate(lakedepth1d_i(ns_loc_i))
-  call convert_2d_to_1d_array(dim_idx, lakedepth2d_i, lakedepth1d_i)
+  call convert_2d_to_1d_array(dim_idx(1,1), dim_idx(1,2), dim_idx(2,1), dim_idx(2,2), lakedepth2d_i, lakedepth1d_i)
 
   ! Determine lakedepth_o on output grid
   call gridmap_areaave(tgridmap, lakedepth1d_i, lakedepth_o, nodata=10._r8)

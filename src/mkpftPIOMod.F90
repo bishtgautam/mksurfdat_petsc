@@ -40,11 +40,11 @@ module mkpftPIOMod
   !
   ! !PUBLIC MEMBER FUNCTIONS:
   !
-  public mkpftPIO
+  public mkpft_pio
 
 contains
 
-  subroutine mkpftPIO(ldomain_pio, mapfname, fpft, ndiag, pctlnd_o, pctpft_o)
+  subroutine mkpft_pio(ldomain_pio, mapfname, fpft, ndiag, pctlnd_o, pctpft_o)
 
     use mkdomainPIOMod, only : domain_pio_type, domain_read_pio, domain_clean_pio
     use mkvarpar      , only : numstdpft, numstdcft
@@ -188,7 +188,7 @@ contains
 
        do m = 0, numpft
 
-          call convert_2d_to_1d_array(dim_idx, pctpft3d_i(:,:,m), pctpft1d_i)
+          call convert_2d_to_1d_array(dim_idx(1,1), dim_idx(1,2), dim_idx(2,1), dim_idx(2,2), pctpft3d_i(:,:,m), pctpft1d_i)
 
           call gridmap_areaave(tgridmap, pctpft1d_i(:), pctpft_o(:,m),  nodata=0._r8)
 
@@ -235,6 +235,6 @@ contains
     write (6,*) 'Successfully made PFTs'
     write (6,*)
 
-  end subroutine mkpftPIO
+  end subroutine mkpft_pio
 
 end module mkpftPIOMod

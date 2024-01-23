@@ -98,7 +98,7 @@ contains
        ! Convert 2D vector to 1D vector
        ns_loc_i = (dim_idx(1,2) - dim_idx(1,1) + 1) * (dim_idx(2,2) - dim_idx(2,1) + 1)
        allocate(data1d_i(ns_loc_i))
-       call convert_2d_to_1d_array(dim_idx, data2d_i, data1d_i)
+       call convert_2d_to_1d_array(dim_idx(1,1), dim_idx(1,2), dim_idx(2,1), dim_idx(2,2), data2d_i, data1d_i)
 
        ! Determine data_o on output grid
        call gridmap_areaave(tgridmap, data1d_i(:), data_o, nodata=nodata_value)
@@ -240,7 +240,7 @@ contains
        do m = start_id_for_dim3, start_id_for_dim3 + (dim_idx(3,2) - dim_idx(3,1))
 
           ! Convert data from 2D to 1D
-          call convert_2d_to_1d_array(dim_idx, data3d_i(:,:,m), data1d_i)
+          call convert_2d_to_1d_array(dim_idx(1,1), dim_idx(1,2), dim_idx(2,1), dim_idx(2,2), data3d_i(:,:,m), data1d_i)
 
           ! Determine data_o on output grid
           call gridmap_areaave(tgridmap, data1d_i(:), data_o(:,m), nodata=nodata_value)

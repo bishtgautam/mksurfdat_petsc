@@ -8,7 +8,7 @@ program mksurfdat_petsc
   use mkglcmecMod
   use mksoilMod
   use mkpftMod
-  use mkpftPIOMod, only : mkpftPIO
+  use mkpftPIOMod, only : mkpft_pio
   use mkvarctl
   use mkurbanparMod
   use mkurbanparCommonMod
@@ -245,12 +245,12 @@ program mksurfdat_petsc
   ! ----------------------------------------------------------------------
 
   ! Make PFTs [pctpft_full] from dataset [fvegtyp]
-#if 0
+#if 1
 
-  call mkpft(ldomain, mapfname=map_fpft, fpft=mksrf_fvegtyp, &
-       ndiag=ndiag, pctlnd_o=pctlnd_pft, pctpft_o=pctpft_full )
-  !call mkpftPIO(ldomain_pio, mapfname=map_fpft, fpft=mksrf_fvegtyp, &
+  !call mkpft(ldomain, mapfname=map_fpft, fpft=mksrf_fvegtyp, &
   !     ndiag=ndiag, pctlnd_o=pctlnd_pft, pctpft_o=pctpft_full )
+  call mkpft_pio(ldomain_pio, mapfname=map_fpft, fpft=mksrf_fvegtyp, &
+       ndiag=ndiag, pctlnd_o=pctlnd_pft, pctpft_o=pctpft_full )
 
   ! Make inland water [pctlak, pctwet] [flakwat] [fwetlnd]
 

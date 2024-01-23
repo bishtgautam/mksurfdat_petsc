@@ -765,7 +765,7 @@ subroutine mkglacier_pio(ldomain_pio, mapfname, datfname, ndiag, zero_out, glac_
      ns_loc_i = (dim_idx(1,2) - dim_idx(1,1) + 1) * (dim_idx(2,2) - dim_idx(2,1) + 1)
      allocate(glac1d_i(ns_loc_i))
 
-     call convert_2d_to_1d_array(dim_idx, glac2d_i, glac1d_i)
+     call convert_2d_to_1d_array(dim_idx(1,1), dim_idx(1,2), dim_idx(2,1), dim_idx(2,2), glac2d_i, glac1d_i)
 
      ! Read the map
      call gridmap_mapread(tgridmap, mapfname )
