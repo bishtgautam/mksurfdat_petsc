@@ -333,7 +333,7 @@ contains
     PetscCall(MatSetFromOptions(gridmap%map_mat, ierr))
 
     do n = 1, gridmap%ns
-       PetscCallA(MatSetValues(gridmap%map_mat, 1, gridmap%dst_indx(n) - 1, 1, gridmap%src_indx(n) - 1, gridmap%wovr(n), INSERT_VALUES, ierr))
+       PetscCallA(MatSetValues(gridmap%map_mat, 1, [gridmap%dst_indx(n) - 1], 1, [gridmap%src_indx(n) - 1], [gridmap%wovr(n)], INSERT_VALUES, ierr))
     end do
     PetscCallA(MatAssemblyBegin(gridmap%map_mat, MAT_FINAL_ASSEMBLY, ierr))
     PetscCallA(MatAssemblyEnd(gridmap%map_mat, MAT_FINAL_ASSEMBLY, ierr))
@@ -363,7 +363,7 @@ contains
     ! Now, create a temporary matrix that has 1/dst_vec(:) as the diagonal
     PetscCallA(VecGetArrayF90(gridmap%dst_vec, dst_p, ierr))
     do no = 1, gridmap%nb
-       PetscCallA(MatSetValues(temp_mat, 1, no - 1, 1, no - 1, 1._r8/dst_p(no), INSERT_VALUES, ierr))
+       PetscCallA(MatSetValues(temp_mat, 1, [no - 1], 1, [no - 1], [1._r8/dst_p(no)], INSERT_VALUES, ierr))
     end do
     PetscCallA(VecRestoreArrayF90(gridmap%dst_vec, dst_p, ierr))
 
@@ -611,7 +611,7 @@ contains
        else
           wt = 0._r8
        end if
-       PetscCallA(MatSetValues(new_wt_mat, 1, no - 1, 1, ni - 1, wt, INSERT_VALUES, ierr))
+       PetscCallA(MatSetValues(new_wt_mat, 1, [no - 1], 1, [ni - 1], [wt], INSERT_VALUES, ierr))
 
     end do
 
