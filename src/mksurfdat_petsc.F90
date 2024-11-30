@@ -331,11 +331,12 @@ program mksurfdat_petsc
   !call mkdata_double_3d_pio(ldomain_pio, mapfname=map_furban, datfname=mksrf_furban, varname='PCT_URBAN', &
   !     data_descrip='%urban', ndiag=ndiag, zero_out=all_veg, nodata_value=0._r8, data_o=pcturb, &
   !     max_valid_value=100.000001_r8)
-  call exit(0)
 
   if ( .not. all_urban .and. .not. all_veg )then
-     call mkelev (ldomain, mapfname=map_furbtopo, datfname=mksrf_furbtopo, &
-          varname='TOPO_ICE', ndiag=ndiag, elev_o=elev)
+     !call mkelev (ldomain, mapfname=map_furbtopo, datfname=mksrf_furbtopo, &
+     !     varname='TOPO_ICE', ndiag=ndiag, elev_o=elev)
+     call mkelev_pio (ldomain_pio, mapfname=map_furbtopo, datfname=mksrf_furbtopo, &
+          varname='TOPO_ICE', ndiag=ndiag, elev_o=elev);
 
      where (elev .gt. elev_thresh)
         pcturb = 0._r8
@@ -345,8 +346,11 @@ program mksurfdat_petsc
 
   ! Determine topography
 
-  call mkelev (ldomain, mapfname=map_flndtopo, datfname=mksrf_flndtopo, &
-       varname='TOPO', ndiag=ndiag, elev_o=topo)
+  !call mkelev (ldomain, mapfname=map_flndtopo, datfname=mksrf_flndtopo, &
+  !     varname='TOPO', ndiag=ndiag, elev_o=topo)
+  call mkelev_pio (ldomain_pio, mapfname=map_flndtopo, datfname=mksrf_flndtopo, &
+       varname='TOPO', ndiag=ndiag, elev_o=elev);
+  call exit(0)
 
   ! Make VIC parameters [binfl, ws, dsmax, ds] from [fvic]
 

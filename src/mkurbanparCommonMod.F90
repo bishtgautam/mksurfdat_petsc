@@ -29,6 +29,7 @@ module mkurbanparCommonMod
    public :: mkurban_pct             ! Make output urban %, given input urban %
    public :: mkurban_pct_diagnostics ! print diagnostics related to pct urban
    public :: mkelev                  ! Get elevation to reduce urban for high elevation areas
+   public :: mkelev_pio              ! PIO-version: Get elevation to reduce urban for high elevation areas
 !
 ! !PUBLIC DATA MEMBERS:
 !
@@ -352,5 +353,94 @@ subroutine mkelev(ldomain, mapfname, datfname, varname, ndiag, elev_o)
 end subroutine mkelev
 
 !-----------------------------------------------------------------------
+subroutine mkelev_pio(ldomain_pio, mapfname, datfname, varname, ndiag, elev_o)
+
+  ! !DESCRIPTION:
+  ! Make elevation data
+  !
+  ! !USES:
+  use mkdomainPIOMod, only : domain_pio_type, domain_clean_pio, domain_read_pio
+  use mkgridmapMod
+  use mkvarpar
+  use mkvarctl
+  use mkncdio
+  use pio
+  use piofileutils
+  use utils
+  !
+  ! !ARGUMENTS:
+  implicit none
+  type(domain_pio_type), intent(in) :: ldomain_pio
+  character(len=*)  , intent(in) :: mapfname  ! input mapping file name
+  character(len=*)  , intent(in) :: datfname  ! input data file name
+  integer           , intent(in) :: ndiag     ! unit number for diag out
+  character(len=*)  , intent(in) :: varname   ! topo variable name
+  real(r8)          , intent(out):: elev_o(:) ! output elevation data
+  ! !LOCAL VARIABLES:
+  !EOP
+  type(gridmap_type)    :: tgridmap
+  type(domain_pio_type)    :: tdomain_pio            ! local domain
+
+  type(file_desc_t)     :: ncid
+  type(iosystem_desc_t) :: pioIoSystem
+  real(r8) , pointer    :: elev2d_i(:,:)
+  real(r8) , pointer    :: elev1d_i(:)
+  integer  :: ns_i,ns_o                       ! indices
+  integer  :: dimid,varid               ! input netCDF id's
+  integer  :: ns_loc_i,ns_loc_o               ! indices
+  integer               :: ierr
+  integer               :: dim_idx(2,2)
+  character(len=256) :: name                  ! name of attribute
+  character(len=256) :: unit                  ! units of attribute
+  character(len= 32) :: subname = 'mkelev_pi'
+  !-----------------------------------------------------------------------
+
+  write (6,*) 'Attempting to make elevation .....'
+  call shr_sys_flush(6)
+  write(*,*)'mapfname:' ,trim(mapfname)
+  write(*,*)'datfname:' ,trim(datfname)
+
+  write (6,*) 'Open elevation file: ', trim(datfname)
+
+  ! Read the input domain
+  call domain_read_pio(tdomain_pio, datfname)
+
+  ! Open the netcdf file
+  call OpenFilePIO(datfname, pioIoSystem, ncid)
+
+  ! Read the variable
+  call read_float_or_double_2d(tdomain_pio, pioIoSystem, ncid, varname, dim_idx, elev2d_i)
+
+  call PIO_closefile(ncid)
+  call PIO_finalize(pioIoSystem, ierr)
+
+  ! Read topo elev dataset with unit mask everywhere
+
+  call gridmap_mapread(tgridmap, mapfname)
+
+  ! Convert 2D vector to 1D vector
+  ns_loc_i = (dim_idx(1,2) - dim_idx(1,1) + 1) * (dim_idx(2,2) - dim_idx(2,1) + 1)
+
+  allocate(elev1d_i(ns_loc_i))
+
+  call convert_2d_to_1d_array(dim_idx(1,1), dim_idx(1,2), dim_idx(2,1), dim_idx(2,2), elev2d_i, elev1d_i)
+
+  ! Determine elev_o on output grid
+
+  elev_o(:) = 0._r8
+
+  call gridmap_areaave(tgridmap, elev1d_i, elev_o, nodata=0._r8)
+
+  call domain_clean_pio(tdomain_pio)
+
+  call gridmap_clean(tgridmap)
+  deallocate (elev2d_i)
+  deallocate (elev1d_i)
+
+  write (6,*) 'Successfully made elevation'
+  write (6,*)
+  call shr_sys_flush(6)
+
+end subroutine mkelev_pio
 
 end module mkurbanparCommonMod
