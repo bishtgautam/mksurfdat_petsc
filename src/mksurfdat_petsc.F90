@@ -349,13 +349,26 @@ program mksurfdat_petsc
   !call mkelev (ldomain, mapfname=map_flndtopo, datfname=mksrf_flndtopo, &
   !     varname='TOPO', ndiag=ndiag, elev_o=topo)
   call mkelev_pio (ldomain_pio, mapfname=map_flndtopo, datfname=mksrf_flndtopo, &
-       varname='TOPO', ndiag=ndiag, elev_o=elev);
-  call exit(0)
+       varname='TOPO', ndiag=ndiag, elev_o=topo);
 
   ! Make VIC parameters [binfl, ws, dsmax, ds] from [fvic]
 
-  call mkVICparams (ldomain, mapfname=map_fvic, datfname=mksrf_fvic, ndiag=ndiag, &
-       binfl_o=vic_binfl, ws_o=vic_ws, dsmax_o=vic_dsmax, ds_o=vic_ds)
+  !call mkVICparams (ldomain, mapfname=map_fvic, datfname=mksrf_fvic, ndiag=ndiag, &
+  !     binfl_o=vic_binfl, ws_o=vic_ws, dsmax_o=vic_dsmax, ds_o=vic_ds)
+  call mkdata_double_2d_pio(ldomain_pio, mapfname=map_fvic, datfname=mksrf_fvic, varname='binfl', &
+       data_descrip='binfl', ndiag=ndiag, zero_out=.false., nodata_value=0._r8, data_o=vic_binfl, &
+       min_valid_value=0._r8)
+  call mkdata_double_2d_pio(ldomain_pio, mapfname=map_fvic, datfname=mksrf_fvic, varname='Ws', &
+       data_descrip='Ws', ndiag=ndiag, zero_out=.false., nodata_value=0._r8, data_o=vic_ws, &
+       min_valid_value=0._r8)
+  call mkdata_double_2d_pio(ldomain_pio, mapfname=map_fvic, datfname=mksrf_fvic, varname='Dsmax', &
+       data_descrip='Dsmax', ndiag=ndiag, zero_out=.false., nodata_value=0._r8, data_o=vic_dsmax, &
+       min_valid_value=0._r8)
+  call mkdata_double_2d_pio(ldomain_pio, mapfname=map_fvic, datfname=mksrf_fvic, varname='Ds', &
+       data_descrip='Ds', ndiag=ndiag, zero_out=.false., nodata_value=0._r8, data_o=vic_ds, &
+       min_valid_value=0._r8)
+
+  call exit(0)
 
   ! Make lake depth [lakedepth] from [flakwat]
 
