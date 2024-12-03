@@ -633,12 +633,20 @@ subroutine mkwetlnd_pio(ldomain_pio, mapfname, datfname, ndiag, zero_out, swmp_o
         if (swmp_o(no) < 1._r8) swmp_o(no) = 0._r8
      enddo
 
+  else
+
+     ! set zero
+     ns_loc_o = ldomain_pio%ns_loc
+     do no = 1,ns_loc_o
+        swmp_o(no) = 0._r8
+     enddo
+
   end if
 
   ! Deallocate dynamic memory
 
-  call domain_clean_pio(tdomain_pio)
   if ( .not. zero_out )then
+     call domain_clean_pio(tdomain_pio)
      call gridmap_clean(tgridmap)
      deallocate (swmp2d_i)
      deallocate (swmp1d_i)
