@@ -5,6 +5,7 @@ module utils
   implicit none
 
   public convert_2d_to_1d_array
+  public convert_2d_to_1d_array_integer
 
 contains
 
@@ -28,4 +29,24 @@ contains
     
   end subroutine convert_2d_to_1d_array
   
+  subroutine convert_2d_to_1d_array_integer(begi, endi, begj, endj, data2d, data1d)
+    !
+    implicit none
+    !
+    integer         , intent(in)  :: begi, endi, begj, endj
+    integer, pointer, intent(in)  :: data2d(:,:)
+    integer, pointer, intent(out) :: data1d(:)
+    !
+    integer                        :: i, j, count
+
+    count = 0
+    do j = begj, endj
+       do i = begi, endi
+          count = count + 1
+          data1d(count) = data2d(i,j)
+       end do
+    end do
+
+  end subroutine convert_2d_to_1d_array_integer
+
 end module utils
