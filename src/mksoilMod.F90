@@ -31,6 +31,8 @@ module mksoilMod
   public mksoilcol      ! Set soil color
   public mksoilord      ! Set soil order
   public mkfmax         ! Make percent fmax
+
+  public mksoiltex_pio  ! Set soil texture
 !
 ! !PUBLIC DATA MEMBERS:
 !
@@ -527,6 +529,417 @@ subroutine mksoiltex(ldomain, mapfname, datfname, ndiag, sand_o, clay_o)
 end subroutine mksoiltex
 
 !-----------------------------------------------------------------------
+
+!-----------------------------------------------------------------------
+!BOP
+!
+! !IROUTINE: mksoiltex_pio
+!
+! !INTERFACE:
+subroutine mksoiltex_pio(ldomain_pio, mapfname, datfname, ndiag, sand_o, clay_o)
+  !
+  ! !DESCRIPTION:
+  ! make %sand and %clay from IGBP soil data, which includes
+  ! igbp soil 'mapunits' and their corresponding textures
+  !
+  ! !USES:
+  use mkdomainPIOMod, only : domain_pio_type, domain_read_pio, domain_clean_pio
+  use mkgridmapMod
+  use mkvarpar	
+  use mkvarctl    
+  use mkncdio
+  use pio
+  use utils
+  use piofileutils
+  !
+  ! !ARGUMENTS:
+  implicit none
+  type(domain_pio_type) , intent(inout) :: ldomain_pio
+  character(len=*)  , intent(in) :: mapfname      ! input mapping file name
+  character(len=*)  , intent(in) :: datfname      ! input data file name
+  integer           , intent(in) :: ndiag         ! unit number for diag out
+  real(r8)          , intent(out):: sand_o(:,:)   ! % sand (output grid)
+  real(r8)          , intent(out):: clay_o(:,:)   ! % clay (output grid)
+  !
+  ! !CALLED FROM:
+  ! subroutine mksrfdat in module mksrfdatMod
+  !
+  ! !REVISION HISTORY:
+  ! Author: Gautam Bisht
+  !
+  !
+  ! !LOCAL VARIABLES:
+  !EOP
+  type(gridmap_type)    :: tgridmap
+  type(domain_pio_type) :: tdomain_pio     ! local domain
+  character(len=38)  :: typ                 ! soil texture based on ...
+  integer  :: nlay                          ! number of soil layers
+  integer  :: mapunitmax                    ! max value of igbp soil mapunits
+  integer  :: mapunittemp                   ! temporary igbp soil mapunit
+  integer  :: maxovr
+  integer , allocatable :: novr(:)
+  integer , allocatable :: kmap(:,:)
+  real(r8), allocatable :: kwgt(:,:)
+  integer , allocatable :: kmax(:)
+  real(r8), allocatable :: wst(:)
+  real(r8), pointer :: sand3d_i(:,:,:)      ! input grid: percent sand
+  real(r8), pointer :: clay3d_i(:,:,:)      ! input grid: percent clay
+  real(r8), pointer :: sand2d_i(:,:)      ! input grid: percent sand
+  real(r8), pointer :: clay2d_i(:,:)      ! input grid: percent clay
+  real(r8), pointer :: tmp1d_i(:)
+  real(r8), pointer :: mapunit2d_i(:,:)     ! input grid: igbp soil mapunits
+  real(r8), pointer :: mapunit1d_i(:)       ! input grid: igbp soil mapunits
+  integer, parameter :: num=2               ! set soil mapunit number
+  integer  :: wsti(num)                     ! index to 1st and 2nd largest wst
+  integer, parameter :: nlsm=4              ! number of soil textures 
+  character(len=38)  :: soil(0:nlsm)        ! name of each soil texture
+  real(r8) :: gast_i(0:nlsm)                ! global area, by texture type
+  real(r8) :: gast_o(0:nlsm)                ! global area, by texture type
+  real(r8) :: wt                            ! map overlap weight
+  real(r8) :: sum_fldi                      ! global sum of dummy input fld
+  real(r8) :: sum_fldo                      ! global sum of dummy output fld
+  integer  :: l,k,n,m,ni,no,ns_i,ns_loc_i,ns_loc_o       ! indices
+  integer  :: k1,k2                         ! indices
+  integer  :: dimid,varid              ! input netCDF id's
+  integer  :: ier                           ! error status
+  integer  :: miss = 99999                  ! missing data indicator
+  real(r8) :: relerr = 0.00001              ! max error: sum overlap wts ne 1
+  logical  :: found                         ! temporary
+  integer  :: kmap_max                      ! maximum overlap weights
+  integer, parameter :: kmap_max_min   = 90 ! kmap_max mininum value
+  integer, parameter :: km_mx_ns_prod = 160000 ! product of kmap_max*ns_o to keep constant
+
+  type(file_desc_t)     :: ncid
+  type(iosystem_desc_t) :: pioIoSystem
+  type(io_desc_t)       :: iodescNCells
+  integer               :: count, i, j, vartype, ierr
+  integer               :: dim_idx_3d(3,2)
+  integer               :: dim_idx_2d(3,2)
+  character(len=32) :: subname = 'mksoiltex'
+!-----------------------------------------------------------------------
+
+  write (6,*) 'Attempting to make %sand and %clay .....'
+  call shr_sys_flush(6)
+  write(*,*)'mapfname:' ,trim(mapfname)
+  write(*,*)'datfname:' ,trim(datfname)
+
+  ! -----------------------------------------------------------------
+  ! Define the model surface types: 0 to nlsm
+  ! -----------------------------------------------------------------
+
+  soil(0) = 'no soil: ocean, glacier, lake, no data'
+  soil(1) = 'clays                                 '
+  soil(2) = 'sands                                 '
+  soil(3) = 'loams                                 '
+  soil(4) = 'silts                                 '
+
+  ! -----------------------------------------------------------------
+  ! Read input file
+  ! -----------------------------------------------------------------
+
+  ! Obtain input grid info, read local fields
+
+  write (6,*) 'Open soil texture file: ', trim(datfname)
+
+  call domain_read_pio(tdomain_pio, datfname)
+
+  call OpenFilePIO(datfname, pioIoSystem, ncid)
+
+  call read_float_or_double_2d(tdomain_pio, pioIoSystem, ncid, 'MAPUNITS', dim_idx_2d, mapunit2d_i)
+  call read_float_or_double_3d(tdomain_pio, pioIoSystem, ncid, 'PCT_SAND', 0, dim_idx_3d, sand3d_i)
+  call read_float_or_double_3d(tdomain_pio, pioIoSystem, ncid, 'PCT_CLAY', 0, dim_idx_3d, clay3d_i)
+
+  call PIO_closefile(ncid)
+  call PIO_finalize(pioIoSystem, ierr)
+
+  call gridmap_mapread(tgridmap, mapfname)
+
+  ! Convert 2D vector to 1D vector
+  ns_loc_i = (dim_idx_2d(1,2) - dim_idx_2d(1,1) + 1) * (dim_idx_2d(2,2) - dim_idx_2d(2,1) + 1)
+
+  allocate(sand2d_i(ns_loc_i,nlay))
+  allocate(clay2d_i(ns_loc_i,nlay))
+  allocate(tmp1d_i(ns_loc_i))
+
+  do l = 1, nlay
+     call convert_2d_to_1d_array(dim_idx_3d(1,1), dim_idx_3d(1,2), dim_idx_3d(2,1), dim_idx_3d(2,2), sand3d_i(:,:,m), tmp1d_i)
+     sand2d_i(:,m) = tmp1d_i(:)
+
+     call convert_2d_to_1d_array(dim_idx_3d(1,1), dim_idx_3d(1,2), dim_idx_3d(2,1), dim_idx_3d(2,2), clay3d_i(:,:,m), tmp1d_i)
+     clay2d_i(:,m) = tmp1d_i(:)
+  end do
+  
+  ! Compute local fields _o
+  if (soil_sand==unset .and. soil_clay==unset) then
+
+     allocate(mapunit1d_i(ns_loc_i))
+
+     call convert_2d_to_1d_array(dim_idx_2d(1,1), dim_idx_2d(1,2), dim_idx_2d(2,1), dim_idx_2d(2,2), mapunit2d_i, mapunit1d_i)
+
+     ! kmap_max are the maximum number of mapunits that will consider on
+     ! any output gridcell - this is set currently above and can be changed
+     ! kmap(:) are the mapunit values on the input grid
+     ! kwgt(:) are the weights on the input grid
+
+     ns_loc_o = ldomain_pio%ns_loc
+
+     allocate(novr(ns_loc_o))
+     novr(:) = 0._r8
+     do n = 1,tgridmap%ns
+        ni = tgridmap%src_indx(n)
+        no = tgridmap%dst_indx(n)
+        wt = tgridmap%wovr(n)
+        novr(no) = novr(no) + 1
+     end do
+     maxovr = maxval(novr(:))
+     kmap_max = min(maxovr,max(kmap_max_min,km_mx_ns_prod/ns_loc_o))
+     deallocate(novr)
+
+     write(6,*)'kmap_max= ',kmap_max,' maxovr= ',maxovr,' ns_loc_o= ',ns_loc_o,' size= ',(kmap_max+1)*ns_loc_o
+
+     allocate(kmap(0:kmap_max,ns_loc_o), stat=ier)
+     if (ier/=0) call abort()
+     allocate(kwgt(0:kmap_max,ns_loc_o), stat=ier)
+     if (ier/=0) call abort()
+     allocate(kmax(ns_loc_o), stat=ier)
+     if (ier/=0) call abort()
+     allocate(wst(0:kmap_max), stat=ier)
+     if (ier/=0) call abort()
+
+     kwgt(:,:) = 0.
+     kmap(:,:) = 0
+     kmax(:) = 0
+
+     do n = 1,tgridmap%ns
+        ni = tgridmap%src_indx(n)
+        no = tgridmap%dst_indx(n)
+        wt = tgridmap%wovr(n)
+        if (tgridmap%frac_src(ni) > 0) then
+           k = mapunit1d_i(ni) 
+        else
+           k = 0
+        end if
+        found = .false.
+        do l = 0,kmax(no)
+           if (k == kmap(l,no)) then
+              kwgt(l,no) = kwgt(l,no) + wt
+              kmap(l,no) = k
+              found = .true.
+              exit
+           end if
+        end do
+        if (.not. found) then
+           kmax(no) = kmax(no) + 1
+           if (kmax(no) > kmap_max) then
+              write(6,*)'kmax is > kmap_max= ',kmax(no), 'kmap_max = ', &
+                         kmap_max,' for no = ',no
+              write(6,*)'reset kmap_max in mksoilMod to a greater value'
+              stop
+           end if
+           kmap(kmax(no),no) = k
+           kwgt(kmax(no),no) = wt
+        end if
+     enddo
+
+  end if
+
+#if 1
+  do no = 1,ns_loc_o
+
+     if (soil_sand==unset .and. soil_clay==unset) then
+        wst(:) = 0.
+        wst(0:kmax(no)) = kwgt(0:kmax(no),no)
+
+        ! Rank non-zero weights by soil mapunit.
+        ! k1 is the most extensive mapunit.
+        ! k2 is the second most extensive mapunit.
+
+        if (maxval(wst(:)) > 0) then
+           call mkrank (kmax(no)+1, wst(0:kmax(no)), miss, wsti, num)
+           k1 = kmap(wsti(1),no)
+           if (wsti(2) == miss) then
+              k2 = miss
+           else
+              k2 = kmap(wsti(2),no)
+           end if
+        else
+           k1 = 0
+           k2 = 0
+        end if
+
+     end if
+
+     ! Set soil texture as follows:
+     !   a. Use dominant igbp soil mapunit based on area of overlap unless
+     !     'no data' is dominant
+     !   b. In this case use second most dominant mapunit if it has data
+     !   c. If this has no data or if there isn't a second most dominant
+     !      mapunit, use loam for soil texture
+
+     if (soil_sand/=unset .and. soil_clay/=unset) then  !---soil texture is input
+        do l = 1, nlay
+           sand_o(no,l) = soil_sand
+           clay_o(no,l) = soil_clay
+        end do
+     else if (k1 /= 0) then           !---not 'no data'
+        do l = 1, nlay
+           sand_o(no,l) = sand2d_i(k1,l)
+           clay_o(no,l) = clay2d_i(k1,l)
+        end do
+     else                                  !---if (k1 == 0) then
+        if (k2 == 0 .or. k2 == miss) then     !---no data
+           do l = 1, nlay
+              sand_o(no,l) = 43.           !---use loam
+              clay_o(no,l) = 18.
+           end do
+        else                               !---if (k2 /= 0 and /= miss)
+           do l = 1, nlay
+              sand_o(no,l) = sand2d_i(k2,l)
+              clay_o(no,l) = clay2d_i(k2,l)
+           end do
+        end if       !---end of k2 if-block
+     end if          !---end of k1 if-block
+
+  enddo
+
+  if (soil_sand==unset .and. soil_clay==unset) then
+
+     ! Global sum of output field 
+
+     sum_fldi = 0.0_r8
+     do ni = 1,ns_i
+        sum_fldi = sum_fldi + tgridmap%area_src(ni)*tgridmap%frac_src(ni)*re**2
+     enddo
+
+     sum_fldo = 0.
+     do no = 1,ns_loc_o
+        sum_fldo = sum_fldo + tgridmap%area_dst(no)*tgridmap%frac_dst(no)*re**2
+     end do
+
+     ! -----------------------------------------------------------------
+     ! Error check1
+     ! Compare global sum fld_o to global sum fld_i.
+     ! -----------------------------------------------------------------
+
+     if ( trim(mksrf_gridtype) == 'global') then
+        if ( abs(sum_fldo/sum_fldi-1.) > relerr ) then
+           write (6,*) 'MKSOILTEX error: input field not conserved'
+           write (6,'(a30,e20.10)') 'global sum output field = ',sum_fldo
+           write (6,'(a30,e20.10)') 'global sum input  field = ',sum_fldi
+           stop
+        end if
+     end if
+
+     ! -----------------------------------------------------------------
+     ! Error check2
+     ! Compare global area of each soil type on input and output grids
+     ! -----------------------------------------------------------------
+
+     ! input grid: global areas by texture class
+
+     gast_i(:) = 0.
+     do l = 1, nlay
+        do ni = 1,ns_i
+           mapunittemp = nint(mapunit1d_i(ni))
+           if (mapunittemp==0) then
+              typ = 'no soil: ocean, glacier, lake, no data'
+           else if (clay2d_i(mapunittemp,l) >= 40.) then
+              typ = 'clays'
+           else if (sand2d_i(mapunittemp,l) >= 50.) then
+              typ = 'sands'
+           else if (clay2d_i(mapunittemp,l)+sand2d_i(mapunittemp,l) < 50.) then
+              !if (tdomain_pio%mask(ni) /= 0.) then
+                 typ = 'silts'
+              !else            !if (tdomain%mask(ni) == 0.) then no data
+              !   typ = 'no soil: ocean, glacier, lake, no data'
+              !end if
+           else
+              typ = 'loams'
+           end if
+           do m = 0, nlsm
+              if (typ == soil(m)) go to 101
+           end do
+           write (6,*) 'MKSOILTEX error: sand = ',sand2d_i(mapunittemp,l), &
+             ' clay = ',clay2d_i(mapunittemp,l), &
+             ' not assigned to soil type for input grid lon,lat,layer = ',ni,l
+           call abort()
+101        continue
+           gast_i(m) = gast_i(m) + tgridmap%area_src(ni)*tgridmap%frac_src(ni)*re**2
+        end do
+     end do
+
+     ! output grid: global areas by texture class
+
+     gast_o(:) = 0.
+     do l = 1, nlay
+        do no = 1,ns_loc_o
+           if (clay_o(no,l)==0. .and. sand_o(no,l)==0.) then
+              typ = 'no soil: ocean, glacier, lake, no data'
+           else if (clay_o(no,l) >= 40.) then
+              typ = 'clays'
+           else if (sand_o(no,l) >= 50.) then
+              typ = 'sands'
+           else if (clay_o(no,l)+sand_o(no,l) < 50.) then
+              typ = 'silts'
+           else
+              typ = 'loams'
+           end if
+           do m = 0, nlsm
+              if (typ == soil(m)) go to 102
+           end do
+           write (6,*) 'MKSOILTEX error: sand = ',sand_o(no,l), &
+             ' clay = ',clay_o(no,l), &
+             ' not assigned to soil type for output grid lon,lat,layer = ',no,l
+           call abort()
+102        continue
+           gast_o(m) = gast_o(m) + tgridmap%area_dst(no)*tgridmap%frac_dst(no)*re**2
+        end do
+     end do
+
+     ! Diagnostic output
+
+     write (ndiag,*)
+     write (ndiag,'(1x,70a1)') ('=',l=1,70)
+     write (ndiag,*) 'Soil Texture Output'
+     write (ndiag,'(1x,70a1)') ('=',l=1,70)
+     write (ndiag,*)
+
+     write (ndiag,*) 'The following table of soil texture classes is for comparison only.'
+     write (ndiag,*) 'The actual data is continuous %sand, %silt and %clay not textural classes'
+     write (ndiag,*)
+
+     write (ndiag,*)
+     write (ndiag,'(1x,70a1)') ('.',l=1,70)
+     write (ndiag,1001)
+1001 format (1x,'soil texture class',17x,' input grid area output grid area',/ &
+             1x,33x,'     10**6 km**2','      10**6 km**2')
+     write (ndiag,'(1x,70a1)') ('.',l=1,70)
+     write (ndiag,*)
+
+     do l = 0, nlsm
+        write (ndiag,1002) soil(l),gast_i(l)*1.e-6,gast_o(l)*1.e-6
+1002    format (1x,a38,f16.3,f17.3)
+     end do
+
+  end if
+#endif
+
+  ! Deallocate dynamic memory
+
+  call domain_clean_pio(tdomain_pio)
+  if (soil_sand==unset .and. soil_clay==unset) then
+     call gridmap_clean(tgridmap)
+     deallocate (kmap, kwgt, kmax, wst)
+     deallocate (sand2d_i,clay2d_i,mapunit2d_i)
+     deallocate (sand3d_i,clay3d_i,mapunit1d_i,tmp1d_i)
+  end if
+
+
+  write (6,*) 'Successfully made %sand and %clay'
+  write (6,*)
+  call shr_sys_flush(6)
+
+end subroutine mksoiltex_pio
 
 !-----------------------------------------------------------------------
 !BOP

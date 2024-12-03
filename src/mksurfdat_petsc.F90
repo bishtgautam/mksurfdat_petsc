@@ -275,6 +275,8 @@ program mksurfdat_petsc
 
   call mksoiltex (ldomain, mapfname=map_fsoitex, datfname=mksrf_fsoitex, &
        ndiag=ndiag, sand_o=pctsand, clay_o=pctclay)
+  !call mksoiltex_pio (ldomain_pio, mapfname=map_fsoitex, datfname=mksrf_fsoitex, &
+  !     ndiag=ndiag, sand_o=pctsand, clay_o=pctclay)
 
   ! Make soil color classes [soicol] [fsoicol]
 
