@@ -16,17 +16,11 @@ module mkgridmapPIOMod
   private
 
   type grid_type
-     real(r8), pointer :: xc1d(:)
-     real(r8), pointer :: yc1d(:)
-     real(r8), pointer :: area1d(:)
-     real(r8), pointer :: frac1d(:)
-     integer , pointer :: mask1d(:)
-
-     real(r8), pointer :: xc2d(:,:)
-     real(r8), pointer :: yc2d(:,:)
-     real(r8), pointer :: area2d(:,:)
-     real(r8), pointer :: frac2d(:,:)
-     integer , pointer :: mask2d(:,:)
+     real(r8), pointer :: xc(:)
+     real(r8), pointer :: yc(:)
+     real(r8), pointer :: area(:)
+     real(r8), pointer :: frac(:)
+     integer , pointer :: mask(:)
   end type grid_type
 
   type gridmap_dim_type
@@ -66,6 +60,58 @@ module mkgridmapPIOMod
   character(len=32), parameter :: isSet = "gridmap_IsSet"
 
 contains
+
+  !------------------------------------------------------------------------------
+  subroutine gridmap_grid_setup(pioIoSystem, ncid, dim, grid_suffix, grid)
+
+    implicit none
+
+    type(iosystem_desc_t) , intent(in)    :: pioIoSystem
+    type(file_desc_t)     , intent(in)    :: ncid
+    type(gridmap_dim_type) , intent(in)    :: dim
+    character(len=2)       , intent(in)    :: grid_suffix
+    type(grid_type)        , intent(inout) :: grid
+
+    character(len=24)                      :: var_name
+
+    ! allocate memory
+    allocate(grid%xc(dim%begd:dim%endd))
+    allocate(grid%yc(dim%begd:dim%endd))
+    allocate(grid%area(dim%begd:dim%endd))
+    allocate(grid%frac(dim%begd:dim%endd))
+    allocate(grid%mask(dim%begd:dim%endd))
+
+    var_name = 'xc' // grid_suffix
+    call gridmap_read_float_or_double_1d(pioIoSystem, ncid, var_name, dim%begd, dim%endd, dim%nglb, dim%compdof, grid%xc)
+
+    var_name = 'yc' // grid_suffix
+    call gridmap_read_float_or_double_1d(pioIoSystem, ncid, var_name, dim%begd, dim%endd, dim%nglb, dim%compdof, grid%yc)
+
+    var_name = 'area' // grid_suffix
+    call gridmap_read_float_or_double_1d(pioIoSystem, ncid, var_name, dim%begd, dim%endd, dim%nglb, dim%compdof, grid%area)
+
+    var_name = 'frac' // grid_suffix
+    call gridmap_read_float_or_double_1d(pioIoSystem, ncid, var_name, dim%begd, dim%endd, dim%nglb, dim%compdof, grid%frac)
+
+    var_name = 'mask' // grid_suffix
+    call gridmap_read_integer_1d(pioIoSystem, ncid, var_name, dim%begd, dim%endd, dim%nglb, dim%compdof, grid%mask)
+
+  end subroutine gridmap_grid_setup
+
+  !------------------------------------------------------------------------------
+  subroutine gridmap_grid_clean(grid)
+
+    implicit none
+
+    type(grid_type), intent(inout) :: grid
+
+    deallocate(grid%xc)
+    deallocate(grid%yc)
+    deallocate(grid%area)
+    deallocate(grid%frac)
+    deallocate(grid%mask)
+
+  end subroutine gridmap_grid_clean
 
   !------------------------------------------------------------------------------
   subroutine gridmap_read_dimsize_pio(pioIoSystem, ncid, dim_name, ndim)
@@ -258,6 +304,9 @@ contains
     call gridmap_dim_setup(pioIoSystem, ncid, 'n_b', gridmap_pio%dim_nb)
     call gridmap_dim_setup(pioIoSystem, ncid, 'n_s', gridmap_pio%dim_ns)
 
+    call gridmap_grid_setup(pioIoSystem, ncid, gridmap_pio%dim_na, '_a', gridmap_pio%src)
+    call gridmap_grid_setup(pioIoSystem, ncid, gridmap_pio%dim_nb, '_b', gridmap_pio%dst)
+
     allocate(gridmap_pio%wovr(gridmap_pio%dim_ns%begd:gridmap_pio%dim_ns%endd))
     allocate(gridmap_pio%row(gridmap_pio%dim_ns%begd:gridmap_pio%dim_ns%endd))
     allocate(gridmap_pio%col(gridmap_pio%dim_ns%begd:gridmap_pio%dim_ns%endd))
@@ -400,6 +449,9 @@ contains
        call gridmap_dim_clean(gridmap_pio%dim_na)
        call gridmap_dim_clean(gridmap_pio%dim_nb)
        call gridmap_dim_clean(gridmap_pio%dim_ns)
+
+       call gridmap_grid_clean(gridmap_pio%src)
+       call gridmap_grid_clean(gridmap_pio%dst)
 
        deallocate(gridmap_pio%wovr)
        deallocate(gridmap_pio%row)
