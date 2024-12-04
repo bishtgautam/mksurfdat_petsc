@@ -673,6 +673,7 @@ contains
     call mpi_bcast(mksrf_fgrvl       , len(mksrf_fgrvl)       , MPI_CHARACTER, 0, PETSC_COMM_WORLD, ier) 
     call mpi_bcast(mksrf_fslp10      , len(mksrf_fslp10)      , MPI_CHARACTER, 0, PETSC_COMM_WORLD, ier) 
     call mpi_bcast(mksrf_fero        , len(mksrf_fero)        , MPI_CHARACTER, 0, PETSC_COMM_WORLD, ier) 
+    call mpi_bcast(map_fpft          , len(map_fpft)          , MPI_CHARACTER, 0, PETSC_COMM_WORLD, ier)
     call mpi_bcast(map_flakwat       , len(map_flakwat)       , MPI_CHARACTER, 0, PETSC_COMM_WORLD, ier) 
     call mpi_bcast(map_fwetlnd       , len(map_fwetlnd)       , MPI_CHARACTER, 0, PETSC_COMM_WORLD, ier) 
     call mpi_bcast(map_fglacier      , len(map_fglacier)      , MPI_CHARACTER, 0, PETSC_COMM_WORLD, ier) 
