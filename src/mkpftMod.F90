@@ -29,6 +29,7 @@ module mkpftMod
   public mkpft_parse_oride  ! Parse the string with PFT fraction/index info to override
   public mkpft_normalize    ! Rescale pctpft
   public mkpftAtt           ! Write out attributes to output file on pft
+  public mkpftAttPIO        ! PIO-version: Write out attributes to output file on pft
 !
 ! !PUBLIC DATA MEMBERS: 
 !
@@ -942,5 +943,134 @@ subroutine mkpftAtt( ncid, dynlanduse, xtype )
 end subroutine mkpftAtt
 
 !-----------------------------------------------------------------------
+subroutine mkpftAttPIO( ncid, dynlanduse, xtype, dim_id_gridcell, dim_id_lsmlon, dim_id_lsmlat, dim_id_time, &
+     dim_id_lsmpft, dim_id_natpft, dim_id_cft)
+
+  use fileutils  , only : get_filename
+  use mkvarctl   , only : mksrf_fvegtyp, mksrf_flai, outnc_1d
+  use pio
+  use piofileutils
+  use mkvarpar
+  use mkvarctl
+
+  implicit none
+
+  type(file_desc_t) , intent(in)    :: ncid
+  logical           , intent(in)    :: dynlanduse
+  integer           , intent(in)    :: xtype          ! external type to output real data as
+  integer           , intent(in)    :: dim_id_gridcell
+  integer           , intent(in)    :: dim_id_lsmlon
+  integer           , intent(in)    :: dim_id_lsmlat
+  integer           , intent(inout) :: dim_id_time
+  integer           , intent(inout) :: dim_id_lsmpft
+  integer           , intent(inout) :: dim_id_natpft
+  integer           , intent(inout) :: dim_id_cft
+
+  character(len=512)                :: str            ! global attribute string
+  character(len=512)                :: att_name, att_value
+  character(len=32)                 :: subname = 'mkpftAttPIO'
+  type(var_desc_t)                  :: pioVar
+  integer                           :: dim1d(1), dim2d(2), dim3d(3), dim4d(4)
+  integer                           :: ier
+  integer :: pftsize              ! size of lsmpft dimension
+  integer :: natpftsize           ! size of natpft dimension
+
+  ! Define dimensions
+
+  call DefineDimPIO(ncid, 'time', PIO_UNLIMITED, dim_id_time)
+
+  if (.not. dynlanduse) then
+     pftsize = numpft + 1
+     call DefineDimPIO(ncid, 'lsmpft', pftsize, dim_id_lsmpft)
+  end if
+
+  natpftsize = num_natpft + 1
+  call DefineDimPIO(ncid, 'natpft', natpftsize, dim_id_natpft)
+
+  if (num_cft > 0) then
+     call DefineDimPIO(ncid, 'cft', num_cft, dim_id_cft)
+  end if
+
+  ! Add global attributes
+
+  if (.not. dynlanduse) then
+     str = get_filename(mksrf_flai)
+     call check_ret(PIO_put_att (ncid, PIO_GLOBAL, 'Lai_raw_data_file_name', trim(str)), subname)
+  end if
+
+  if ( use_input_pft ) then
+     str = 'TRUE'
+     call check_ret(PIO_put_att (ncid, PIO_GLOBAL, 'pft_override', trim(str)), subname)
+  else if (zero_out) then
+     str = 'TRUE'
+     call check_ret(PIO_put_att (ncid, PIO_GLOBAL, 'zero_out_pft_override', trim(str)), subname)
+  else
+     str = get_filename(mksrf_fvegtyp)
+     call check_ret(PIO_put_att (ncid, PIO_GLOBAL, 'Vegetation_type_raw_data_filename', trim(str)), subname)
+  end if
+
+  ! Define variables
+
+  dim1d(1) = dim_id_natpft
+  call DefineVarPIO_1d(ncid, 'natpft', PIO_INT, dim1d, longName='indices of natural PFTs', units='index')
+
+  if (num_cft > 0) then
+     dim1d(1) = dim_id_cft
+     call DefineVarPIO_1d(ncid, 'cft', PIO_INT, dim1d, longName='indices of CFTs', units='index')
+  end if
+
+
+  if (outnc_1d) then
+
+     dim1d(1) = dim_id_gridcell
+     call DefineVarPIO_1d(ncid, 'LANDFRAC_PFT' , xtype, dim1d, longName='land fraction from pft dataset'                             , units='unitless')
+     call DefineVarPIO_1d(ncid, 'PFTDATA_MASK' , xtype, dim1d, longName='land mask from pft dataset, indicative of real/fake points' , units='unitless')
+     call DefineVarPIO_1d(ncid, 'PCT_NATVEG'   , xtype, dim1d, longName='total percent natural vegetation landunit'                  , units='unitless')
+     call DefineVarPIO_1d(ncid, 'PCT_CROP'     , xtype, dim1d, longName='total percent crop landunit'                                , units='unitless')
+
+     if (.not. dynlanduse) then
+        dim2d(1) = dim_id_gridcell; dim2d(2) = dim_id_natpft
+        call DefineVarPIO_2d(ncid, 'PCT_NAT_PFT', xtype, dim2d, longName='percent plant functional type on the natural veg landunit (% of landunit)', units='unitless')
+     else
+        dim3d(1) = dim_id_gridcell; dim3d(2) = dim_id_natpft; dim3d(3) = dim_id_time
+        call DefineVarPIO_3d(ncid, 'PCT_NAT_PFT', xtype, dim3d, longName='percent plant functional type on the natural veg landunit (% of landunit)', units='unitless')
+     end if
+
+     if (num_cft > 0) then
+        dim2d(1) = dim_id_gridcell; dim2d(2) = dim_id_cft
+        call DefineVarPIO_2d(ncid, 'PCT_CFT', xtype, dim2d, longName='percent crop functional type on the crop landunit (% of landunit)', units='unitless')
+     end if
+
+     if (.not. dynlanduse) then
+        dim3d(1) = dim_id_gridcell; dim3d(2) = dim_id_lsmpft; dim3d(3) = dim_id_time
+        call DefineVarPIO_3d(ncid, 'MONTHLY_LAI'        , xtype, dim3d, longName='monthly leaf area index' , units='unitless')
+        call DefineVarPIO_3d(ncid, 'MONTHLY_SAI'        , xtype, dim3d, longName='monthly stem area index' , units='unitless')
+        call DefineVarPIO_3d(ncid, 'MONTHLY_HEIGHT_TOP' , xtype, dim3d, longName='monthly height top'      , units='meters')
+        call DefineVarPIO_3d(ncid, 'MONTHLY_HEIGHT_BOT' , xtype, dim3d, longName='monthly height bot'      , units='meters')
+     end if
+
+  else ! if (outnc_1d)
+
+     dim2d(1) = dim_id_lsmlon;dim2d(2) = dim_id_lsmlat
+     call DefineVarPIO_2d(ncid, 'LANDFRAC_PFT' , xtype, dim2d, longName='land fraction from pft dataset'                             , units='unitless')
+     call DefineVarPIO_2d(ncid, 'PFTDATA_MASK' , xtype, dim2d, longName='land mask from pft dataset, indicative of real/fake points' , units='unitless')
+     call DefineVarPIO_2d(ncid, 'PCT_NATVEG'   , xtype, dim2d, longName='total percent natural vegetation landunit'                  , units='unitless')
+     call DefineVarPIO_2d(ncid, 'PCT_CROP'     , xtype, dim2d, longName='total percent crop landunit'                                , units='unitless')
+
+     if (.not. dynlanduse) then
+        dim3d(1) = dim_id_lsmlon; dim3d(2) = dim_id_lsmlat; dim3d(3) = dim_id_natpft
+        call DefineVarPIO_3d(ncid, 'PCT_NAT_PFT', xtype, dim3d, longName='percent plant functional type on the natural veg landunit (% of landunit)', units='unitless')
+     else
+        dim4d(1) = dim_id_lsmlon; dim4d(2) = dim_id_lsmlat; dim4d(3) = dim_id_natpft; dim4d(4) = dim_id_time
+        call DefineVarPIO_4d(ncid, 'PCT_NAT_PFT', xtype, dim4d, longName='percent plant functional type on the natural veg landunit (% of landunit)', units='unitless')
+     end if
+
+     if (num_cft > 0) then
+        dim3d(1) = dim_id_lsmlon; dim3d(2) = dim_id_lsmlat; dim3d(3) = dim_id_cft
+        call DefineVarPIO_3d(ncid, 'PCT_CFT', xtype, dim3d, longName='percent crop functional type on the crop landunit (% of landunit)', units='unitless')
+     end if
+  end if
+
+end subroutine mkpftAttPIO
 
 end module mkpftMod
