@@ -363,14 +363,16 @@ contains
     ! Now, create a temporary matrix that has 1/dst_vec(:) as the diagonal
     PetscCallA(VecGetArrayF90(gridmap%dst_vec, dst_p, ierr))
     do no = 1, gridmap%nb
-       PetscCallA(MatSetValues(temp_mat, 1, [no - 1], 1, [no - 1], [1._r8/dst_p(no)], INSERT_VALUES, ierr))
+       if (dst_p(no) > 0._r8) then
+          PetscCallA(MatSetValues(temp_mat, 1, [no - 1], 1, [no - 1], [1._r8/dst_p(no)], INSERT_VALUES, ierr))
+       end if
     end do
     PetscCallA(VecRestoreArrayF90(gridmap%dst_vec, dst_p, ierr))
 
-    ! map_frac_mat = temp_mat * map_mat
     PetscCallA(MatAssemblyBegin(temp_mat, MAT_FINAL_ASSEMBLY, ierr))
     PetscCallA(MatAssemblyEnd(temp_mat, MAT_FINAL_ASSEMBLY, ierr))
 
+    ! map_frac_mat = temp_mat * map_mat
     PetscCallA(MatMatMult(temp_mat, gridmap%map_mat, MAT_INITIAL_MATRIX, PETSC_DEFAULT_REAL, gridmap%map_frac_mat, ierr))
 
     PetscCallA(MatDestroy(temp_mat, ierr))
