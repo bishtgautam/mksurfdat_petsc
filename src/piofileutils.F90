@@ -9,7 +9,7 @@ module piofileutils
   public OpenFilePio
   public read_float_or_double_2d
   public read_float_or_double_3d
-  
+  public check_ret
 
 contains
 
