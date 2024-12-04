@@ -398,8 +398,7 @@ contains
     real(r8)               , intent(out) :: dst_array(:)
     real(r8)               , intent(in)  :: nodata               ! value to apply where there are no input data
 
-    integer                              :: ni
-    integer                              :: no
+    integer                              :: ni, no, idx
     PetscReal              , pointer     :: src_p(:), dst_p(:)
     PetscErrorCode                       :: ierr
     character(*)           , parameter   :: subName = '(gridmap_areaave_default_pio) '
@@ -418,9 +417,13 @@ contains
 
     ! fill the destination array
     PetscCallA(VecGetArrayF90(gridmap_pio%dst_vec, dst_p, ierr))
-
     do no = 1, gridmap_pio%dim_nb%nloc
-       dst_array(no) = dst_p(no)
+       idx = gridmap_pio%dim_nb%begd + no - 1
+       if (gridmap_pio%dst%frac(idx) <= 0._r8) then
+          dst_array(no) = nodata
+       else
+          dst_array(no) = dst_p(no)
+       end if
     end do
     PetscCallA(VecRestoreArrayF90(gridmap_pio%dst_vec, dst_p, ierr))
 
