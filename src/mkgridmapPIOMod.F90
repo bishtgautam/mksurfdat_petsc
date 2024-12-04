@@ -56,6 +56,12 @@ module mkgridmapPIOMod
 
   public :: gridmap_mapread_pio
   public :: gridmap_clean_pio
+  public :: gridmap_areaave_pio
+
+  interface gridmap_areaave_pio
+     module procedure gridmap_areaave_default_pio
+     module procedure gridmap_areaave_srcmask_pio
+  end interface gridmap_areaave_pio
 
   character(len=32), parameter :: isSet = "gridmap_IsSet"
 
@@ -428,6 +434,59 @@ contains
     PetscCallA(VecRestoreArrayF90(gridmap_pio%dst_vec, dst_p, ierr))
 
   end subroutine gridmap_areaave_default_pio
+
+  !------------------------------------------------------------------------------
+  subroutine gridmap_areaave_srcmask_pio(gridmap_pio, src_array, dst_array, nodata, mask_src)
+
+    implicit none
+
+    type(gridmap_pio_type) , intent(in)  :: gridmap_pio
+    real(r8)               , intent(in)  :: src_array(:)
+    real(r8)               , intent(out) :: dst_array(:)
+    real(r8)               , intent(in)  :: nodata               ! value to apply where there are no input data
+    real(r8)               , intent(in)  :: mask_src(:)
+
+    integer                              :: ni, no, idx
+    PetscReal              , pointer     :: src_p(:), dst_p(:), tmp_p(:)
+    Vec                                  :: tmp_src_vec, tmp_dst_vec
+    PetscErrorCode                       :: ierr
+    character(*)           , parameter   :: subName = '(gridmap_areaave_srcmask_pio) '
+
+    call gridmap_checkifset_pio(gridmap_pio, subname)
+
+    ! create a temporary vectors
+    PetscCallA(VecDuplicate(gridmap_pio%src_vec, tmp_src_vec, ierr))
+    PetscCallA(VecDuplicate(gridmap_pio%dst_vec, tmp_dst_vec, ierr))
+
+    ! fill the source and temporary Vec
+    PetscCallA(VecGetArrayF90(gridmap_pio%src_vec, src_p, ierr))
+    PetscCallA(VecGetArrayF90(tmp_src_vec        , tmp_p, ierr))
+    do ni = 1, gridmap_pio%dim_na%nloc
+       src_p(ni) = src_array(ni)
+       tmp_p(ni) = mask_src(ni)
+    end do
+    PetscCallA(VecRestoreArrayF90(tmp_src_vec        , tmp_p, ierr))
+    PetscCallA(VecRestoreArrayF90(gridmap_pio%src_vec, src_p, ierr))
+
+    ! do matrix-vec multiplication
+    PetscCallA(MatMult(gridmap_pio%map_frac_mat, gridmap_pio%src_vec, gridmap_pio%dst_vec, ierr))
+    PetscCallA(MatMult(gridmap_pio%map_frac_mat, tmp_src_vec        , tmp_dst_vec        , ierr))
+
+    ! fill the destination array
+    PetscCallA(VecGetArrayF90(gridmap_pio%dst_vec, dst_p, ierr))
+    PetscCallA(VecGetArrayF90(tmp_dst_vec        , tmp_p, ierr))
+    do no = 1, gridmap_pio%dim_nb%nloc
+       idx = gridmap_pio%dim_nb%begd + no - 1
+       if (tmp_p(no) <= 0._r8) then
+          dst_array(no) = nodata
+       else
+          dst_array(no) = dst_p(no)/tmp_p(no)
+       end if
+    end do
+    PetscCallA(VecRestoreArrayF90(tmp_dst_vec        , tmp_p, ierr))
+    PetscCallA(VecRestoreArrayF90(gridmap_pio%dst_vec, dst_p, ierr))
+
+  end subroutine gridmap_areaave_srcmask_pio
 
   !------------------------------------------------------------------------------
   subroutine gridmap_dim_clean(dim)
