@@ -62,6 +62,8 @@ module mkgridmapPIOMod
 
   public :: gridmap_mapread_pio
 
+  character(len=32), parameter :: isSet = "gridmap_IsSet"
+
 contains
 
   !------------------------------------------------------------------------------
@@ -332,7 +334,24 @@ contains
 
     PetscCallA(MatDestroy(temp_mat, ierr))
 
+    ! map is set
+    gridmap_pio%set = isSet
+
   end subroutine gridmap_mapread_pio
+
+  !------------------------------------------------------------------------------
+  subroutine gridmap_pio_checkifset( gridmap_pio, subname )
+
+    implicit none
+    type(gridmap_pio_type), intent(in) :: gridmap_pio
+    character(len=*)      , intent(in) :: subname
+
+    if ( gridmap_pio%set .ne. IsSet )then
+       write(6,*) SubName//' ERROR: gridmap_pio NOT set yet, run gridmap_mapread_pio first'
+       call abort()
+    end if
+
+  end subroutine gridmap_pio_checkifset
 
   
 end module mkgridmapPIOMod
