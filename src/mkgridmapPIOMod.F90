@@ -61,6 +61,7 @@ module mkgridmapPIOMod
   public :: gridmap_pio_type
 
   public :: gridmap_mapread_pio
+  public :: gridmap_clean_pio
 
   character(len=32), parameter :: isSet = "gridmap_IsSet"
 
@@ -217,7 +218,6 @@ contains
     integer                :: stride
     integer                :: optBase
     integer                :: iotype
-    integer                :: ier
     integer                :: no, ii, n
 
     type(file_desc_t)      :: ncid
@@ -340,7 +340,87 @@ contains
   end subroutine gridmap_mapread_pio
 
   !------------------------------------------------------------------------------
-  subroutine gridmap_pio_checkifset( gridmap_pio, subname )
+  subroutine gridmap_areaave_default_pio(gridmap_pio, src_array, dst_array, nodata)
+
+    implicit none
+
+    type(gridmap_pio_type) , intent(in)  :: gridmap_pio
+    real(r8)               , intent(in)  :: src_array(:)
+    real(r8)               , intent(out) :: dst_array(:)
+    real(r8)               , intent(in)  :: nodata               ! value to apply where there are no input data
+
+    integer                              :: ni
+    integer                              :: no
+    PetscReal              , pointer     :: src_p(:), dst_p(:)
+    PetscErrorCode                       :: ierr
+    character(*)           , parameter   :: subName = '(gridmap_areaave_default_pio) '
+
+    call gridmap_checkifset_pio(gridmap_pio, subname)
+
+    ! fill the source Vec
+    PetscCallA(VecGetArrayF90(gridmap_pio%src_vec, src_p, ierr))
+    do ni = 1, gridmap_pio%dim_na%nloc
+       src_p(ni) = src_array(ni)
+    end do
+    PetscCallA(VecRestoreArrayF90(gridmap_pio%src_vec, src_p, ierr))
+
+    ! do matrix-vec multiplication
+    PetscCallA(MatMult(gridmap_pio%map_frac_mat, gridmap_pio%src_vec, gridmap_pio%dst_vec, ierr))
+
+    ! fill the destination array
+    PetscCallA(VecGetArrayF90(gridmap_pio%dst_vec, dst_p, ierr))
+
+    do no = 1, gridmap_pio%dim_nb%nloc
+       dst_array(no) = dst_p(no)
+    end do
+    PetscCallA(VecRestoreArrayF90(gridmap_pio%dst_vec, dst_p, ierr))
+
+  end subroutine gridmap_areaave_default_pio
+
+  !------------------------------------------------------------------------------
+  subroutine gridmap_dim_clean(dim)
+    implicit none
+    type(gridmap_dim_type), intent(inout) :: dim
+
+    deallocate(dim%compdof)
+
+  end subroutine gridmap_dim_clean
+
+  !------------------------------------------------------------------------------
+  subroutine gridmap_clean_pio(gridmap_pio)
+
+    implicit none
+    type(gridmap_pio_type), intent(inout) :: gridmap_pio
+
+    character(len=*), parameter :: subName = "gridmap_pio_clean"
+    PetscErrorCode              :: ierr
+
+    if (gridmap_pio%set .eq. isSet) then
+
+       call gridmap_dim_clean(gridmap_pio%dim_na)
+       call gridmap_dim_clean(gridmap_pio%dim_nb)
+       call gridmap_dim_clean(gridmap_pio%dim_ns)
+
+       deallocate(gridmap_pio%wovr)
+       deallocate(gridmap_pio%row)
+       deallocate(gridmap_pio%col)
+
+       PetscCallA(VecDestroy(gridmap_pio%src_vec      , ierr))
+       PetscCallA(VecDestroy(gridmap_pio%dst_vec      , ierr))
+       PetscCallA(MatDestroy(gridmap_pio%map_mat      , ierr))
+       PetscCallA(MatDestroy(gridmap_pio%map_frac_mat , ierr))
+    else
+       if (iam == 0) then
+          write(6,*) subName//' Warning: claling '//trim(subName)//' on unallocated gridmap_pio'
+       end if
+    end if
+
+    gridmap_pio%set = "NOT-set"
+
+  end subroutine gridmap_clean_pio
+
+  !------------------------------------------------------------------------------
+  subroutine gridmap_checkifset_pio( gridmap_pio, subname )
 
     implicit none
     type(gridmap_pio_type), intent(in) :: gridmap_pio
@@ -351,7 +431,7 @@ contains
        call abort()
     end if
 
-  end subroutine gridmap_pio_checkifset
+  end subroutine gridmap_checkifset_pio
 
   
 end module mkgridmapPIOMod
