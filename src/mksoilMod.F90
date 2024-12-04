@@ -25,6 +25,7 @@ module mksoilMod
   public mksoilInit     ! Soil Initialization
 
   public mksoilAtt      ! Add attributes to output file
+  public mksoilAttPIO   ! PIO-version to add attributes to output file
 
   public mksoiltex      ! Set soil texture
   public mkorganic      ! Set organic soil
@@ -2184,5 +2185,112 @@ subroutine mksoilAtt( ncid, dynlanduse, xtype )
 end subroutine mksoilAtt
 
 !-----------------------------------------------------------------------
+subroutine mksoilAttPIO( ncid, dynlanduse, xtype, dim_id_gridcell, dim_id_lsmlon, dim_id_lsmlat, dim_id_nlevsoi)
+
+  use fileutils  , only : get_filename
+  use pio
+  use piofileutils
+  use mkvarpar
+  use mkvarctl
+
+  implicit none
+
+  type(file_desc_t) , intent(in)    :: ncid
+  logical           , intent(in)    :: dynlanduse
+  integer           , intent(in)    :: xtype          ! external type to output real data as
+  integer           , intent(in)    :: dim_id_gridcell
+  integer           , intent(in)    :: dim_id_lsmlon
+  integer           , intent(in)    :: dim_id_lsmlat
+  integer           , intent(inout) :: dim_id_nlevsoi
+
+  character(len=512)                :: str            ! global attribute string
+  character(len=512)                :: att_name, att_value
+  character(len=32)                 :: subname = 'mksoilAttPIO'
+  type(var_desc_t)                  :: pioVar
+  integer                           :: dim1d(1), dim2d(2)
+  integer                           :: ier
+
+  if (.not.dynlanduse) then
+
+     ! Define dimensions unique to soil
+
+     call DefineDimPIO(ncid, 'nlevsoi' , nlevsoi, dim_id_nlevsoi)
+
+     ! Add global attributes to file
+
+     if ( soil_clay /= unset .and. soil_sand /= unset )then
+        str = 'TRUE'
+        call check_ret(PIO_put_att (ncid, PIO_GLOBAL, 'soil_clay_override', trim(str)), subname)
+        str = 'TRUE'
+        call check_ret(PIO_put_att (ncid, PIO_GLOBAL, 'soil_sand_override', trim(str)), subname)
+     else
+        str = get_filename(mksrf_fsoitex)
+        call check_ret(PIO_put_att(ncid, PIO_GLOBAL, 'Soil_texture_raw_data_file_name', trim(str)), subname)
+     end if
+     if ( soil_color /= unsetcol )then
+        str = 'TRUE'
+        call check_ret(PIO_put_att (ncid, PIO_GLOBAL, 'soil_color_override', trim(str)), subname)
+     else
+        str = get_filename(mksrf_fsoicol)
+        call check_ret(PIO_put_att(ncid, PIO_GLOBAL, 'Soil_color_raw_data_file_name', trim(str)), subname)
+     end if
+
+     if ( soil_order /= unsetord )then
+        str = 'TRUE'
+        call check_ret(PIO_put_att (ncid, PIO_GLOBAL, 'soil_order_override', trim(str)), subname)
+     else
+        str = get_filename(mksrf_fsoiord)
+        call check_ret(PIO_put_att(ncid, PIO_GLOBAL, 'Soil_order_raw_data_file_name', trim(str)),subname)
+     end if
+
+     if ( soil_fmax /= unset )then
+        str = 'TRUE'
+        call check_ret(PIO_put_att (ncid, PIO_GLOBAL, 'soil_fmax_override', trim(str)), subname)
+     else
+        str = get_filename(mksrf_fmax)
+        call check_ret(PIO_put_att(ncid, PIO_GLOBAL, 'Fmax_raw_data_file_name', trim(str)), subname)
+     end if
+     str = get_filename(mksrf_forganic)
+     call check_ret(PIO_put_att(ncid, PIO_GLOBAL, 'Organic_matter_raw_data_file_name', trim(str)), subname)
+
+     ! Define variables
+
+     call check_ret(PIO_def_var(ncid, 'mxsoil_color', PIO_INT, pioVar), subname)
+     att_name = 'long_name'; att_value = 'maximum numbers of soil colors';
+     call check_ret(PIO_put_att(ncid, pioVar, att_name, trim(att_value)), subname)
+     att_name = 'units'; att_value = 'unitless';
+     call check_ret(PIO_put_att(ncid, pioVar, att_name, trim(att_value)), subname)
+
+     call check_ret(PIO_def_var(ncid, 'mxsoil_order', PIO_INT, pioVar), subname)
+     att_name = 'long_name'; att_value = 'maximum numbers of soil orders';
+     call check_ret(PIO_put_att(ncid, pioVar, att_name, trim(att_value)), subname)
+     att_name = 'units'; att_value = 'unitless';
+     call check_ret(PIO_put_att(ncid, pioVar, att_name, trim(att_value)), subname)
+
+     if (outnc_1d) then
+        dim1d(1) = dim_id_gridcell
+
+        call DefineVarPIO_1d(ncid, 'SOIL_COLOR', PIO_INT, dim1d, longName='soil color', units='unitless')
+        call DefineVarPIO_1d(ncid, 'PCT_CLAY', xtype, dim1d, longName='percent sand', units='unitless')
+        call DefineVarPIO_1d(ncid, 'PCT_SAND', xtype, dim1d, longName='percent clay', units='unitless')
+        call DefineVarPIO_1d(ncid, 'ORGANIC', xtype, dim1d, longName='organic matter density at soil levels', &
+             units='kg/m3 (assumed carbon content 0.58 gC per gOM)')
+        call DefineVarPIO_1d(ncid, 'FMAX', xtype, dim1d, longName='maximum fractional saturated area', units='unitless')
+
+     else
+        dim2d(1) = dim_id_lsmlon
+        dim2d(2) = dim_id_lsmlat
+
+        call DefineVarPIO_2d(ncid, 'SOIL_COLOR', PIO_INT, dim2d, longName='soil color', units='unitless')
+        call DefineVarPIO_2d(ncid, 'PCT_CLAY', xtype, dim2d, longName='percent sand', units='unitless')
+        call DefineVarPIO_2d(ncid, 'PCT_SAND', xtype, dim2d, longName='percent clay', units='unitless')
+        call DefineVarPIO_2d(ncid, 'ORGANIC', xtype, dim2d, longName='organic matter density at soil levels', &
+             units='kg/m3 (assumed carbon content 0.58 gC per gOM)')
+        call DefineVarPIO_2d(ncid, 'FMAX', xtype, dim2d, longName='maximum fractional saturated area', units='unitless')
+     end if
+
+  end if
+
+end subroutine mksoilAttPIO
 
 end module mksoilMod
