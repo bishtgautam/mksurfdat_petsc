@@ -1,5 +1,27 @@
 module mkfileMod
 
+  public mkfile
+  public mkfile_pio
+
+  type dim_id_type
+     integer :: gridcell
+     integer :: lsmlon
+     integer :: lsmlat
+     integer :: nglcec
+     integer :: nglcecp1
+     integer :: numurbl
+     integer :: nlevurb
+     integer :: numrad
+     integer :: numchar
+     integer :: nlevsoi
+     integer :: time
+     integer :: lsmpft
+     integer :: natpft
+     integer :: cft
+  end type dim_id_type
+
+  type(dim_id_type) :: dim_id
+
 contains
 
 !-----------------------------------------------------------------------
@@ -1019,5 +1041,596 @@ contains
     call check_ret(nf_close(ncid), subname)
 
   end subroutine mkfile
+
+!-----------------------------------------------------------------------
+  subroutine mkfile_pio(domain_pio, fname, dynlanduse)
+
+    use spmdMod        , only : iam, npes, masterproc, mpicom
+    use mkdomainPIOMod , only : domain_pio_type
+    use mksoilMod      , only : mksoilAttPIO
+    use mkpftMod       , only : mkpftAttPIO
+    use mkvarctl
+    use pio
+    use piofileutils
+
+    implicit none
+
+    type(domain_pio_type) , intent(in) :: domain_pio
+    character(len=*)      , intent(in) :: fname
+    logical               , intent(in) :: dynlanduse
+
+    type(iosystem_desc_t) :: pioIoSystem
+    type(file_desc_t)     :: ncid
+    integer               :: ier
+    integer               :: values(8)              ! temporary
+    character(len= 18)    :: datetime               ! temporary
+    character(len=  8)    :: date                   ! temporary
+    character(len= 10)    :: time                   ! temporary
+    character(len=  5)    :: zone                   ! temporary
+    character(len=256)    :: str                    ! global attribute string
+    character(len=32)     :: subname = 'mkfile_pio' ! subroutine name
+    integer :: xtype
+
+    if (iam == 0) then
+       write(6,*) 'creating file ... '
+    end if
+    call CreateFilePIO(trim(fname), pioIoSystem, ncid)
+
+    call mkfile_define_dimensions(domain_pio, ncid)
+
+    call mkfile_write_global_attibutes(ncid, dynlanduse)
+
+    if ( .not. outnc_double )then
+       xtype = PIO_REAL
+    else
+       xtype = PIO_DOUBLE
+    end if
+
+    call mksoilAttPIO(ncid, dynlanduse, xtype, dim_id%gridcell, dim_id%lsmlon, dim_id%lsmlat, dim_id%nlevsoi)
+
+    call mkpftAttPIO(ncid, dynlanduse, xtype, dim_id%gridcell, dim_id%lsmlon, dim_id%lsmlat, &
+         dim_id%time, dim_id%lsmpft, dim_id%natpft, dim_id%cft)
+
+    call mkfile_define_variables(ncid, dynlanduse, xtype)
+
+    call PIO_closefile(ncid)
+    call PIO_finalize(pioIoSystem, ier)
+
+  end subroutine mkfile_pio
+
+  !-----------------------------------------------------------------------
+  subroutine mkfile_define_dimensions(domain_pio, ncid)
+
+    use mkdomainPIOMod , only : domain_pio_type
+    use mkvarpar       , only : nlevsoi, nlevurb, numrad
+    use mkurbanparMod  , only : numurbl
+    use mkglcmecMod    , only : nglcec
+    use pio
+    use piofileutils
+
+    implicit none
+
+    type(domain_pio_type) , intent(in) :: domain_pio
+    type(file_desc_t)     , intent(in) :: ncid
+
+    ! initialize
+    dim_id%gridcell = -1
+    dim_id%lsmlon   = -1
+    dim_id%lsmlat   = -1
+    dim_id%nglcec   = -1
+    dim_id%nglcecp1 = -1
+    dim_id%numurbl  = -1
+    dim_id%nlevurb  = -1
+    dim_id%numrad   = -1
+    dim_id%numchar  = -1
+    dim_id%nlevsoi  = -1
+    dim_id%time     = -1
+    dim_id%lsmpft   = -1
+    dim_id%natpft   = -1
+    dim_id%cft      = -1
+
+    call DefineDimPIO(ncid, 'gridcell', domain_pio%ns_glb , dim_id%gridcell)
+    call DefineDimPIO(ncid, 'numurbl' , numurbl           , dim_id%numurbl)
+    call DefineDimPIO(ncid, 'nlevurb' , nlevurb           , dim_id%nlevurb)
+    call DefineDimPIO(ncid, 'numrad'  , numrad            , dim_id%numrad)
+    call DefineDimPIO(ncid, 'numchar' , 256               , dim_id%numchar)
+
+  end subroutine mkfile_define_dimensions
+
+    !-----------------------------------------------------------------------
+  subroutine mkfile_write_global_attibutes(ncid, dynlanduse)
+
+    use fileutils, only : get_filename
+    use mkvarctl
+    use pio
+    use piofileutils
+
+    implicit none
+    type(file_desc_t) , intent(in) :: ncid
+    logical           , intent(in) :: dynlanduse
+
+    integer                        :: values(8)                                      ! temporary
+    character(len= 18)             :: datetime                                       ! temporary
+    character(len=  8)             :: date                                           ! temporary
+    character(len= 10)             :: time                                           ! temporary
+    character(len=  5)             :: zone                                           ! temporary
+    character(len=256)             :: str                                            ! global attribute string
+    character(len=64)              :: subname = 'mkfile_write_global_attributes_pio' ! subroutine name
+
+    str = 'NCAR-CSM'
+    call check_ret(PIO_put_att(ncid, PIO_GLOBAL, 'Conventions', trim(str)),subname)
+
+    call date_and_time (date, time, zone, values)
+    datetime(1:8) =        date(5:6) // '-' // date(7:8) // '-' // date(3:4)
+    datetime(9:)  = ' ' // time(1:2) // ':' // time(3:4) // ':' // time(5:6) // ' '
+    str = 'created on: ' // datetime
+    call check_ret(PIO_put_att(ncid, PIO_GLOBAL, 'History_Log', trim(str)), subname)
+
+    str = 'E3SM Land Model'
+    call check_ret(PIO_put_att (ncid, PIO_GLOBAL, 'Source', trim(str)), subname)
+
+#ifdef OPT
+    str = 'TRUE'
+#else
+    str = 'FALSE'
+#endif
+    call check_ret(PIO_put_att (ncid, PIO_GLOBAL, 'Compiler_Optimized', trim(str)), subname)
+
+    if ( all_urban )then
+       str = 'TRUE'
+       call check_ret(PIO_put_att(ncid, PIO_GLOBAL, 'all_urban', trim(str)), subname)
+    end if
+
+    if ( no_inlandwet )then
+       str = 'TRUE'
+       call check_ret(PIO_put_att(ncid, PIO_GLOBAL, 'no_inlandwet', trim(str)), subname)
+    end if
+
+    ! Raw data file names
+
+    str = get_filename(mksrf_fgrid)
+    call check_ret(PIO_put_att(ncid, PIO_GLOBAL, 'Input_grid_dataset', trim(str)), subname)
+
+    str = trim(mksrf_gridtype)
+    call check_ret(PIO_put_att(ncid, PIO_GLOBAL, 'Input_gridtype', trim(str)), subname)
+
+    if (.not. dynlanduse) then
+       str = get_filename(mksrf_fvocef)
+       call check_ret(PIO_put_att(ncid, PIO_GLOBAL, 'VOC_EF_raw_data_file_name', trim(str)), subname)
+    end if
+
+    str = get_filename(mksrf_flakwat)
+    call check_ret(PIO_put_att(ncid, PIO_GLOBAL, 'Inland_lake_raw_data_file_name', trim(str)), subname)
+
+    str = get_filename(mksrf_fwetlnd)
+    call check_ret(PIO_put_att(ncid, PIO_GLOBAL, 'Inland_wetland_raw_data_file_name', trim(str)), subname)
+
+    str = get_filename(mksrf_fglacier)
+    call check_ret(PIO_put_att(ncid, PIO_GLOBAL, 'Glacier_raw_data_file_name', trim(str)), subname)
+
+    str = get_filename(mksrf_furbtopo)
+    call check_ret(PIO_put_att(ncid, PIO_GLOBAL, 'Urban_Topography_raw_data_file_name', trim(str)), subname)
+
+    str = get_filename(mksrf_flndtopo)
+    call check_ret(PIO_put_att(ncid, PIO_GLOBAL, 'Land_Topography_raw_data_file_name', trim(str)), subname)
+
+    str = get_filename(mksrf_furban)
+    call check_ret(PIO_put_att(ncid, PIO_GLOBAL, 'Urban_raw_data_file_name', trim(str)), subname)
+
+    if (.not. dynlanduse) then
+       str = get_filename(mksrf_flai)
+       call check_ret(PIO_put_att(ncid, PIO_GLOBAL, 'Lai_raw_data_file_name', trim(str)), subname)
+    end if
+
+    str = get_filename(mksrf_fabm)
+    call check_ret(PIO_put_att(ncid, PIO_GLOBAL, 'agfirepkmon_raw_data_file_name', trim(str)), subname)
+
+    str = get_filename(mksrf_fgdp)
+    call check_ret(PIO_put_att(ncid, PIO_GLOBAL, 'gdp_raw_data_file_name', trim(str)), subname)
+
+    str = get_filename(mksrf_fpeat)
+    call check_ret(PIO_put_att(ncid, PIO_GLOBAL, 'peatland_raw_data_file_name', trim(str)), subname)
+
+    str = get_filename(mksrf_ftopostats)
+    call check_ret(PIO_put_att(ncid, PIO_GLOBAL, 'topography_stats_raw_data_file_name', trim(str)), subname)
+
+    str = get_filename(mksrf_fvic)
+    call check_ret(PIO_put_att(ncid, PIO_GLOBAL, 'vic_raw_data_file_name', trim(str)), subname)
+
+    str = get_filename(mksrf_fch4)
+    call check_ret(PIO_put_att(ncid, PIO_GLOBAL, 'ch4_params_raw_data_file_name', trim(str)), subname)
+
+    ! Mapping file names
+
+    str = get_filename(map_fpft)
+    call check_ret(PIO_put_att(ncid, PIO_GLOBAL, 'map_pft_file_name', trim(str)), subname)
+
+    str = get_filename(map_flakwat)
+    call check_ret(PIO_put_att(ncid, PIO_GLOBAL, 'map_lakwat_file', trim(str)), subname)
+
+    str = get_filename(map_fwetlnd)
+    call check_ret(PIO_put_att(ncid, PIO_GLOBAL, 'map_wetlnd_file', trim(str)), subname)
+
+    str = get_filename(map_fglacier)
+    call check_ret(PIO_put_att(ncid, PIO_GLOBAL, 'map_glacier_file', trim(str)), subname)
+
+    str = get_filename(map_fsoitex)
+    call check_ret(PIO_put_att(ncid, PIO_GLOBAL, 'map_soil_texture_file', trim(str)), subname)
+
+    str = get_filename(map_fsoicol)
+    call check_ret(PIO_put_att(ncid, PIO_GLOBAL, 'map_soil_color_file', trim(str)), subname)
+
+    str = get_filename(map_fsoiord)
+    call check_ret(PIO_put_att(ncid, PIO_GLOBAL, 'map_soil_order_file', trim(str)), subname)
+
+    str = get_filename(map_forganic)
+    call check_ret(PIO_put_att(ncid, PIO_GLOBAL, 'map_soil_organic_file', trim(str)), subname)
+
+    str = get_filename(map_furban)
+    call check_ret(PIO_put_att(ncid, PIO_GLOBAL, 'map_urban_file', trim(str)), subname)
+
+    str = get_filename(map_fmax)
+    call check_ret(PIO_put_att(ncid, PIO_GLOBAL, 'map_fmax_file', trim(str)), subname)
+
+    str = get_filename(map_fvocef)
+    call check_ret(PIO_put_att(ncid, PIO_GLOBAL, 'map_VOC_EF_file', trim(str)), subname)
+
+    str = get_filename(map_fharvest)
+    call check_ret(PIO_put_att(ncid, PIO_GLOBAL, 'map_harvest_file', trim(str)), subname)
+
+    str = get_filename(map_flai)
+    call check_ret(PIO_put_att(ncid, PIO_GLOBAL, 'map_lai_sai_file', trim(str)), subname)
+
+    str = get_filename(map_furbtopo)
+    call check_ret(PIO_put_att(ncid, PIO_GLOBAL, 'map_urban_topography_file', trim(str)), subname)
+
+    str = get_filename(map_flndtopo)
+    call check_ret(PIO_put_att(ncid, PIO_GLOBAL, 'map_land_topography_file', trim(str)), subname)
+
+    str = get_filename(map_fabm)
+    call check_ret(PIO_put_att(ncid, PIO_GLOBAL, 'map_agfirepkmon_file', trim(str)), subname)
+
+    str = get_filename(map_fgdp)
+    call check_ret(PIO_put_att(ncid, PIO_GLOBAL, 'map_gdp_file', trim(str)), subname)
+
+    str = get_filename(map_fpeat)
+    call check_ret(PIO_put_att(ncid, PIO_GLOBAL, 'map_peatland_file', trim(str)), subname)
+
+    str = get_filename(map_ftopostats)
+    call check_ret(PIO_put_att(ncid, PIO_GLOBAL, 'map_topography_stats_file', trim(str)), subname)
+
+    str = get_filename(map_fvic)
+    call check_ret(PIO_put_att(ncid, PIO_GLOBAL, 'map_vic_file', trim(str)), subname)
+
+    str = get_filename(map_fch4)
+    call check_ret(PIO_put_att(ncid, PIO_GLOBAL, 'map_ch4_params_file', trim(str)), subname)
+
+    str = get_filename(map_fgrvl)
+    call check_ret(PIO_put_att(ncid, PIO_GLOBAL, 'map_gravel_file', trim(str)), subname)
+
+    str = get_filename(map_fslp10)
+    call check_ret(PIO_put_att(ncid, PIO_GLOBAL, 'map_slp10_file', trim(str)), subname)
+
+    str = get_filename(map_fero)
+    call check_ret(PIO_put_att(ncid, PIO_GLOBAL, 'map_erosion_file', trim(str)), subname)
+
+  end subroutine mkfile_write_global_attibutes
+
+  !-----------------------------------------------------------------------
+  subroutine mkfile_define_variables( ncid, dynlanduse, xtype)
+
+    use fileutils   , only : get_filename
+    use mkglcmecMod , only : nglcec
+    use mkharvestMod, only : mkharvest_fieldname, mkharvest_numtypes, mkharvest_longname
+    use pio
+    use piofileutils
+    use mkvarpar
+    use mkvarctl
+
+    implicit none
+
+    type(file_desc_t) , intent(in)    :: ncid
+    logical           , intent(in)    :: dynlanduse
+    integer           , intent(in)    :: xtype          ! external type to output real data as
+
+    type(var_desc_t)                  :: pioVar
+    integer                           :: dim1d(1), dim2d(2), dim3d(3), j
+    character(len=32)                 :: subname = 'mkfile_define_variables'
+
+    if (outnc_1d) then
+       call mkfile_define_variables_for_1d_grid( ncid, dynlanduse, xtype)
+    else
+       call mkfile_define_variables_for_2d_grid( ncid, dynlanduse, xtype)
+    end if
+
+  end subroutine mkfile_define_variables
+
+!-----------------------------------------------------------------------
+  subroutine mkfile_define_variables_for_1d_grid( ncid, dynlanduse, xtype)
+
+    use fileutils   , only : get_filename
+    use mkglcmecMod , only : nglcec
+    use mkharvestMod, only : mkharvest_fieldname, mkharvest_numtypes, mkharvest_longname
+    use pio
+    use piofileutils
+    use mkvarpar
+    use mkvarctl
+
+    implicit none
+
+    type(file_desc_t) , intent(in)    :: ncid
+    logical           , intent(in)    :: dynlanduse
+    integer           , intent(in)    :: xtype          ! external type to output real data as
+
+    type(var_desc_t)                  :: pioVar
+    integer                           :: dim1d(1), dim2d(2), dim3d(3), j
+    character(len=32)                 :: subname = 'mkfile_define_variables'
+
+    dim1d(1) = dim_id%gridcell
+    call DefineVarPIO_1d(ncid, 'AREA', xtype, dim1d, longName='area', units='km^2')
+    call DefineVarPIO_1d(ncid, 'LONGXY', xtype, dim1d, longName='longitude', units='degrees east')
+    call DefineVarPIO_1d(ncid, 'LATIXY', xtype, dim1d, longName='latitude', units='degrees north')
+
+    if (.not. dynlanduse) then
+       dim1d(1) = dim_id%gridcell
+       call DefineVarPIO_1d(ncid, 'EF1_BTR', xtype, dim1d, longName='EF btr (isoprene)', units='unitless')
+       call DefineVarPIO_1d(ncid, 'EF1_FET', xtype, dim1d, longName='EF fet (isoprene)', units='unitless')
+       call DefineVarPIO_1d(ncid, 'EF1_FDT', xtype, dim1d, longName='EF fdt (isoprene)', units='unitless')
+       call DefineVarPIO_1d(ncid, 'EF1_SHR', xtype, dim1d, longName='EF shr (isoprene)', units='unitless')
+       call DefineVarPIO_1d(ncid, 'EF1_GRS', xtype, dim1d, longName='EF grs (isoprene)', units='unitless')
+       call DefineVarPIO_1d(ncid, 'EF1_CRP', xtype, dim1d, longName='EF crp (isoprene)', units='unitless')
+
+       dim2d(1) = dim_id%gridcell; dim2d(2) = dim_id%numurbl;
+       call DefineVarPIO_2d(ncid, 'CANYON_HWR' , xtype, dim2d, longName='canyon height to width ratio'  , units='unitless')
+       call DefineVarPIO_2d(ncid, 'EM_IMPROAD' , xtype, dim2d, longName='emissivity of impervious road' , units='unitless')
+       call DefineVarPIO_2d(ncid, 'EM_ROOF'    , xtype, dim2d, longName='emissivity of roof'            , units='unitless')
+       call DefineVarPIO_2d(ncid, 'EM_WALL'    , xtype, dim2d, longName='emissivity of wall'            , units='unitless')
+       call DefineVarPIO_2d(ncid, 'HT_ROOF'    , xtype, dim2d, longName='height of roof'                , units='meters')
+       call DefineVarPIO_2d(ncid, 'THICK_ROOF' , xtype, dim2d, longName='thickness of roof'             , units='meters')
+       call DefineVarPIO_2d(ncid, 'THICK_WALL' , xtype, dim2d, longName='thickness of wall'             , units='meters')
+
+       call DefineVarPIO_2d(ncid, 'T_BUILDING_MAX', xtype, dim2d, longName='maximum interior building temperature', units='K')
+       call DefineVarPIO_2d(ncid, 'T_BUILDING_MIN', xtype, dim2d, longName='minimum interior building temperature', units='K')
+
+       call DefineVarPIO_2d(ncid, 'WIND_HGT_CANYON' , xtype, dim2d, longName='height of wind in canyon'  , units='meters')
+       call DefineVarPIO_2d(ncid, 'WTLUNIT_ROOF'    , xtype, dim2d, longName='fraction of root'          , units='unitless')
+       call DefineVarPIO_2d(ncid, 'WTROAD_PERV'     , xtype, dim2d, longName='fraction of pervious road' , units='unitless')
+
+       dim3d(1) = dim_id%gridcell; dim3d(2) = dim_id%numurbl; dim3d(3) = dim_id%numrad;
+       call DefineVarPIO_3d(ncid, 'ALB_IMPROADALB_IMPROAD_DIR' , xtype, dim3d, longName='direct albedo of impervious road'  , units='unitless')
+       call DefineVarPIO_3d(ncid, 'ALB_IMPROADALB_IMPROAD_DIF' , xtype, dim3d, longName='diffuse albedo of impervious road' , units='unitless')
+       call DefineVarPIO_3d(ncid, 'ALB_PERROAD_DIR'            , xtype, dim3d, longName='direct albedo of pervious road'    , units='unitless')
+       call DefineVarPIO_3d(ncid, 'ALB_PERROAD_DIF'            , xtype, dim3d, longName='diffuse albedo of pervious road'   , units='unitless')
+
+       dim2d(1) = dim_id%gridcell; dim2d(2) = dim_id%numurbl;
+       call DefineVarPIO_2d(ncid, 'ALB_ROOF_DIR', xtype, dim2d, longName='direct albedo of roof'  , units='unitless')
+       call DefineVarPIO_2d(ncid, 'ALB_ROOF_DIF', xtype, dim2d, longName='diffuse albedo of roof' , units='unitless')
+       call DefineVarPIO_2d(ncid, 'ALB_WALL_DIR', xtype, dim2d, longName='direct albedo of wall'  , units='unitless')
+       call DefineVarPIO_2d(ncid, 'ALB_WALL_DIF', xtype, dim2d, longName='diffuse albedo of wall' , units='unitless')
+
+       dim3d(1) = dim_id%gridcell; dim3d(2) = dim_id%numurbl; dim3d(3) = dim_id%nlevurb;
+       call DefineVarPIO_3d(ncid, 'TK_ROOF'    , xtype, dim3d, longName='thermal conductivity of roof'                , units='W/m*K')
+       call DefineVarPIO_3d(ncid, 'TK_WALL'    , xtype, dim3d, longName='thermal conductivity of wall'                , units='W/m*K')
+       call DefineVarPIO_3d(ncid, 'TK_IMPROAD' , xtype, dim3d, longName='thermal conductivity of impervious road'     , units='W/m*K')
+       call DefineVarPIO_3d(ncid, 'CV_ROOF'    , xtype, dim3d, longName='volumetric heat capacity of roof'            , units='J/m^3*K')
+       call DefineVarPIO_3d(ncid, 'CV_WALL'    , xtype, dim3d, longName='volumetric heat capacity of wall'            , units='J/m^3*K')
+       call DefineVarPIO_3d(ncid, 'CV_IMPROAD' , xtype, dim3d, longName='volumetric heat capacity of impervious road' , units='J/m^3*K')
+
+       dim2d(1) = dim_id%gridcell; dim2d(2) = dim_id%numurbl;
+       call DefineVarPIO_2d(ncid, 'NLEV_IMPROAD', PIO_INT, dim2d, longName='number of impervious road layers', units='unitless')
+
+       dim1d(1) = dim_id%gridcell
+       call DefineVarPIO_1d(ncid, 'peatf' , xtype, dim1d, longName='peatland fraction'            , units='unitless')
+       call DefineVarPIO_1d(ncid, 'abm'   , xtype, dim1d, longName='agricultural fire peak month' , units='unitless')
+       call DefineVarPIO_1d(ncid, 'gdp'   , xtype, dim1d, longName='gdp'                          , units='unitless')
+
+       call DefineVarPIO_1d(ncid, 'SLOPE'    , xtype, dim1d, longName='mean topographic slope'          , units='degrees')
+       call DefineVarPIO_1d(ncid, 'STD_ELEV' , xtype, dim1d, longName='standard deviation of elevation' , units='m')
+
+       call DefineVarPIO_1d(ncid, 'binfl' , xtype, dim1d, longName='VIC b parameter for the Variable Infiltration Capacity Curve' , units='unitless')
+       call DefineVarPIO_1d(ncid, 'Ws'    , xtype, dim1d, longName='VIC Ws parameter for the ARNO Curve'                          , units='unitless')
+       call DefineVarPIO_1d(ncid, 'Dsmax' , xtype, dim1d, longName='VIC Dsmax parameter for the ARNO curve'                       , units='mm/day')
+       call DefineVarPIO_1d(ncid, 'Ds'    , xtype, dim1d, longName='VIC Ds parameter for the ARNO curve'                          , units='unitless')
+
+       call DefineVarPIO_1d(ncid, 'LAKEDEPTH', xtype, dim1d, longName='lake depth', units='m')
+
+       call DefineVarPIO_1d(ncid, 'F0'   , xtype, dim1d, longName='maximum gridcell fractional inundated area'   , units='unitless')
+       call DefineVarPIO_1d(ncid, 'P3'   , xtype, dim1d, longName='coefficient for qflx_surf_lag for finundated' , units='s/mm')
+       call DefineVarPIO_1d(ncid, 'ZWT0' , xtype, dim1d, longName='decay factor for finundated'                  , units='m')
+    end if
+
+    dim1d(1) = dim_id%gridcell
+    call DefineVarPIO_1d(ncid, 'PCT_WETLAND' , xtype, dim1d, longName='percent wetland' , units='unitless')
+    call DefineVarPIO_1d(ncid, 'PCT_LAKE'    , xtype, dim1d, longName='percent lake'    , units='unitless')
+    call DefineVarPIO_1d(ncid, 'PCT_GLACIER' , xtype, dim1d, longName='percent glacier' , units='unitless')
+
+    if (.not. dynlanduse) then
+       if (nglcec > 0) then
+          dim1d(1) = dim_id%nglcecp1
+          call DefineVarPIO_1d(ncid, 'GLC_MEC', xtype, dim1d, longName='Glacier elevation class', units='m')
+
+          dim2d(1) = dim_id%gridcell; dim2d(2) = dim_id%nglcec;
+          call DefineVarPIO_2d(ncid, 'PCT_GLC_MEC'          , xtype, dim2d, longName='percent glacier for each glacier elevation class (% of landunit)'                       , units='unitless')
+          call DefineVarPIO_2d(ncid, 'PCT_GLC_MEC_GIC'      , xtype, dim2d, longName='percent smaller glaciers and ice caps for each glacier elevation class (% of landunit)' , units='unitless')
+          call DefineVarPIO_2d(ncid, 'PCT_GLC_MEC_ICESHEET' , xtype, dim2d, longName='percent ice sheet for each glacier elevation class (% of landunit)'                     , units='unitless')
+
+          dim1d(1) = dim_id%gridcell
+          call DefineVarPIO_1d(ncid, 'PCT_GLC_GIC'      , xtype, dim1d, longName='percent ice caps/glaciers (% of landunit)' , units='unitless')
+          call DefineVarPIO_1d(ncid, 'PCT_GLC_ICESHEET' , xtype, dim1d, longName='percent ice sheets (% of landunit)'        , units='unitless')
+
+          dim2d(1) = dim_id%gridcell; dim2d(2) = dim_id%nglcec;
+          call DefineVarPIO_2d(ncid, 'TOPO_GLC_MEC', xtype, dim2d, longName='mean elevation on glacier elevation classes', units='m')
+       end if
+
+       dim1d(1) = dim_id%gridcell
+       call DefineVarPIO_1d(ncid, 'TOPO', xtype, dim1d, longName='mean elevation on land' , units='m')
+    end if
+
+    dim2d(1) = dim_id%gridcell; dim2d(2) = dim_id%numurbl;
+    call DefineVarPIO_2d(ncid, 'PCT_URBAN', xtype, dim2d, longName='percent urban for each density type', units='unitless')
+
+    if (.not. dynlanduse) then
+       dim1d(1) = dim_id%gridcell
+       call DefineVarPIO_1d(ncid, 'URBAN_REGION_ID', PIO_INT, dim1d, longName='urban region ID' , units='unitless')
+    endif
+
+    if (dynlanduse) then
+       do j = 1, mkharvest_numtypes()
+          dim2d(1) = dim_id%gridcell; dim2d(2) = dim_id%time;
+          call DefineVarPIO_2d(ncid, mkharvest_fieldname(j), xtype, dim2d, longName=mkharvest_longname(j), units='unitless')
+       end do
+    end if
+
+    dim1d(1) = dim_id%gridcell
+    call DefineVarPIO_1d(ncid, 'APATITE_P'   , xtype, dim1d, longName='Apatite Phosphorus'   , units='gP/m2')
+    call DefineVarPIO_1d(ncid, 'LABILE_P'    , xtype, dim1d, longName='Labile Phosphorus'    , units='gP/m2')
+    call DefineVarPIO_1d(ncid, 'OCCLUDED_P'  , xtype, dim1d, longName='Occuluded Phosphorus' , units='gP/m2')
+    call DefineVarPIO_1d(ncid, 'SECONDARY_P' , xtype, dim1d, longName='Secondary Phosphorus' , units='gP/m2')
+
+  end subroutine mkfile_define_variables_for_1d_grid
+
+!-----------------------------------------------------------------------
+  subroutine mkfile_define_variables_for_2d_grid( ncid, dynlanduse, xtype)
+
+    use fileutils   , only : get_filename
+    use mkglcmecMod , only : nglcec
+    use mkharvestMod, only : mkharvest_fieldname, mkharvest_numtypes, mkharvest_longname
+    use pio
+    use piofileutils
+    use mkvarpar
+    use mkvarctl
+
+    implicit none
+
+    type(file_desc_t) , intent(in)    :: ncid
+    logical           , intent(in)    :: dynlanduse
+    integer           , intent(in)    :: xtype          ! external type to output real data as
+
+    type(var_desc_t)                  :: pioVar
+    integer                           :: dim1d(1), dim2d(2), dim3d(3), dim4d(4), j
+    character(len=32)                 :: subname = 'mkfile_define_variables'
+
+    dim2d(1) = dim_id%lsmlon; dim2d(2) = dim_id%lsmlat
+    call DefineVarPIO_2d(ncid, 'AREA', xtype, dim2d, longName='area', units='km^2')
+    call DefineVarPIO_2d(ncid, 'LONGXY', xtype, dim2d, longName='longitude', units='degrees east')
+    call DefineVarPIO_2d(ncid, 'LATIXY', xtype, dim2d, longName='latitude', units='degrees north')
+
+    if (.not. dynlanduse) then
+       dim2d(1) = dim_id%lsmlon; dim2d(2) = dim_id%lsmlat
+       call DefineVarPIO_2d(ncid, 'EF1_BTR', xtype, dim2d, longName='EF btr (isoprene)', units='unitless')
+       call DefineVarPIO_2d(ncid, 'EF1_FET', xtype, dim2d, longName='EF fet (isoprene)', units='unitless')
+       call DefineVarPIO_2d(ncid, 'EF1_FDT', xtype, dim2d, longName='EF fdt (isoprene)', units='unitless')
+       call DefineVarPIO_2d(ncid, 'EF1_SHR', xtype, dim2d, longName='EF shr (isoprene)', units='unitless')
+       call DefineVarPIO_2d(ncid, 'EF1_GRS', xtype, dim2d, longName='EF grs (isoprene)', units='unitless')
+       call DefineVarPIO_2d(ncid, 'EF1_CRP', xtype, dim2d, longName='EF crp (isoprene)', units='unitless')
+
+       dim3d(1) = dim_id%lsmlon; dim3d(2) = dim_id%lsmlat; dim3d(3) = dim_id%numurbl;
+       call DefineVarPIO_3d(ncid, 'CANYON_HWR' , xtype, dim3d, longName='canyon height to width ratio'  , units='unitless')
+       call DefineVarPIO_3d(ncid, 'EM_IMPROAD' , xtype, dim3d, longName='emissivity of impervious road' , units='unitless')
+       call DefineVarPIO_3d(ncid, 'EM_ROOF'    , xtype, dim3d, longName='emissivity of roof'            , units='unitless')
+       call DefineVarPIO_3d(ncid, 'EM_WALL'    , xtype, dim3d, longName='emissivity of wall'            , units='unitless')
+       call DefineVarPIO_3d(ncid, 'HT_ROOF'    , xtype, dim3d, longName='height of roof'                , units='meters')
+       call DefineVarPIO_3d(ncid, 'THICK_ROOF' , xtype, dim3d, longName='thickness of roof'             , units='meters')
+       call DefineVarPIO_3d(ncid, 'THICK_WALL' , xtype, dim3d, longName='thickness of wall'             , units='meters')
+
+       call DefineVarPIO_3d(ncid, 'T_BUILDING_MAX', xtype, dim3d, longName='maximum interior building temperature', units='K')
+       call DefineVarPIO_3d(ncid, 'T_BUILDING_MIN', xtype, dim3d, longName='minimum interior building temperature', units='K')
+
+       call DefineVarPIO_3d(ncid, 'WIND_HGT_CANYON' , xtype, dim3d, longName='height of wind in canyon'  , units='meters')
+       call DefineVarPIO_3d(ncid, 'WTLUNIT_ROOF'    , xtype, dim3d, longName='fraction of root'          , units='unitless')
+       call DefineVarPIO_3d(ncid, 'WTROAD_PERV'     , xtype, dim3d, longName='fraction of pervious road' , units='unitless')
+
+       dim4d(1) = dim_id%lsmlon; dim4d(2) = dim_id%lsmlat; dim4d(3) = dim_id%numurbl; dim4d(4) = dim_id%numrad;
+       call DefineVarPIO_4d(ncid, 'ALB_IMPROADALB_IMPROAD_DIR' , xtype, dim4d, longName='direct albedo of impervious road'  , units='unitless')
+       call DefineVarPIO_4d(ncid, 'ALB_IMPROADALB_IMPROAD_DIF' , xtype, dim4d, longName='diffuse albedo of impervious road' , units='unitless')
+       call DefineVarPIO_4d(ncid, 'ALB_PERROAD_DIR'            , xtype, dim4d, longName='direct albedo of pervious road'    , units='unitless')
+       call DefineVarPIO_4d(ncid, 'ALB_PERROAD_DIF'            , xtype, dim4d, longName='diffuse albedo of pervious road'   , units='unitless')
+
+       dim3d(1) = dim_id%lsmlon; dim3d(2) = dim_id%lsmlat; dim3d(3) = dim_id%numurbl;
+       call DefineVarPIO_3d(ncid, 'ALB_ROOF_DIR', xtype, dim3d, longName='direct albedo of roof'  , units='unitless')
+       call DefineVarPIO_3d(ncid, 'ALB_ROOF_DIF', xtype, dim3d, longName='diffuse albedo of roof' , units='unitless')
+       call DefineVarPIO_3d(ncid, 'ALB_WALL_DIR', xtype, dim3d, longName='direct albedo of wall'  , units='unitless')
+       call DefineVarPIO_3d(ncid, 'ALB_WALL_DIF', xtype, dim3d, longName='diffuse albedo of wall' , units='unitless')
+
+       dim4d(1) = dim_id%lsmlon; dim4d(2) = dim_id%lsmlat; dim4d(3) = dim_id%numurbl; dim4d(4) = dim_id%nlevurb;
+       call DefineVarPIO_4d(ncid, 'TK_ROOF'    , xtype, dim4d, longName='thermal conductivity of roof'                , units='W/m*K')
+       call DefineVarPIO_4d(ncid, 'TK_WALL'    , xtype, dim4d, longName='thermal conductivity of wall'                , units='W/m*K')
+       call DefineVarPIO_4d(ncid, 'TK_IMPROAD' , xtype, dim4d, longName='thermal conductivity of impervious road'     , units='W/m*K')
+       call DefineVarPIO_4d(ncid, 'CV_ROOF'    , xtype, dim4d, longName='volumetric heat capacity of roof'            , units='J/m^3*K')
+       call DefineVarPIO_4d(ncid, 'CV_WALL'    , xtype, dim4d, longName='volumetric heat capacity of wall'            , units='J/m^3*K')
+       call DefineVarPIO_4d(ncid, 'CV_IMPROAD' , xtype, dim4d, longName='volumetric heat capacity of impervious road' , units='J/m^3*K')
+
+       dim3d(1) = dim_id%lsmlon; dim3d(2) = dim_id%lsmlat; dim3d(3) = dim_id%numurbl;
+       call DefineVarPIO_3d(ncid, 'NLEV_IMPROAD', PIO_INT, dim3d, longName='number of impervious road layers', units='unitless')
+
+       dim2d(1) = dim_id%lsmlon; dim2d(2) = dim_id%lsmlat
+       call DefineVarPIO_2d(ncid, 'peatf' , xtype, dim2d, longName='peatland fraction'            , units='unitless')
+       call DefineVarPIO_2d(ncid, 'abm'   , xtype, dim2d, longName='agricultural fire peak month' , units='unitless')
+       call DefineVarPIO_2d(ncid, 'gdp'   , xtype, dim2d, longName='gdp'                          , units='unitless')
+
+       call DefineVarPIO_2d(ncid, 'SLOPE'    , xtype, dim2d, longName='mean topographic slope'          , units='degrees')
+       call DefineVarPIO_2d(ncid, 'STD_ELEV' , xtype, dim2d, longName='standard deviation of elevation' , units='m')
+
+       call DefineVarPIO_2d(ncid, 'binfl' , xtype, dim2d, longName='VIC b parameter for the Variable Infiltration Capacity Curve' , units='unitless')
+       call DefineVarPIO_2d(ncid, 'Ws'    , xtype, dim2d, longName='VIC Ws parameter for the ARNO Curve'                          , units='unitless')
+       call DefineVarPIO_2d(ncid, 'Dsmax' , xtype, dim2d, longName='VIC Dsmax parameter for the ARNO curve'                       , units='mm/day')
+       call DefineVarPIO_2d(ncid, 'Ds'    , xtype, dim2d, longName='VIC Ds parameter for the ARNO curve'                          , units='unitless')
+
+       call DefineVarPIO_2d(ncid, 'LAKEDEPTH', xtype, dim2d, longName='lake depth', units='m')
+
+       call DefineVarPIO_2d(ncid, 'F0'   , xtype, dim2d, longName='maximum gridcell fractional inundated area'   , units='unitless')
+       call DefineVarPIO_2d(ncid, 'P3'   , xtype, dim2d, longName='coefficient for qflx_surf_lag for finundated' , units='s/mm')
+       call DefineVarPIO_2d(ncid, 'ZWT0' , xtype, dim2d, longName='decay factor for finundated'                  , units='m')
+    end if
+
+    dim2d(1) = dim_id%lsmlon; dim2d(2) = dim_id%lsmlat
+    call DefineVarPIO_2d(ncid, 'PCT_WETLAND' , xtype, dim2d, longName='percent wetland' , units='unitless')
+    call DefineVarPIO_2d(ncid, 'PCT_LAKE'    , xtype, dim2d, longName='percent lake'    , units='unitless')
+    call DefineVarPIO_2d(ncid, 'PCT_GLACIER' , xtype, dim2d, longName='percent glacier' , units='unitless')
+
+    if (.not. dynlanduse) then
+       if (nglcec > 0) then
+          dim1d(1) = dim_id%nglcecp1
+          call DefineVarPIO_1d(ncid, 'GLC_MEC', xtype, dim1d, longName='Glacier elevation class', units='m')
+
+          dim3d(1) = dim_id%lsmlon; dim3d(2) = dim_id%lsmlat; dim3d(3) = dim_id%nglcec;
+          call DefineVarPIO_3d(ncid, 'PCT_GLC_MEC'          , xtype, dim3d, longName='percent glacier for each glacier elevation class (% of landunit)'                       , units='unitless')
+          call DefineVarPIO_3d(ncid, 'PCT_GLC_MEC_GIC'      , xtype, dim3d, longName='percent smaller glaciers and ice caps for each glacier elevation class (% of landunit)' , units='unitless')
+          call DefineVarPIO_3d(ncid, 'PCT_GLC_MEC_ICESHEET' , xtype, dim3d, longName='percent ice sheet for each glacier elevation class (% of landunit)'                     , units='unitless')
+
+          dim2d(1) = dim_id%lsmlon; dim2d(2) = dim_id%lsmlat
+          call DefineVarPIO_2d(ncid, 'PCT_GLC_GIC'      , xtype, dim2d, longName='percent ice caps/glaciers (% of landunit)' , units='unitless')
+          call DefineVarPIO_2d(ncid, 'PCT_GLC_ICESHEET' , xtype, dim2d, longName='percent ice sheets (% of landunit)'        , units='unitless')
+
+          dim3d(1) = dim_id%lsmlon; dim3d(2) = dim_id%lsmlat; dim3d(3) = dim_id%nglcec;
+          call DefineVarPIO_3d(ncid, 'TOPO_GLC_MEC', xtype, dim3d, longName='mean elevation on glacier elevation classes', units='m')
+       end if
+
+       dim2d(1) = dim_id%lsmlon; dim2d(2) = dim_id%lsmlat
+       call DefineVarPIO_2d(ncid, 'TOPO', xtype, dim2d, longName='mean elevation on land' , units='m')
+    end if
+
+    dim3d(1) = dim_id%lsmlon; dim3d(2) = dim_id%lsmlat; dim3d(3) = dim_id%numurbl;
+    call DefineVarPIO_3d(ncid, 'PCT_URBAN', xtype, dim3d, longName='percent urban for each density type', units='unitless')
+
+    if (.not. dynlanduse) then
+       dim2d(1) = dim_id%lsmlon; dim2d(2) = dim_id%lsmlat
+       call DefineVarPIO_2d(ncid, 'URBAN_REGION_ID', PIO_INT, dim2d, longName='urban region ID' , units='unitless')
+    endif
+
+    if (dynlanduse) then
+       do j = 1, mkharvest_numtypes()
+          dim3d(1) = dim_id%lsmlon; dim3d(2) = dim_id%lsmlat; dim3d(3) = dim_id%time;
+          call DefineVarPIO_3d(ncid, mkharvest_fieldname(j), xtype, dim3d, longName=mkharvest_longname(j), units='unitless')
+       end do
+    end if
+
+    dim2d(1) = dim_id%lsmlon; dim2d(2) = dim_id%lsmlat
+    call DefineVarPIO_2d(ncid, 'APATITE_P'   , xtype, dim2d, longName='Apatite Phosphorus'   , units='gP/m2')
+    call DefineVarPIO_2d(ncid, 'LABILE_P'    , xtype, dim2d, longName='Labile Phosphorus'    , units='gP/m2')
+    call DefineVarPIO_2d(ncid, 'OCCLUDED_P'  , xtype, dim2d, longName='Occuluded Phosphorus' , units='gP/m2')
+    call DefineVarPIO_2d(ncid, 'SECONDARY_P' , xtype, dim2d, longName='Secondary Phosphorus' , units='gP/m2')
+
+  end subroutine mkfile_define_variables_for_2d_grid
 
 end module mkfileMod
