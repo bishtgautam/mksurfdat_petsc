@@ -6,10 +6,16 @@ module piofileutils
 
   implicit none
 
-  public OpenFilePio
+  public OpenFilePIO
+  public CreateFilePIO
+  public DefineDimPIO
   public read_float_or_double_2d
   public read_float_or_double_3d
   public check_ret
+  public DefineVarPIO_1d
+  public DefineVarPIO_2d
+  public DefineVarPIO_3d
+  public DefineVarPIO_4d
 
 contains
 
@@ -81,6 +87,182 @@ contains
     call check_ret(PIO_openfile(pioIoSystem, ncid, iotype, trim(fname), PIO_NOWRITE), subname)
 
   end subroutine OpenFilePIO
+
+  !-----------------------------------------------------------------------
+  subroutine CreateFilePIO(fname, pioIoSystem, ncid)
+    use petsc
+    use spmdMod, only : iam, npes, masterproc, mpicom
+    use pio
+
+    implicit none
+
+    character (len=*)     :: fname
+    type(file_desc_t)     :: ncid
+    type(iosystem_desc_t) :: pioIoSystem
+    !
+    integer               :: niotasks
+    integer               :: numAggregator
+    integer               :: stride
+    integer               :: optBase
+    integer               :: iotype
+    integer               :: retVal, ier
+    character(len= 32)    :: subname = 'CreateFilePIO'
+
+    stride        = 1
+    numAggregator = 0
+    iotype        = PIO_iotype_pnetcdf
+    niotasks      = npes
+
+    if (npes == 1) then
+       optBase = 0
+    else
+       optBase = 1
+    end if
+
+    call PIO_init(iam,     & ! MPI rank
+         MPI_COMM_WORLD,   & ! MPI communicator
+         niotasks,         & ! Number of iotasks (ntasks/stride)
+         numAggregator,    & ! number of aggregators to use
+         stride,           & ! stride
+         PIO_rearr_subset, & ! do not use any form of rearrangement
+         pioIoSystem,      & ! iosystem
+         optBase)
+
+    call check_ret(PIO_createfile(pioIoSystem, ncid, iotype, trim(fname), PIO_CLOBBER), subname)
+
+  end subroutine CreateFilePIO
+
+  !-----------------------------------------------------------------------
+  subroutine DefineDimPIO(ncid, dimName, dimLen, dimID)
+
+    implicit none
+
+    type(file_desc_t)     , intent (in)  :: ncid
+    character(len=*)      , intent (in)  :: dimName
+    integer               , intent (in)  :: dimLen
+    integer               , intent (out) :: dimID
+
+    character(len= 32)    :: subname = 'DefineDimPIO'
+
+    call check_ret(PIO_def_dim(ncid, dimName, dimLen, dimID), subname)
+
+  end subroutine DefineDimPIO
+
+  !-----------------------------------------------------------------------
+  subroutine DefineVarPIO_1d(ncid, varName, xtype, dimID_1d, longName, units)
+
+    use pio
+
+    implicit none
+
+    type(file_desc_t) , intent (in) :: ncid
+    character(len=*)  , intent (in) :: varName
+    integer           , intent (in) :: xtype
+    integer           , intent (in) :: dimID_1d(1)
+    character(len=*)  , optional    :: longName
+    character(len=*)  , optional    :: units
+
+    type(var_desc_t)                :: pioVar
+    character(len=32)               :: subname = 'DefineVarPIO_1d'
+
+    call check_ret(PIO_def_var(ncid, varName, xtype, dimID_1d, pioVar), subname)
+
+    if (present(longName)) then
+       call check_ret(PIO_put_att(ncid, pioVar, 'long_name', trim(longName)), subname)
+    end if
+
+    if (present(units)) then
+       call check_ret(PIO_put_att(ncid, pioVar, 'units', trim(units)), subname)
+    end if
+
+  end subroutine DefineVarPIO_1d
+
+  !-----------------------------------------------------------------------
+  subroutine DefineVarPIO_2d(ncid, varName, xtype, dimIDs, longName, units)
+
+    use pio
+
+    implicit none
+
+    type(file_desc_t) , intent (in) :: ncid
+    character(len=*)  , intent (in) :: varName
+    integer           , intent (in) :: xtype
+    integer           , intent (in) :: dimIDs(2)
+    character(len=*)  , optional    :: longName
+    character(len=*)  , optional    :: units
+
+    type(var_desc_t)                :: pioVar
+    character(len=32)               :: subname = 'DefineVarPIO_1d'
+
+    call check_ret(PIO_def_var(ncid, varName, xtype, dimIDs, pioVar), subname)
+
+    if (present(longName)) then
+       call check_ret(PIO_put_att(ncid, pioVar, 'long_name', trim(longName)), subname)
+    end if
+
+    if (present(units)) then
+       call check_ret(PIO_put_att(ncid, pioVar, 'units', trim(units)), subname)
+    end if
+
+  end subroutine DefineVarPIO_2d
+
+  !-----------------------------------------------------------------------
+  subroutine DefineVarPIO_3d(ncid, varName, xtype, dimIDs, longName, units)
+
+    use pio
+
+    implicit none
+
+    type(file_desc_t) , intent (in) :: ncid
+    character(len=*)  , intent (in) :: varName
+    integer           , intent (in) :: xtype
+    integer           , intent (in) :: dimIDs(3)
+    character(len=*)  , optional    :: longName
+    character(len=*)  , optional    :: units
+
+    type(var_desc_t)                :: pioVar
+    character(len=32)               :: subname = 'DefineVarPIO_1d'
+
+    call check_ret(PIO_def_var(ncid, varName, xtype, dimIDs, pioVar), subname)
+
+    if (present(longName)) then
+       call check_ret(PIO_put_att(ncid, pioVar, 'long_name', trim(longName)), subname)
+    end if
+
+    if (present(units)) then
+       call check_ret(PIO_put_att(ncid, pioVar, 'units', trim(units)), subname)
+    end if
+
+  end subroutine DefineVarPIO_3d
+
+  !-----------------------------------------------------------------------
+  subroutine DefineVarPIO_4d(ncid, varName, xtype, dimIDs, longName, units)
+
+    use pio
+
+    implicit none
+
+    type(file_desc_t) , intent (in) :: ncid
+    character(len=*)  , intent (in) :: varName
+    integer           , intent (in) :: xtype
+    integer           , intent (in) :: dimIDs(4)
+    character(len=*)  , optional    :: longName
+    character(len=*)  , optional    :: units
+
+    type(var_desc_t)                :: pioVar
+    character(len=32)               :: subname = 'DefineVarPIO_1d'
+
+    call check_ret(PIO_def_var(ncid, varName, xtype, dimIDs, pioVar), subname)
+
+    if (present(longName)) then
+       call check_ret(PIO_put_att(ncid, pioVar, 'long_name', trim(longName)), subname)
+    end if
+
+    if (present(units)) then
+       call check_ret(PIO_put_att(ncid, pioVar, 'units', trim(units)), subname)
+    end if
+
+  end subroutine DefineVarPIO_4d
 
   !-----------------------------------------------------------------------
   subroutine read_float_or_double_2d(domain, pioIoSystem, ncid, varname, dim_idx, data2d)
