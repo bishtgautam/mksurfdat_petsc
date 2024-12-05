@@ -19,7 +19,7 @@ contains
     !
     ! !USES:
     use mkdomainPIOMod, only : domain_pio_type, domain_clean_pio, domain_read_pio
-    use mkgridmapMod
+    use mkgridmapPIOMod
     use mkvarpar
     use mkvarctl
     use mkncdio
@@ -43,7 +43,7 @@ contains
     real(r8)              , intent(in), optional :: min_valid_value   !
     real(r8)              , intent(in), optional :: max_valid_value
                                                                       !
-    type(gridmap_type)                           :: tgridmap
+    type(gridmap_pio_type)                       :: tgridmap_pio
     type(domain_pio_type)                        :: tdomain_pio       ! local domain
     integer                                      :: no
     integer                                      :: ns_loc_i,ns_loc_o !  indices
@@ -93,7 +93,7 @@ contains
        call PIO_finalize(pioIoSystem, ierr)
 
        ! Read the map
-       call gridmap_mapread(tgridmap, mapfname )
+       call gridmap_mapread_pio(tgridmap_pio, mapfname )
 
        ! Convert 2D vector to 1D vector
        ns_loc_i = (dim_idx(1,2) - dim_idx(1,1) + 1) * (dim_idx(2,2) - dim_idx(2,1) + 1)
@@ -101,7 +101,7 @@ contains
        call convert_2d_to_1d_array(dim_idx(1,1), dim_idx(1,2), dim_idx(2,1), dim_idx(2,2), data2d_i, data1d_i)
 
        ! Determine data_o on output grid
-       call gridmap_areaave(tgridmap, data1d_i(:), data_o, nodata=nodata_value)
+       call gridmap_areaave_pio(tgridmap_pio, data1d_i(:), data_o, nodata=nodata_value)
 
        if (min_valid_specified) then
           if (min_bad(data_o, min_valid_value, data_descrip)) then
@@ -133,7 +133,7 @@ contains
     if ( .not. zero_out )then
        call domain_clean_pio(tdomain_pio)
 
-       call gridmap_clean(tgridmap)
+       call gridmap_clean_pio(tgridmap_pio)
        deallocate (data2d_i)
        deallocate (data1d_i)
     end if
@@ -153,7 +153,7 @@ contains
     !
     ! !USES:
     use mkdomainPIOMod, only : domain_pio_type, domain_clean_pio, domain_read_pio
-    use mkgridmapMod
+    use mkgridmapPIOMod
     use mkvarpar
     use mkvarctl
     use mkncdio
@@ -178,7 +178,7 @@ contains
     real(r8)              , intent(in), optional :: min_valid_value   !
     real(r8)              , intent(in), optional :: max_valid_value
                                                                       !
-    type(gridmap_type)                           :: tgridmap
+    type(gridmap_pio_type)                       :: tgridmap_pio
     type(domain_pio_type)                        :: tdomain_pio       ! local domain
     integer                                      :: no,m
     integer                                      :: ns_loc_i,ns_loc_o !  indices
@@ -231,7 +231,7 @@ contains
        call PIO_finalize(pioIoSystem, ierr)
 
        ! Read the map
-       call gridmap_mapread(tgridmap, mapfname )
+       call gridmap_mapread_pio(tgridmap_pio, mapfname )
 
        ! Convert 2D vector to 1D vector
        ns_loc_i = (dim_idx(1,2) - dim_idx(1,1) + 1) * (dim_idx(2,2) - dim_idx(2,1) + 1)
@@ -243,7 +243,7 @@ contains
           call convert_2d_to_1d_array(dim_idx(1,1), dim_idx(1,2), dim_idx(2,1), dim_idx(2,2), data3d_i(:,:,m), data1d_i)
 
           ! Determine data_o on output grid
-          call gridmap_areaave(tgridmap, data1d_i(:), data_o(:,m), nodata=nodata_value)
+          call gridmap_areaave_pio(tgridmap_pio, data1d_i(:), data_o(:,m), nodata=nodata_value)
 
           if (min_valid_specified) then
              if (min_bad(data_o(:,m), min_valid_value, data_descrip)) then
@@ -276,7 +276,7 @@ contains
     if ( .not. zero_out )then
        call domain_clean_pio(tdomain_pio)
 
-       call gridmap_clean(tgridmap)
+       call gridmap_clean_pio(tgridmap_pio)
        deallocate (data3d_i)
        deallocate (data1d_i)
     end if

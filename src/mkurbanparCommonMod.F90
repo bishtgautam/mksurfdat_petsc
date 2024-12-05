@@ -360,7 +360,7 @@ subroutine mkelev_pio(ldomain_pio, mapfname, datfname, varname, ndiag, elev_o)
   !
   ! !USES:
   use mkdomainPIOMod, only : domain_pio_type, domain_clean_pio, domain_read_pio
-  use mkgridmapMod
+  use mkgridmapPIOMod
   use mkvarpar
   use mkvarctl
   use mkncdio
@@ -378,7 +378,7 @@ subroutine mkelev_pio(ldomain_pio, mapfname, datfname, varname, ndiag, elev_o)
   real(r8)          , intent(out):: elev_o(:) ! output elevation data
   ! !LOCAL VARIABLES:
   !EOP
-  type(gridmap_type)    :: tgridmap
+  type(gridmap_pio_type)   :: tgridmap_pio
   type(domain_pio_type)    :: tdomain_pio            ! local domain
 
   type(file_desc_t)     :: ncid
@@ -416,7 +416,7 @@ subroutine mkelev_pio(ldomain_pio, mapfname, datfname, varname, ndiag, elev_o)
 
   ! Read topo elev dataset with unit mask everywhere
 
-  call gridmap_mapread(tgridmap, mapfname)
+  call gridmap_mapread_pio(tgridmap_pio, mapfname)
 
   ! Convert 2D vector to 1D vector
   ns_loc_i = (dim_idx(1,2) - dim_idx(1,1) + 1) * (dim_idx(2,2) - dim_idx(2,1) + 1)
@@ -429,11 +429,11 @@ subroutine mkelev_pio(ldomain_pio, mapfname, datfname, varname, ndiag, elev_o)
 
   elev_o(:) = 0._r8
 
-  call gridmap_areaave(tgridmap, elev1d_i, elev_o, nodata=0._r8)
+  call gridmap_areaave_pio(tgridmap_pio, elev1d_i, elev_o, nodata=0._r8)
 
   call domain_clean_pio(tdomain_pio)
 
-  call gridmap_clean(tgridmap)
+  call gridmap_clean_pio(tgridmap_pio)
   deallocate (elev2d_i)
   deallocate (elev1d_i)
 

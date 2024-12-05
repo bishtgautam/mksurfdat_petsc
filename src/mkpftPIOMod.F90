@@ -5,6 +5,7 @@ module mkpftPIOMod
   use mkvarctl    , only : numpft
   use mkdomainMod , only : domain_checksame
   use piofileutils
+  use petsc
 
   implicit none
 
@@ -48,7 +49,7 @@ contains
 
     use mkdomainPIOMod, only : domain_pio_type, domain_read_pio, domain_clean_pio
     use mkvarpar      , only : numstdpft, numstdcft
-    use mkgridmapMod
+    use mkgridmapPIOMod
     use pio
     use utils
 
@@ -61,7 +62,7 @@ contains
     real(r8)              , pointer       :: pctpft_o(:,:)         ! PFT cover (% of vegetated area)
 
     type(domain_pio_type) :: tdomain_pio     ! local domain
-    type(gridmap_type)    :: tgridmap           ! local gridmap
+    type(gridmap_pio_type):: tgridmap_pio
     real(r8) , pointer    :: pctpft3d_i(:,:,:)      ! input grid: PFT percent
     integer               :: numpft_i                        ! num of plant types input data
     real(r8)              :: sum_fldo                        ! global sum of dummy output fld
@@ -166,12 +167,13 @@ contains
     else
 
        ! Read the map
-       call gridmap_mapread(tgridmap, mapfname)
+       call gridmap_mapread_pio(tgridmap_pio, mapfname)
 
        ns_loc_o = ldomain_pio%ns_loc
 
        do no = 1, ns_loc_o
-          pctlnd_o(no)     = tgridmap%frac_dst(no) * 100._r8
+          i = tgridmap_pio%dim_nb%begd + no - 1
+          pctlnd_o(no) = tgridmap_pio%dst%frac(i) * 100._r8
        end do
 
        if (ldomain_pio%is_2d) then
@@ -179,7 +181,8 @@ contains
           call abort()
        else
           do no = 1, ns_loc_o
-             ldomain_pio%frac1d(ldomain_pio%begs + no - 1) = tgridmap%frac_dst(no)
+             i = tgridmap_pio%dim_nb%begd + no - 1
+             ldomain_pio%frac1d(ldomain_pio%begs + no - 1) = tgridmap_pio%dst%frac(i)
           end do
        end if
 
@@ -190,7 +193,7 @@ contains
 
           call convert_2d_to_1d_array(dim_idx(1,1), dim_idx(1,2), dim_idx(2,1), dim_idx(2,2), pctpft3d_i(:,:,m), pctpft1d_i)
 
-          call gridmap_areaave(tgridmap, pctpft1d_i(:), pctpft_o(:,m),  nodata=0._r8)
+          call gridmap_areaave_pio(tgridmap_pio, pctpft1d_i(:), pctpft_o(:,m), nodata=0._r8)
 
           do no = 1, ns_loc_o
              if (pctlnd_o(no) < 1.0e-6) then
@@ -229,7 +232,7 @@ contains
     ! Deallocate memory
     call domain_clean_pio(tdomain_pio)
     if ( .not. zero_out .and. .not. use_input_pft) then
-       call gridmap_clean(tgridmap)
+       call gridmap_clean_pio(tgridmap_pio)
     end if
 
     write (6,*) 'Successfully made PFTs'

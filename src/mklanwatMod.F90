@@ -232,6 +232,7 @@ subroutine mklakwat_pio(ldomain_pio, mapfname, datfname, ndiag, zero_out, lake_o
 ! !USES:
   use mkdomainPIOMod, only : domain_pio_type, domain_clean_pio, domain_read_pio
   use mkgridmapMod
+  use mkgridmapPIOMod
   use mkvarpar
   use mkvarctl
   use mkncdio
@@ -249,7 +250,7 @@ subroutine mklakwat_pio(ldomain_pio, mapfname, datfname, ndiag, zero_out, lake_o
   logical           , intent(in) :: zero_out  ! if should zero glacier out
   real(r8)          , intent(out):: lake_o(:) ! output grid: %lake
   !
-  type(gridmap_type)    :: tgridmap
+  type(gridmap_pio_type) :: tgridmap_pio
   type(domain_pio_type)    :: tdomain_pio            ! local domain
   real(r8) :: sum_fldi                        ! global sum of dummy input fld
   real(r8) :: sum_fldo                        ! global sum of dummy output fld
@@ -302,7 +303,7 @@ subroutine mklakwat_pio(ldomain_pio, mapfname, datfname, ndiag, zero_out, lake_o
      ! and correct according to land landmask
      ! Note that percent cover is in terms of total grid area.
 
-     call gridmap_mapread(tgridmap, mapfname )
+     call gridmap_mapread_pio(tgridmap_pio, mapfname )
 
      ! Convert 2D vector to 1D vector
      ns_loc_i = (dim_idx(1,2) - dim_idx(1,1) + 1) * (dim_idx(2,2) - dim_idx(2,1) + 1)
@@ -313,7 +314,7 @@ subroutine mklakwat_pio(ldomain_pio, mapfname, datfname, ndiag, zero_out, lake_o
 
      ! Determine lake_o on output grid
 
-     call gridmap_areaave(tgridmap, lake1d_i(:), lake_o, nodata=0._r8)
+     call gridmap_areaave_pio(tgridmap_pio, lake1d_i(:), lake_o, nodata=0._r8)
 
      ns_loc_o = ldomain_pio%ns_loc
      do no = 1, ns_loc_o
@@ -326,7 +327,7 @@ subroutine mklakwat_pio(ldomain_pio, mapfname, datfname, ndiag, zero_out, lake_o
 
   call domain_clean_pio(tdomain_pio)
   if ( .not. zero_out )then
-     call gridmap_clean(tgridmap)
+     call gridmap_clean_pio(tgridmap_pio)
      deallocate (lake2d_i)
      deallocate (lake1d_i)
   end if
@@ -533,6 +534,7 @@ subroutine mkwetlnd_pio(ldomain_pio, mapfname, datfname, ndiag, zero_out, swmp_o
   ! !USES:
   use mkdomainPIOMod, only : domain_pio_type, domain_clean_pio, domain_read_pio
   use mkgridmapMod
+  use mkgridmapPIOMod
   use mkvarpar
   use mkvarctl
   use mkncdio
@@ -559,7 +561,7 @@ subroutine mkwetlnd_pio(ldomain_pio, mapfname, datfname, ndiag, zero_out, swmp_o
   !
   ! !LOCAL VARIABLES:
   !EOP
-  type(gridmap_type)    :: tgridmap
+  type(gridmap_pio_type)    :: tgridmap_pio
   type(domain_pio_type)    :: tdomain_pio            ! local domain
   real(r8), allocatable :: swmp_i(:)          ! input grid: percent swamp
   real(r8) :: sum_fldi                        ! global sum of dummy input fld
@@ -615,7 +617,7 @@ subroutine mkwetlnd_pio(ldomain_pio, mapfname, datfname, ndiag, zero_out, swmp_o
      ! and correct according to land landmask
      ! Note that percent cover is in terms of total grid area.
 
-     call gridmap_mapread(tgridmap, mapfname )
+     call gridmap_mapread_pio(tgridmap_pio, mapfname )
 
      ! Convert 2D vector to 1D vector
      ns_loc_i = (dim_idx(1,2) - dim_idx(1,1) + 1) * (dim_idx(2,2) - dim_idx(2,1) + 1)
@@ -626,7 +628,7 @@ subroutine mkwetlnd_pio(ldomain_pio, mapfname, datfname, ndiag, zero_out, swmp_o
 
      ! Determine swmp_o on output grid
 
-     call gridmap_areaave(tgridmap, swmp1d_i(:), swmp_o, nodata=0._r8)
+     call gridmap_areaave_pio(tgridmap_pio, swmp1d_i(:), swmp_o, nodata=0._r8)
 
      ns_loc_o = ldomain_pio%ns_loc
      do no = 1,ns_loc_o
@@ -647,7 +649,7 @@ subroutine mkwetlnd_pio(ldomain_pio, mapfname, datfname, ndiag, zero_out, swmp_o
 
   if ( .not. zero_out )then
      call domain_clean_pio(tdomain_pio)
-     call gridmap_clean(tgridmap)
+     call gridmap_clean_pio(tgridmap_pio)
      deallocate (swmp2d_i)
      deallocate (swmp1d_i)
   end if
@@ -767,7 +769,7 @@ subroutine mklakparams_pio(ldomain_pio, mapfname, datfname, ndiag, lakedepth_o)
   !
   ! !USES:
   use mkdomainPIOMod, only : domain_pio_type, domain_clean_pio, domain_read_pio
-  use mkgridmapMod
+  use mkgridmapPIOMod
   use mkncdio
   use mkdiagnosticsMod, only : output_diagnostics_continuous
   use mkchecksMod, only : min_bad
@@ -784,7 +786,7 @@ subroutine mklakparams_pio(ldomain_pio, mapfname, datfname, ndiag, lakedepth_o)
   integer               , intent(in)  :: ndiag          ! unit number for diag out
   real(r8)              , intent(out) :: lakedepth_o(:) ! output grid: lake depth (m)
 
-  type(gridmap_type)                  :: tgridmap
+  type(gridmap_pio_type)               :: tgridmap_pio
   type(domain_pio_type)               :: tdomain_pio    ! local domain
   real(r8)              , allocatable :: data_i(:)      ! data on input grid
   integer                             :: varid          ! input netCDF id's
@@ -814,7 +816,7 @@ subroutine mklakparams_pio(ldomain_pio, mapfname, datfname, ndiag, lakedepth_o)
 
   call domain_read_pio(tdomain_pio, datfname)
 
-  call gridmap_mapread(tgridmap, mapfname )
+  call gridmap_mapread_pio(tgridmap_pio, mapfname )
 
   ! -----------------------------------------------------------------
   ! Open input file, allocate memory for input data
@@ -840,7 +842,7 @@ subroutine mklakparams_pio(ldomain_pio, mapfname, datfname, ndiag, lakedepth_o)
   call convert_2d_to_1d_array(dim_idx(1,1), dim_idx(1,2), dim_idx(2,1), dim_idx(2,2), lakedepth2d_i, lakedepth1d_i)
 
   ! Determine lakedepth_o on output grid
-  call gridmap_areaave(tgridmap, lakedepth1d_i, lakedepth_o, nodata=10._r8)
+  call gridmap_areaave_pio(tgridmap_pio, lakedepth1d_i, lakedepth_o, nodata=10._r8)
 
   ! Check validity of output data
   if (min_bad(lakedepth_o, min_valid_lakedepth, 'lakedepth')) then
@@ -852,7 +854,7 @@ subroutine mklakparams_pio(ldomain_pio, mapfname, datfname, ndiag, lakedepth_o)
   ! -----------------------------------------------------------------
 
   call domain_clean_pio(tdomain_pio)
-  call gridmap_clean(tgridmap)
+  call gridmap_clean_pio(tgridmap_pio)
   deallocate (lakedepth1d_i)
   deallocate (lakedepth2d_i)
 

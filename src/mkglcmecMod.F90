@@ -688,7 +688,7 @@ subroutine mkglacier_pio(ldomain_pio, mapfname, datfname, ndiag, zero_out, glac_
 !
 ! !USES:
   use mkdomainPIOMod, only : domain_pio_type, domain_clean_pio, domain_read_pio
-  use mkgridmapMod
+  use mkgridmapPIOMod
   use mkvarpar
   use mkvarctl
   use mkncdio
@@ -706,7 +706,7 @@ subroutine mkglacier_pio(ldomain_pio, mapfname, datfname, ndiag, zero_out, glac_
   real(r8)              , intent(out):: glac_o(:) ! output grid: %glacier
   ! !LOCAL VARIABLES:
   !
-  type(gridmap_type)    :: tgridmap
+  type(gridmap_pio_type):: tgridmap_pio
   type(domain_pio_type) :: tdomain_pio        ! local domain
   real(r8), allocatable :: glac_i(:)          ! input grid: percent glac
   real(r8)              :: sum_fldi           ! global sum of dummy input fld
@@ -768,11 +768,11 @@ subroutine mkglacier_pio(ldomain_pio, mapfname, datfname, ndiag, zero_out, glac_
      call convert_2d_to_1d_array(dim_idx(1,1), dim_idx(1,2), dim_idx(2,1), dim_idx(2,2), glac2d_i, glac1d_i)
 
      ! Read the map
-     call gridmap_mapread(tgridmap, mapfname )
+     call gridmap_mapread_pio(tgridmap_pio, mapfname )
 
      ! Determine glac_o on output grid
 
-     call gridmap_areaave(tgridmap, glac1d_i, glac_o, nodata=0._r8)
+     call gridmap_areaave_pio(tgridmap_pio, glac1d_i, glac_o, nodata=0._r8)
 
      ns_loc_o = ldomain_pio%ns_loc
      do no = 1, ns_loc_o
@@ -784,7 +784,7 @@ subroutine mkglacier_pio(ldomain_pio, mapfname, datfname, ndiag, zero_out, glac_
 
   call domain_clean_pio(tdomain_pio)
   if ( .not. zero_out )then
-     call gridmap_clean(tgridmap)
+     call gridmap_clean_pio(tgridmap_pio)
      deallocate (glac1d_i)
      deallocate (glac2d_i)
   end if
