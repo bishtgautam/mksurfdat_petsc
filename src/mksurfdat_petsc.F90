@@ -288,17 +288,15 @@ program mksurfdat_petsc
 
   !call mkfmax (ldomain, mapfname=map_fmax, datfname=mksrf_fmax, &
   !     ndiag=ndiag, fmax_o=fmax)
-  call mkdata_double_2d_pio(ldomain_pio, mapfname=map_fmax, datfname=mksrf_fmax, varname='FMAX', &
-       data_descrip='%fmax', ndiag=ndiag, zero_out=.false., nodata_value=0.365783_r8, data_o=fmax, &
-       threshold_o=0._r8)
+  call mkfmax_pio (ldomain_pio, mapfname=map_fmax, datfname=mksrf_fmax, &
+       ndiag=ndiag, fmax_o=fmax)
 
   ! Make GDP data [gdp] from [gdp]
 
   !call mkgdp (ldomain, mapfname=map_fgdp, datfname=mksrf_fgdp, &
   !     ndiag=ndiag, gdp_o=gdp)
-  call mkdata_double_2d_pio(ldomain_pio, mapfname=map_fgdp, datfname=mksrf_fgdp, varname='gdp', &
-       data_descrip='GDP', ndiag=ndiag, zero_out=.false., nodata_value=0._r8, data_o=gdp, &
-       min_valid_value=0._r8)
+  call mkgdp_pio (ldomain_pio, mapfname=map_fgdp, datfname=mksrf_fgdp, &
+       ndiag=ndiag, gdp_o=gdp)
 
   ! Make peat data [fpeat] from [peatf]
 
@@ -312,23 +310,19 @@ program mksurfdat_petsc
 
   call mkagfirepkmon (ldomain, mapfname=map_fabm, datfname=mksrf_fabm, &
        ndiag=ndiag, agfirepkmon_o=agfirepkmon)
-  !call mkdata_integer_2d_pio(ldomain_pio, mapfname=map_fabm, datfname=mksrf_fabm, varname='abm', &
-  !     data_descrip='peatf', ndiag=ndiag, zero_out=.false., nodata_value=0._r8, data_o=agfirepkmon, &
-  !     min_valid_value=1, max_valid_value=13)
+  !TODO: call mkagfirepkmon_pio (ldomain_pio, mapfname=map_fabm, datfname=mksrf_fabm, &
+  !     ndiag=ndiag, agfirepkmon_o=agfirepkmon)
 
   ! Make urban fraction [pcturb] from [furban] dataset
 
   call mkurban (ldomain, mapfname=map_furban, datfname=mksrf_furban, &
        ndiag=ndiag, zero_out=all_veg, urbn_o=pcturb, urbn_classes_o=urbn_classes, &
        region_o=urban_region)
-
-  !call mkurban_pio (ldomain_pio, mapfname=map_furban, datfname=mksrf_furban, &
+  !TODO: call mkurban_pio (ldomain_pio, mapfname=map_furban, datfname=mksrf_furban, &
   !     ndiag=ndiag, zero_out=all_veg, urbn_o=pcturb, urbn_classes_o=urbn_classes, &
   !     region_o=urban_region)
 
   if ( .not. all_urban .and. .not. all_veg )then
-     !call mkelev (ldomain, mapfname=map_furbtopo, datfname=mksrf_furbtopo, &
-     !     varname='TOPO_ICE', ndiag=ndiag, elev_o=elev)
      call mkelev_pio (ldomain_pio, mapfname=map_furbtopo, datfname=mksrf_furbtopo, &
           varname='TOPO_ICE', ndiag=ndiag, elev_o=elev);
 
@@ -340,127 +334,47 @@ program mksurfdat_petsc
 
   ! Determine topography
 
-  !call mkelev (ldomain, mapfname=map_flndtopo, datfname=mksrf_flndtopo, &
-  !     varname='TOPO', ndiag=ndiag, elev_o=topo)
   call mkelev_pio (ldomain_pio, mapfname=map_flndtopo, datfname=mksrf_flndtopo, &
        varname='TOPO', ndiag=ndiag, elev_o=topo);
 
   ! Make VIC parameters [binfl, ws, dsmax, ds] from [fvic]
 
-  !call mkVICparams (ldomain, mapfname=map_fvic, datfname=mksrf_fvic, ndiag=ndiag, &
-  !     binfl_o=vic_binfl, ws_o=vic_ws, dsmax_o=vic_dsmax, ds_o=vic_ds)
-  call mkdata_double_2d_pio(ldomain_pio, mapfname=map_fvic, datfname=mksrf_fvic, varname='binfl', &
-       data_descrip='binfl', ndiag=ndiag, zero_out=.false., nodata_value=0._r8, data_o=vic_binfl, &
-       min_valid_value=0._r8)
-  call mkdata_double_2d_pio(ldomain_pio, mapfname=map_fvic, datfname=mksrf_fvic, varname='Ws', &
-       data_descrip='Ws', ndiag=ndiag, zero_out=.false., nodata_value=0._r8, data_o=vic_ws, &
-       min_valid_value=0._r8)
-  call mkdata_double_2d_pio(ldomain_pio, mapfname=map_fvic, datfname=mksrf_fvic, varname='Dsmax', &
-       data_descrip='Dsmax', ndiag=ndiag, zero_out=.false., nodata_value=0._r8, data_o=vic_dsmax, &
-       min_valid_value=0._r8)
-  call mkdata_double_2d_pio(ldomain_pio, mapfname=map_fvic, datfname=mksrf_fvic, varname='Ds', &
-       data_descrip='Ds', ndiag=ndiag, zero_out=.false., nodata_value=0._r8, data_o=vic_ds, &
-       min_valid_value=0._r8)
+  call mkVICparams_pio (ldomain_pio, mapfname=map_fvic, datfname=mksrf_fvic, ndiag=ndiag, &
+       binfl_o=vic_binfl, ws_o=vic_ws, dsmax_o=vic_dsmax, ds_o=vic_ds)
 
   ! Make lake depth [lakedepth] from [flakwat]
 
-  !call mklakparams (ldomain, mapfname=map_flakwat, datfname=mksrf_flakwat, ndiag=ndiag, &
-  !     lakedepth_o=lakedepth)
-  call mkdata_double_2d_pio(ldomain_pio, mapfname=map_flakwat, datfname=mksrf_flakwat, varname='LAKEDEPTH', &
-       data_descrip='LAKEDEPTH', ndiag=ndiag, zero_out=.false., nodata_value=0._r8, data_o=lakedepth, &
-       min_valid_value=0._r8)
+  call mklakparams_pio (ldomain_pio, mapfname=map_flakwat, datfname=mksrf_flakwat, ndiag=ndiag, &
+       lakedepth_o=lakedepth)
 
   ! Make inversion-derived CH4 parameters [f0, p3, zwt0] from [fch4]
 
-  !call mkCH4inversion (ldomain, mapfname=map_fch4, datfname=mksrf_fch4, ndiag=ndiag, &
-  !     f0_o=f0, p3_o=p3, zwt0_o=zwt0)
-  call mkdata_double_2d_pio(ldomain_pio, mapfname=map_fch4, datfname=mksrf_fch4, varname='F0', &
-       data_descrip='F0', ndiag=ndiag, zero_out=.false., nodata_value=0._r8, data_o=f0, &
-       min_valid_value=0._r8, max_valid_value=1._r8 + 1.0e-14_r8)
-  call mkdata_double_2d_pio(ldomain_pio, mapfname=map_fch4, datfname=mksrf_fch4, varname='P3', &
-       data_descrip='P3', ndiag=ndiag, zero_out=.false., nodata_value=0._r8, data_o=p3, &
-       min_valid_value=0._r8)
-  call mkdata_double_2d_pio(ldomain_pio, mapfname=map_fch4, datfname=mksrf_fch4, varname='ZWT0', &
-       data_descrip='ZWT0', ndiag=ndiag, zero_out=.false., nodata_value=0._r8, data_o=zwt0, &
-       min_valid_value=0._r8)
+  call mkCH4inversion_pio (ldomain_pio, mapfname=map_fch4, datfname=mksrf_fch4, ndiag=ndiag, &
+       f0_o=f0, p3_o=p3, zwt0_o=zwt0)
 
   ! Make organic matter density [organic] [forganic]
 
-  !call mkorganic (ldomain, mapfname=map_forganic, datfname=mksrf_forganic, &
-  !     ndiag=ndiag, organic_o=organic)
-  call mkdata_double_3d_pio(ldomain_pio, mapfname=map_forganic, datfname=mksrf_forganic, varname='ORGANIC', &
-       data_descrip='%organic', ndiag=ndiag, zero_out=.false., nodata_value=0._r8, start_id_for_dim3=1, &
-       data_o=organic, max_valid_value=130.000001_r8)
+  call mkorganic_pio (ldomain_pio, mapfname=map_forganic, datfname=mksrf_forganic, &
+       ndiag=ndiag, organic_o=organic)
 
   ! Make VOC emission factors for isoprene &
   ! [ef1_btr,ef1_fet,ef1_fdt,ef1_shr,ef1_grs,ef1_crp]
 
-  !call mkvocef (ldomain, mapfname=map_fvocef, datfname=mksrf_fvocef, ndiag=ndiag, &
-  !     ef_btr_o=ef1_btr, ef_fet_o=ef1_fet, ef_fdt_o=ef1_fdt,  &
-  !     ef_shr_o=ef1_shr, ef_grs_o=ef1_grs, ef_crp_o=ef1_crp)
-  call mkdata_double_2d_pio(ldomain_pio, mapfname=map_fvocef, datfname=mksrf_fvocef, varname='ef_btr', &
-       data_descrip='ef_btr', ndiag=ndiag, zero_out=.false., nodata_value=0._r8, data_o=ef1_btr, &
-       min_valid_value=0._r8)
-  call mkdata_double_2d_pio(ldomain_pio, mapfname=map_fvocef, datfname=mksrf_fvocef, varname='ef_fet', &
-       data_descrip='ef_fet', ndiag=ndiag, zero_out=.false., nodata_value=0._r8, data_o=ef1_fet, &
-       min_valid_value=0._r8)
-  call mkdata_double_2d_pio(ldomain_pio, mapfname=map_fvocef, datfname=mksrf_fvocef, varname='ef_fdt', &
-       data_descrip='ef_fdt', ndiag=ndiag, zero_out=.false., nodata_value=0._r8, data_o=ef1_fdt, &
-       min_valid_value=0._r8)
-  call mkdata_double_2d_pio(ldomain_pio, mapfname=map_fvocef, datfname=mksrf_fvocef, varname='ef_shr', &
-       data_descrip='ef_shr', ndiag=ndiag, zero_out=.false., nodata_value=0._r8, data_o=ef1_shr, &
-       min_valid_value=0._r8)
-  call mkdata_double_2d_pio(ldomain_pio, mapfname=map_fvocef, datfname=mksrf_fvocef, varname='ef_grs', &
-       data_descrip='ef_grs', ndiag=ndiag, zero_out=.false., nodata_value=0._r8, data_o=ef1_grs, &
-       min_valid_value=0._r8)
-  call mkdata_double_2d_pio(ldomain_pio, mapfname=map_fvocef, datfname=mksrf_fvocef, varname='ef_crp', &
-       data_descrip='ef_crp', ndiag=ndiag, zero_out=.false., nodata_value=0._r8, data_o=ef1_crp, &
-       min_valid_value=0._r8)
+  call mkvocef_pio (ldomain_pio, mapfname=map_fvocef, datfname=mksrf_fvocef, ndiag=ndiag, &
+       ef_btr_o=ef1_btr, ef_fet_o=ef1_fet, ef_fdt_o=ef1_fdt,  &
+       ef_shr_o=ef1_shr, ef_grs_o=ef1_grs, ef_crp_o=ef1_crp)
 
-  !call mksoilphosphorus (ldomain, mapfname=map_fphosphorus, datfname=mksrf_fphosphorus, &
-  !     ndiag=ndiag, apatiteP_o=apatiteP, labileP_o=labileP, occludedP_o=occludedP, &
-  !     secondaryP_o=secondaryP)
-  call mkdata_double_2d_pio(ldomain_pio, mapfname=map_fphosphorus, datfname=mksrf_fphosphorus, varname='APATITE_P', &
-       data_descrip='APATITE_P', ndiag=ndiag, zero_out=.false., nodata_value=0._r8, data_o=apatiteP, &
-       min_valid_value=0._r8)
-  call mkdata_double_2d_pio(ldomain_pio, mapfname=map_fphosphorus, datfname=mksrf_fphosphorus, varname='LABILE_P', &
-       data_descrip='LABILE_P', ndiag=ndiag, zero_out=.false., nodata_value=0._r8, data_o=labileP, &
-       min_valid_value=0._r8)
-  call mkdata_double_2d_pio(ldomain_pio, mapfname=map_fphosphorus, datfname=mksrf_fphosphorus, varname='OCCLUDED_P', &
-       data_descrip='OCCLUDED_P', ndiag=ndiag, zero_out=.false., nodata_value=0._r8, data_o=occludedP, &
-       min_valid_value=0._r8)
-  call mkdata_double_2d_pio(ldomain_pio, mapfname=map_fphosphorus, datfname=mksrf_fphosphorus, varname='SECONDARY_P', &
-       data_descrip='SECONDARY_P', ndiag=ndiag, zero_out=.false., nodata_value=0._r8, data_o=secondaryP, &
-       min_valid_value=0._r8)
+  call mksoilphosphorus_pio (ldomain_pio, mapfname=map_fphosphorus, datfname=mksrf_fphosphorus, &
+       ndiag=ndiag, apatiteP_o=apatiteP, labileP_o=labileP, occludedP_o=occludedP, &
+       secondaryP_o=secondaryP)
 
-  !call mkgrvl(ldomain, mapfname=map_fgrvl, datfname=mksrf_fgrvl, ndiag=ndiag, grvl_o=grvl)
-  call mkdata_double_3d_pio(ldomain_pio, mapfname=map_fgrvl, datfname=mksrf_fgrvl, varname='PCT_GRVL', &
-       data_descrip='PCT_GRVL', ndiag=ndiag, zero_out=.false., nodata_value=0._r8, start_id_for_dim3=1, &
-       data_o=grvl, max_valid_value=100.000001_r8)
+  call mkgrvl_pio(ldomain_pio, mapfname=map_fgrvl, datfname=mksrf_fgrvl, ndiag=ndiag, grvl_o=grvl)
 
-  !call mkslp10(ldomain, mapfname=map_fslp10, datfname=mksrf_fslp10, ndiag=ndiag, slp10_o=slp10)
-  call mkdata_double_3d_pio(ldomain_pio, mapfname=map_fslp10, datfname=mksrf_fslp10, varname='SLP_P10', &
-       data_descrip='Slope quantiles', ndiag=ndiag, zero_out=.false., nodata_value=0._r8, start_id_for_dim3=1, &
-       data_o=slp10, max_valid_value=100.000001_r8)
+  call mkslp10_pio(ldomain_pio, mapfname=map_fslp10, datfname=mksrf_fslp10, ndiag=ndiag, slp10_o=slp10)
 
-  !call mkEROparams(ldomain, mapfname=map_fero, datfname=mksrf_fero, ndiag=ndiag, &
-  !     ero_c1_o=ero_c1, ero_c2_o=ero_c2, ero_c3_o=ero_c3, tillage_o=tillage, &
-  !     litho_o=litho)
-  call mkdata_double_2d_pio(ldomain_pio, mapfname=map_fero, datfname=mksrf_fero, varname='parEro_c1', &
-       data_descrip='parEro_c1', ndiag=ndiag, zero_out=.false., nodata_value=0._r8, data_o=ero_c1, &
-       min_valid_value=0.0_r8)
-  call mkdata_double_2d_pio(ldomain_pio, mapfname=map_fero, datfname=mksrf_fero, varname='parEro_c2', &
-       data_descrip='parEro_c2', ndiag=ndiag, zero_out=.false., nodata_value=0._r8, data_o=ero_c2, &
-       min_valid_value=0.0_r8)
-  call mkdata_double_2d_pio(ldomain_pio, mapfname=map_fero, datfname=mksrf_fero, varname='parEro_c3', &
-       data_descrip='parEro_c3', ndiag=ndiag, zero_out=.false., nodata_value=0._r8, data_o=ero_c3, &
-       min_valid_value=0.0_r8)
-  call mkdata_double_2d_pio(ldomain_pio, mapfname=map_fero, datfname=mksrf_fero, varname='Tillage', &
-       data_descrip='Tillage', ndiag=ndiag, zero_out=.false., nodata_value=0._r8, data_o=tillage, &
-       min_valid_value=0.0_r8)
-  call mkdata_double_2d_pio(ldomain_pio, mapfname=map_fero, datfname=mksrf_fero, varname='Litho', &
-       data_descrip='Litho', ndiag=ndiag, zero_out=.false., nodata_value=0._r8, data_o=litho, &
-       min_valid_value=0.0_r8)
+  call mkEROparams_pio(ldomain_pio, mapfname=map_fero, datfname=mksrf_fero, ndiag=ndiag, &
+       ero_c1_o=ero_c1, ero_c2_o=ero_c2, ero_c3_o=ero_c3, tillage_o=tillage, &
+       litho_o=litho)
 
   ! Do landuse changes such as for the poles, etc.
 

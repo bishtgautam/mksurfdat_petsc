@@ -26,8 +26,11 @@ module mkSedMod
   public mksedAttPIO   ! PIO-version to add attributes to output file
 
   public mkgrvl         ! Set soil gravel
+  public mkgrvl_pio     ! PIO-verson of set soil gravel
   public mkslp10        ! Set slope percentile
+  public mkslp10_pio    ! PIO-version of set slope percentile
   public mkEROparams    ! Set ELM-Erosion parameters
+  public mkEROparams_pio! PIO-version of set ELM-Erosion parameters
 !
 ! !PUBLIC DATA MEMBERS:
 !
@@ -172,6 +175,40 @@ subroutine mkgrvl(ldomain, mapfname, datfname, ndiag, grvl_o)
 end subroutine mkgrvl
 
 !-----------------------------------------------------------------------
+subroutine mkgrvl_pio(ldomain_pio, mapfname, datfname, ndiag, grvl_o)
+!
+! !DESCRIPTION:
+! make gravel dataset
+!
+! !USES:
+  use mkdomainPIOMod, only : domain_pio_type
+  use mkdataPIOMod
+  !
+  implicit none
+  !
+  type(domain_pio_type) , intent(in) :: ldomain_pio
+  character(len=*)      , intent(in) :: mapfname       ! input mapping file name
+  character(len=*)      , intent(in) :: datfname       ! input data file name
+  integer               , intent(in) :: ndiag          ! unit number for diag out
+  real(r8)              , intent(out):: grvl_o(:,:)    ! output grid:
+  !
+  real(r8), parameter :: nodata_value = 0._r8
+  real(r8), parameter :: max_valid    = 100.000001_r8
+  
+  write (6,*) 'Attempting to make gravel dataset .....'
+  call shr_sys_flush(6)
+
+  call mkdata_double_3d_pio(ldomain_pio, mapfname=mapfname, datfname=datfname, varname='PCT_GRVL', &
+       data_descrip='PCT_GRVL', ndiag=ndiag, zero_out=.false., nodata_value=nodata_value, start_id_for_dim3=1, &
+       data_o=grvl_o, max_valid_value=max_valid)
+
+  write (6,*) 'Successfully made gravel'
+  call shr_sys_flush(6)
+  write(6,*)
+
+end subroutine mkgrvl_pio
+
+!-----------------------------------------------------------------------
 !BOP
 !
 ! !IROUTINE: mkslp10
@@ -300,6 +337,39 @@ subroutine mkslp10(ldomain, mapfname, datfname, ndiag, slp10_o)
   write(6,*)
 
 end subroutine mkslp10 
+
+!-----------------------------------------------------------------------
+subroutine mkslp10_pio(ldomain_pio, mapfname, datfname, ndiag, slp10_o)
+!
+! !DESCRIPTION:
+! make slope percentile dataset
+!
+! !USES:
+  use mkdomainPIOMod, only : domain_pio_type
+  use mkdataPIOMod
+  !
+  implicit none
+  type(domain_pio_type) , intent(in) :: ldomain_pio
+  character(len=*)      , intent(in) :: mapfname       ! input mapping file name
+  character(len=*)      , intent(in) :: datfname       ! input data file name
+  integer               , intent(in) :: ndiag          ! unit number for diag out
+  real(r8)              , intent(out):: slp10_o(:,:)   ! output grid:
+  !
+  real(r8), parameter :: nodata_value = 0._r8
+  real(r8), parameter :: max_valid    = 100.000001_r8
+
+  write (6,*) 'Attempting to make slope percentile dataset .....'
+  call shr_sys_flush(6)
+
+  call mkdata_double_3d_pio(ldomain_pio, mapfname=mapfname, datfname=datfname, varname='SLP_P10', &
+       data_descrip='Slope quantiles', ndiag=ndiag, zero_out=.false., nodata_value=nodata_value, start_id_for_dim3=1, &
+       data_o=slp10_o, max_valid_value=max_valid)
+
+  write (6,*) 'Successfully made slope percentile'
+  call shr_sys_flush(6)
+  write(6,*)
+
+end subroutine mkslp10_pio
 
 !-----------------------------------------------------------------------
 !BOP
@@ -467,6 +537,63 @@ subroutine mkEROparams(ldomain, mapfname, datfname, ndiag, &
   call shr_sys_flush(6)
 
 end subroutine mkEROparams
+
+!-----------------------------------------------------------------------
+!BOP
+!
+! !IROUTINE: mkEROparams
+!
+! !INTERFACE:
+subroutine mkEROparams_pio(ldomain_pio, mapfname, datfname, ndiag, &
+                           ero_c1_o, ero_c2_o, ero_c3_o, tillage_o, &
+                           litho_o)
+  !
+  use mkdomainPIOMod, only : domain_pio_type
+  use mkdataPIOMod
+  !
+  implicit none
+  type(domain_pio_type) , intent(in) :: ldomain_pio
+  character(len=*)  , intent(in) :: mapfname          ! input mapping file name
+  character(len=*)  , intent(in) :: datfname          ! input data file name
+  integer           , intent(in) :: ndiag             ! unit number for diag out
+  real(r8)          , intent(out):: ero_c1_o(:)       ! output grid: ELM-Erosion a scalar parameter for rainfall-driven hillslope erosion 
+  real(r8)          , intent(out):: ero_c2_o(:)       ! output grid: ELM-Erosion a scalar parameter for runoff-driven hillslope erosion
+  real(r8)          , intent(out):: ero_c3_o(:)       ! output grid: ELM-Erosion a scalar parameter for transport capacity of hillslope overland flow
+  real(r8)          , intent(out):: tillage_o(:)      ! output grid: ELM-Erosion conserved tillage fraction
+  real(r8)          , intent(out):: litho_o(:)        ! output grid: ELM-Erosion lithology erodibility index 
+  !
+  real(r8), parameter :: nodata_value = 0._r8
+  real(r8), parameter :: min_valid    = 0._r8
+
+
+  write (6,*) 'Attempting to make ELM-Erosion parameters.....'
+  call shr_sys_flush(6)
+
+  call mkdata_double_2d_pio(ldomain_pio, mapfname=mapfname, datfname=datfname, varname='parEro_c1', &
+       data_descrip='parEro_c1', ndiag=ndiag, zero_out=.false., nodata_value=nodata_value, data_o=ero_c1_o, &
+       min_valid_value=min_valid)
+
+  call mkdata_double_2d_pio(ldomain_pio, mapfname=mapfname, datfname=datfname, varname='parEro_c2', &
+       data_descrip='parEro_c2', ndiag=ndiag, zero_out=.false., nodata_value=nodata_value, data_o=ero_c2_o, &
+       min_valid_value=min_valid)
+
+  call mkdata_double_2d_pio(ldomain_pio, mapfname=mapfname, datfname=datfname, varname='parEro_c3', &
+       data_descrip='parEro_c3', ndiag=ndiag, zero_out=.false., nodata_value=nodata_value, data_o=ero_c3_o, &
+       min_valid_value=min_valid)
+
+  call mkdata_double_2d_pio(ldomain_pio, mapfname=mapfname, datfname=datfname, varname='Tillage', &
+       data_descrip='Tillage', ndiag=ndiag, zero_out=.false., nodata_value=nodata_value, data_o=tillage_o, &
+       min_valid_value=min_valid)
+
+  call mkdata_double_2d_pio(ldomain_pio, mapfname=mapfname, datfname=datfname, varname='Litho', &
+       data_descrip='Litho', ndiag=ndiag, zero_out=.false., nodata_value=nodata_value, data_o=litho_o, &
+       min_valid_value=min_valid)
+
+  write (6,*) 'Successfully made ELM-Erosion parameters'
+  write (6,*)
+  call shr_sys_flush(6)
+
+end subroutine mkEROparams_pio
 
 !-----------------------------------------------------------------------
 !BOP

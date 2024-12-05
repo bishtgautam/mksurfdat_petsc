@@ -24,6 +24,7 @@ module mkpeatMod
 
 ! !PUBLIC MEMBER FUNCTIONS:
   public mkpeat           ! regrid peat data
+  public mkpeat_pio       ! PIO-version of regrid peat data
 !
 !EOP
 !===============================================================
@@ -134,5 +135,43 @@ subroutine mkpeat(ldomain, mapfname, datfname, ndiag, peat_o)
 
 end subroutine mkpeat
 
+!-----------------------------------------------------------------------
+subroutine mkpeat_pio(ldomain_pio, mapfname, datfname, ndiag, peat_o)
+!
+! !DESCRIPTION:
+! make peat
+!
+! !USES:
+  use mkdomainPIOMod, only : domain_pio_type
+  use mkdataPIOMod
+
+! !ARGUMENTS:
+  
+  implicit none
+  type(domain_pio_type) , intent(in) :: ldomain_pio
+  character(len=*)      , intent(in) :: mapfname  ! input mapping file name
+  character(len=*)      , intent(in) :: datfname  ! input data file name
+  integer               , intent(in) :: ndiag     ! unit number for diag out
+  real(r8)              , intent(out):: peat_o(:) ! output grid: fraction peat
+
+  real(r8), parameter :: nodata_value = 0._r8
+  real(r8), parameter :: min_valid = 0._r8          ! minimum valid value
+  real(r8), parameter :: max_valid = 100.000001_r8  ! maximum valid value
+  character(len=32) :: subname = 'mkpeat_pio'
+
+  !-----------------------------------------------------------------------
+
+  write (6,*) 'Attempting to make peat .....'
+  call shr_sys_flush(6)
+
+  call mkdata_double_2d_pio(ldomain_pio, mapfname=mapfname, datfname=datfname, varname='peatf', &
+       data_descrip='peatf', ndiag=ndiag, zero_out=.false., nodata_value=nodata_value, data_o=peat_o, &
+       min_valid_value=min_valid, max_valid_value=max_valid)
+
+  write (6,*) 'Successfully made peat'
+  write (6,*)
+  call shr_sys_flush(6)
+
+end subroutine mkpeat_pio
 
 end module mkpeatMod

@@ -29,6 +29,7 @@ module mksoilMod
 
   public mksoiltex      ! Set soil texture
   public mkorganic      ! Set organic soil
+  public mkorganic_pio  ! PIO-version of set organic soil
   public mksoilcol      ! Set soil color
   public mksoilord      ! Set soil order
   public mkfmax         ! Make percent fmax
@@ -1708,6 +1709,40 @@ subroutine mkorganic(ldomain, mapfname, datfname, ndiag, organic_o)
 end subroutine mkorganic
 
 !-----------------------------------------------------------------------
+subroutine mkorganic_pio(ldomain_pio, mapfname, datfname, ndiag, organic_o)
+!
+! !DESCRIPTION:
+! make organic matter dataset
+!
+! !USES:
+  use mkdomainPIOMod, only : domain_pio_type
+  use mkdataPIOMod
+!
+! !ARGUMENTS:
+  implicit none
+  type(domain_pio_type), intent(in) :: ldomain_pio
+  character(len=*)  , intent(in) :: mapfname       ! input mapping file name
+  character(len=*)  , intent(in) :: datfname       ! input data file name
+  integer           , intent(in) :: ndiag          ! unit number for diag out
+  real(r8)          , intent(out):: organic_o(:,:) ! output grid:
+  !
+  real(r8), parameter :: nodata_value = 0._r8
+  real(r8), parameter :: max_valid    = 130.000001_r8
+
+  write (6,*) 'Attempting to make organic matter dataset .....'
+  call shr_sys_flush(6)
+
+  call mkdata_double_3d_pio(ldomain_pio, mapfname=mapfname, datfname=datfname, varname='ORGANIC', &
+       data_descrip='%organic', ndiag=ndiag, zero_out=.false., nodata_value=nodata_value, start_id_for_dim3=1, &
+       data_o=organic_o, max_valid_value=max_valid)
+
+  write (6,*) 'Successfully made organic matter'
+  call shr_sys_flush(6)
+  write(6,*)
+
+end subroutine mkorganic_pio
+
+!-----------------------------------------------------------------------
 !BOP
 !
 ! !ROUTINE: mkrank
@@ -2039,11 +2074,15 @@ subroutine mkfmax_pio(ldomain_pio, mapfname, datfname, ndiag, fmax_o)
   integer               , intent(in) :: ndiag     ! unit number for diag out
   real(r8)              , intent(out):: fmax_o(:) ! output grid: %fmax
 
+  real(r8), parameter :: nodata_value = 0.365783_r8
+  real(r8), parameter :: min_valid    = 0._r8
+  real(r8), parameter :: max_valid    = 1.000001_r8
+  
   write (6,*) 'Attempting to make %fmax .....'
   call shr_sys_flush(6)
 
   call mkdata_double_2d_pio(ldomain_pio, mapfname=mapfname, datfname=datfname, varname='FMAX', &
-       data_descrip='%fmax', ndiag=ndiag, zero_out=.false., nodata_value=0.365783_r8, data_o=fmax_o, &
+       data_descrip='%fmax', ndiag=ndiag, zero_out=.false., nodata_value=nodata_value, data_o=fmax_o, &
        threshold_o=0._r8)
 
   write (6,*) 'Successfully made %fmax'

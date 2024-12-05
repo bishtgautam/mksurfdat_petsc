@@ -29,6 +29,7 @@ module mklanwatMod
   public mkwetlnd           ! make % wetland
   public mkwetlnd_pio       ! make % wetland PIO version
   public mklakparams        ! make lake parameters
+  public mklakparams_pio     ! make lake parameters PIO version
 
 !EOP
 !===============================================================
@@ -768,95 +769,27 @@ end subroutine mklakparams
 subroutine mklakparams_pio(ldomain_pio, mapfname, datfname, ndiag, lakedepth_o)
   !
   ! !USES:
-  use mkdomainPIOMod, only : domain_pio_type, domain_clean_pio, domain_read_pio
-  use mkgridmapPIOMod
-  use mkncdio
-  use mkdiagnosticsMod, only : output_diagnostics_continuous
-  use mkchecksMod, only : min_bad
-  use pio
-  use piofileutils
-  use utils
+  use mkdomainPIOMod, only : domain_pio_type
+  use mkdataPIOMod
   !
-  ! !ARGUMENTS:
-  
   implicit none
+  !
   type(domain_pio_type) , intent(in)  :: ldomain_pio
   character(len=*)      , intent(in)  :: mapfname       ! input mapping file name
   character(len=*)      , intent(in)  :: datfname       ! input data file name
   integer               , intent(in)  :: ndiag          ! unit number for diag out
   real(r8)              , intent(out) :: lakedepth_o(:) ! output grid: lake depth (m)
 
-  type(gridmap_pio_type)               :: tgridmap_pio
-  type(domain_pio_type)               :: tdomain_pio    ! local domain
-  real(r8)              , allocatable :: data_i(:)      ! data on input grid
-  integer                             :: varid          ! input netCDF id's
-  integer                             :: ier            ! error status
-  integer                             :: ns_loc_i
-  real(r8)              , parameter   :: min_valid_lakedepth = 0._r8
-
-  type(file_desc_t)                   :: ncid
-  type(iosystem_desc_t)               :: pioIoSystem
-  type(io_desc_t)                     :: iodescNCells
-  real(r8)              , pointer     :: lakedepth2d_i(:,:)
-  real(r8)              , pointer     :: lakedepth1d_i(:)
-  integer                             :: ierr
-  integer                             :: dim_idx(2,2)
-
-  character(len=32) :: subname = 'mklakparams_pio'
-!-----------------------------------------------------------------------
+  real(r8), parameter :: nodata_value = 0._r8
+  real(r8), parameter :: min_valid    = 0._r8
+  !-----------------------------------------------------------------------
 
   write (6,*) 'Attempting to make lake parameters.....'
   call shr_sys_flush(6)
-  write(*,*)'mapfname:' ,trim(mapfname)
-  write(*,*)'datfname:' ,trim(datfname)
 
-  ! -----------------------------------------------------------------
-  ! Read domain and mapping information, check for consistency
-  ! -----------------------------------------------------------------
-
-  call domain_read_pio(tdomain_pio, datfname)
-
-  call gridmap_mapread_pio(tgridmap_pio, mapfname )
-
-  ! -----------------------------------------------------------------
-  ! Open input file, allocate memory for input data
-  ! -----------------------------------------------------------------
-
-  write(6,*)'Open lake parameter file: ', trim(datfname)
-
-  ! -----------------------------------------------------------------
-  ! Regrid lake depth
-  ! -----------------------------------------------------------------
-  ! Open the netcdf file
-  call OpenFilePIO(datfname, pioIoSystem, ncid, PIO_NOWRITE)
-
-  ! Read the variable
-  call read_float_or_double_2d(tdomain_pio, pioIoSystem, ncid, 'LAKEDEPTH', dim_idx, lakedepth2d_i)
-
-  call PIO_closefile(ncid)
-  call PIO_finalize(pioIoSystem, ierr)
-
-  ! Convert 2D vector to 1D vector
-  ns_loc_i = (dim_idx(1,2) - dim_idx(1,1) + 1) * (dim_idx(2,2) - dim_idx(2,1) + 1)
-  allocate(lakedepth1d_i(ns_loc_i))
-  call convert_2d_to_1d_array(dim_idx(1,1), dim_idx(1,2), dim_idx(2,1), dim_idx(2,2), lakedepth2d_i, lakedepth1d_i)
-
-  ! Determine lakedepth_o on output grid
-  call gridmap_areaave_pio(tgridmap_pio, lakedepth1d_i, lakedepth_o, nodata=10._r8)
-
-  ! Check validity of output data
-  if (min_bad(lakedepth_o, min_valid_lakedepth, 'lakedepth')) then
-     stop
-  end if
-
-  ! -----------------------------------------------------------------
-  ! Close files and deallocate dynamic memory
-  ! -----------------------------------------------------------------
-
-  call domain_clean_pio(tdomain_pio)
-  call gridmap_clean_pio(tgridmap_pio)
-  deallocate (lakedepth1d_i)
-  deallocate (lakedepth2d_i)
+  call mkdata_double_2d_pio(ldomain_pio, mapfname=mapfname, datfname=datfname, varname='LAKEDEPTH', &
+       data_descrip='LAKEDEPTH', ndiag=ndiag, zero_out=.false., nodata_value=nodata_value, data_o=lakedepth_o, &
+       min_valid_value=min_valid)
 
   write (6,*) 'Successfully made lake parameters'
   write (6,*)

@@ -23,6 +23,7 @@ module mksoilphosphorusMod
   ! !PUBLIC MEMBER FUNCTIONS:
   !
   public mksoilphosphorus     ! Set soil phosphorus
+  public mksoilphosphorus_pio ! PIO-version of set soil phosphorus
 
   !EOP
   !===============================================================
@@ -153,5 +154,56 @@ contains
     call shr_sys_flush(6)
 
   end subroutine mksoilphosphorus
+
+  !-----------------------------------------------------------------------
+  subroutine mksoilphosphorus_pio(ldomain_pio, mapfname, datfname, ndiag, apatiteP_o, &
+       labileP_o, occludedP_o, secondaryP_o)
+    !
+    ! !DESCRIPTION:
+    ! make soil phosphorus datasets
+    !
+    ! !USES:
+    use mkdomainPIOMod, only : domain_pio_type
+    use mkdataPIOMod
+    !
+    type(domain_pio_type) , intent(in)  :: ldomain_pio
+    character(len=*)  , intent(in)  :: mapfname        ! input mapping file name
+    character(len=*)  , intent(in)  :: datfname        ! input data file name
+    integer           , intent(in)  :: ndiag           ! unit number for diag out
+    real(r8)          , intent(out) :: apatiteP_o(:)   ! apatite phosphorus (output grid)
+    real(r8)          , intent(out) :: labileP_o(:)    ! labile phosphorus (output grid)
+    real(r8)          , intent(out) :: occludedP_o(:)  ! occluded phosphorus (output grid)
+    real(r8)          , intent(out) :: secondaryP_o(:) ! secondaryP phosphorus (output grid)
+    !
+    real(r8), parameter   :: nodata_value = 0._r8
+    real(r8), parameter   :: min_valid    = 0._r8
+    !-----------------------------------------------------------------------
+
+    write (6,*) 'Attempting to make soil phosphorus .....'
+    call shr_sys_flush(6)
+    write(*,*)'mapfname:' ,trim(mapfname)
+    write(*,*)'datfname:' ,trim(datfname)
+  
+  call mkdata_double_2d_pio(ldomain_pio, mapfname=mapfname, datfname=datfname, varname='APATITE_P', &
+       data_descrip='APATITE_P', ndiag=ndiag, zero_out=.false., nodata_value=nodata_value, data_o=apatiteP_o, &
+       min_valid_value=min_valid)
+
+  call mkdata_double_2d_pio(ldomain_pio, mapfname=mapfname, datfname=datfname, varname='LABILE_P', &
+       data_descrip='LABILE_P', ndiag=ndiag, zero_out=.false., nodata_value=nodata_value, data_o=labileP_o, &
+       min_valid_value=min_valid)
+
+  call mkdata_double_2d_pio(ldomain_pio, mapfname=mapfname, datfname=datfname, varname='OCCLUDED_P', &
+       data_descrip='OCCLUDED_P', ndiag=ndiag, zero_out=.false., nodata_value=nodata_value, data_o=occludedP_o, &
+       min_valid_value=min_valid)
+
+  call mkdata_double_2d_pio(ldomain_pio, mapfname=mapfname, datfname=datfname, varname='SECONDARY_P', &
+       data_descrip='SECONDARY_P', ndiag=ndiag, zero_out=.false., nodata_value=nodata_value, data_o=secondaryP_o, &
+       min_valid_value=min_valid)
+
+    write (6,*) 'Successfully made phosphorus'
+    write (6,*)
+    call shr_sys_flush(6)
+
+  end subroutine mksoilphosphorus_pio
 
 end module mksoilphosphorusMod

@@ -24,6 +24,7 @@ module mkgdpMod
 
 ! !PUBLIC MEMBER FUNCTIONS:
   public mkgdp            ! regrid gdp data
+  public mkgdp_pio        ! PIO-version for regrid gdb data
 !
 !EOP
 !===============================================================
@@ -132,5 +133,41 @@ subroutine mkgdp(ldomain, mapfname, datfname, ndiag, gdp_o)
   call shr_sys_flush(6)
 
 end subroutine mkgdp
+
+!-----------------------------------------------------------------------
+subroutine mkgdp_pio(ldomain_pio, mapfname, datfname, ndiag, gdp_o)
+!
+! !DESCRIPTION:
+! make GDP from input GDP data
+!
+! !USES:
+  use mkdomainPIOMod, only : domain_pio_type
+  use mkdataPIOMod
+!
+! !ARGUMENTS:
+  
+  implicit none
+  type(domain_pio_type) , intent(in) :: ldomain_pio
+  character(len=*)      , intent(in) :: mapfname  ! input mapping file name
+  character(len=*)      , intent(in) :: datfname  ! input data file name
+  integer               , intent(in) :: ndiag     ! unit number for diag out
+  real(r8)              , intent(out):: gdp_o(:)  ! output grid: GDP (x1000 1995 US$ per capita)
+
+  real(r8), parameter :: nodata_value = 0._r8
+  real(r8), parameter :: min_valid = 0._r8    ! minimum valid value
+  !-----------------------------------------------------------------------
+
+  write (6,*) 'Attempting to make GDP.....'
+  call shr_sys_flush(6)
+
+  call mkdata_double_2d_pio(ldomain_pio, mapfname=mapfname, datfname=datfname, varname='gdp', &
+       data_descrip='GDP', ndiag=ndiag, zero_out=.false., nodata_value=nodata_value, data_o=gdp_o, &
+       min_valid_value=min_valid)
+
+  write (6,*) 'Successfully made GDP'
+  write (6,*)
+  call shr_sys_flush(6)
+
+end subroutine mkgdp_pio
 
 end module mkgdpMod

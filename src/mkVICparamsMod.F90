@@ -24,6 +24,7 @@ module mkVICparamsMod
 
 ! !PUBLIC MEMBER FUNCTIONS:
   public mkVICparams            ! make VIC parameters
+  public mkVICparams_pio        ! PIO-version of make VIC parameters
 !
 !EOP
 !===============================================================
@@ -185,5 +186,61 @@ subroutine mkVICparams(ldomain, mapfname, datfname, ndiag, &
 
 end subroutine mkVICparams
 
+!-----------------------------------------------------------------------
+subroutine mkVICparams_pio(ldomain_pio, mapfname, datfname, ndiag, &
+                       binfl_o, ws_o, dsmax_o, ds_o)
+!
+! !DESCRIPTION:
+! make VIC parameters
+!
+! !USES:
+  use mkdomainPIOMod, only : domain_pio_type
+  use mkdataPIOMod
+!
+! !ARGUMENTS:
+  
+  implicit none
+
+  type(domain_pio_type) , intent(in) :: ldomain_pio
+  character(len=*)      , intent(in) :: mapfname          ! input mapping file name
+  character(len=*)      , intent(in) :: datfname          ! input data file name
+  integer               , intent(in) :: ndiag             ! unit number for diag out
+  real(r8)              , intent(out):: binfl_o(:)        ! output grid: VIC b parameter for the Variable Infiltration Capacity Curve (unitless)
+  real(r8)              , intent(out):: ws_o(:)           ! output grid: VIC Ws parameter for the ARNO curve (unitless)
+  real(r8)              , intent(out):: dsmax_o(:)        ! output grid: VIC Dsmax parameter for the ARNO curve (mm/day)
+  real(r8)              , intent(out):: ds_o(:)           ! output grid: VIC Ds parameter for the ARNO curve (unitless)
+  
+  real(r8), parameter :: nodata_value    = 0._r8
+  real(r8), parameter :: min_valid_binfl = 0._r8
+  real(r8), parameter :: min_valid_ws    = 0._r8
+  real(r8), parameter :: min_valid_dsmax = 0._r8
+  real(r8), parameter :: min_valid_ds    = 0._r8
+
+  character(len=32) :: subname = 'mkVICparams_pio'
+
+  write (6,*) 'Attempting to make VIC parameters.....'
+  call shr_sys_flush(6)
+
+  call mkdata_double_2d_pio(ldomain_pio, mapfname=mapfname, datfname=datfname, varname='binfl', &
+       data_descrip='binfl', ndiag=ndiag, zero_out=.false., nodata_value=nodata_value, data_o=binfl_o, &
+       min_valid_value=min_valid_binfl)
+
+  call mkdata_double_2d_pio(ldomain_pio, mapfname=mapfname, datfname=datfname, varname='Ws', &
+       data_descrip='Ws', ndiag=ndiag, zero_out=.false., nodata_value=nodata_value, data_o=ws_o, &
+       min_valid_value=min_valid_ws)
+
+  call mkdata_double_2d_pio(ldomain_pio, mapfname=mapfname, datfname=datfname, varname='Dsmax', &
+       data_descrip='Dsmax', ndiag=ndiag, zero_out=.false., nodata_value=nodata_value, data_o=dsmax_o, &
+       min_valid_value=min_valid_dsmax)
+
+  call mkdata_double_2d_pio(ldomain_pio, mapfname=mapfname, datfname=datfname, varname='Ds', &
+       data_descrip='Ds', ndiag=ndiag, zero_out=.false., nodata_value=nodata_value, data_o=ds_o, &
+       min_valid_value=min_valid_ds)
+
+  write (6,*) 'Successfully made VIC parameters'
+  write (6,*)
+  call shr_sys_flush(6)
+
+end subroutine mkVICparams_pio
 
 end module mkVICparamsMod

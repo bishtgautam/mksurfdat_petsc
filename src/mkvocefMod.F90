@@ -20,8 +20,10 @@ module mkvocefMod
   private
 
 ! !PUBLIC MEMBER FUNCTIONS:
-  public :: mkvocef  ! Get the percentage emissions for VOC for different
-                     ! land cover types
+  public :: mkvocef     ! Get the percentage emissions for VOC for different
+                        ! land cover types
+  public :: mkvocef_pio ! PIO-version of get the percentage emissions for VOC for different
+                        ! land cover types
 !EOP
 
 contains
@@ -215,6 +217,70 @@ subroutine mkvocef(ldomain, mapfname, datfname, ndiag, &
 
 end subroutine mkvocef
 
+!-----------------------------------------------------------------------
+!BOP
+!
+! !IROUTINE: mkvocef
+!
+! !INTERFACE:
+subroutine mkvocef_pio(ldomain_pio, mapfname, datfname, ndiag, &
+                   ef_btr_o, ef_fet_o, ef_fdt_o, ef_shr_o, ef_grs_o, ef_crp_o)
+!
+! !DESCRIPTION:
+! make volatile organic coumpunds (VOC) emission factors.
+!
+! !USES:
+  use mkdomainPIOMod, only : domain_pio_type
+  use mkdataPIOMod
+  !
+  implicit none
+  !
+  type(domain_pio_type) , intent(in) :: ldomain_pio
+  character(len=*)      , intent(in) :: mapfname    ! input mapping file name
+  character(len=*)      , intent(in) :: datfname    ! input data file name
+  integer               , intent(in) :: ndiag       ! unit number for diagnostic output
+  real(r8)              , intent(out):: ef_btr_o(:) ! output grid: EFs for broadleaf trees
+  real(r8)              , intent(out):: ef_fet_o(:) ! output grid: EFs for fineleaf evergreen
+  real(r8)              , intent(out):: ef_fdt_o(:) ! output grid: EFs for fineleaf deciduous
+  real(r8)              , intent(out):: ef_shr_o(:) ! output grid: EFs for shrubs
+  real(r8)              , intent(out):: ef_grs_o(:) ! output grid: EFs for grasses
+  real(r8)              , intent(out):: ef_crp_o(:) ! output grid: EFs for crops
+  !
+  real(r8), parameter :: nodata_value = 0._r8
+  real(r8), parameter :: min_valid    = 0._r8
+
+  write (6,*) 'Attempting to make VOC emission factors .....'
+  call shr_sys_flush(6)
+
+  call mkdata_double_2d_pio(ldomain_pio, mapfname=mapfname, datfname=datfname, varname='ef_btr', &
+       data_descrip='ef_btr', ndiag=ndiag, zero_out=.false., nodata_value=nodata_value, data_o=ef_btr_o, &
+       min_valid_value=min_valid)
+
+  call mkdata_double_2d_pio(ldomain_pio, mapfname=mapfname, datfname=datfname, varname='ef_fet', &
+       data_descrip='ef_fet', ndiag=ndiag, zero_out=.false., nodata_value=nodata_value, data_o=ef_fet_o, &
+       min_valid_value=min_valid)
+
+  call mkdata_double_2d_pio(ldomain_pio, mapfname=mapfname, datfname=datfname, varname='ef_fdt', &
+       data_descrip='ef_fdt', ndiag=ndiag, zero_out=.false., nodata_value=nodata_value, data_o=ef_fdt_o, &
+       min_valid_value=min_valid)
+
+  call mkdata_double_2d_pio(ldomain_pio, mapfname=mapfname, datfname=datfname, varname='ef_shr', &
+       data_descrip='ef_shr', ndiag=ndiag, zero_out=.false., nodata_value=nodata_value, data_o=ef_shr_o, &
+       min_valid_value=min_valid)
+
+  call mkdata_double_2d_pio(ldomain_pio, mapfname=mapfname, datfname=datfname, varname='ef_grs', &
+       data_descrip='ef_grs', ndiag=ndiag, zero_out=.false., nodata_value=nodata_value, data_o=ef_grs_o, &
+       min_valid_value=min_valid)
+
+  call mkdata_double_2d_pio(ldomain_pio, mapfname=mapfname, datfname=datfname, varname='ef_crp', &
+       data_descrip='ef_crp', ndiag=ndiag, zero_out=.false., nodata_value=nodata_value, data_o=ef_crp_o, &
+       min_valid_value=min_valid)
+
+  write (6,*) 'Successfully made VOC Emission Factors'
+  write (6,*)
+  call shr_sys_flush(6)
+
+end subroutine mkvocef_pio
 !-----------------------------------------------------------------------
 
 end module mkvocefMod

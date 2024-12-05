@@ -24,6 +24,7 @@ module mkCH4inversionMod
 
 ! !PUBLIC MEMBER FUNCTIONS:
   public mkCH4inversion            ! make inversion-derived parameters for CH4
+  public mkCH4inversion_pio        ! make inversion-derived parameters for CH4 PIO version
 !
 !EOP
 !===============================================================
@@ -170,5 +171,58 @@ subroutine mkCH4inversion(ldomain, mapfname, datfname, ndiag, &
 
 end subroutine mkCH4inversion
 
+!-----------------------------------------------------------------------
+subroutine mkCH4inversion_pio(ldomain_pio, mapfname, datfname, ndiag, &
+                          f0_o, p3_o, zwt0_o)
+!
+! !DESCRIPTION:
+! make inversion-derived parameters for CH4
+!
+! !USES:
+  use mkdomainPIOMod, only : domain_pio_type
+  use mkdataPIOMod
+!
+! !ARGUMENTS:
+  
+  implicit none
+  type(domain_pio_type) , intent(in) :: ldomain_pio
+  character(len=*)  , intent(in) :: mapfname          ! input mapping file name
+  character(len=*)  , intent(in) :: datfname          ! input data file name
+  integer           , intent(in) :: ndiag             ! unit number for diag out
+  real(r8)          , intent(out):: f0_o(:)           ! output grid: maximum gridcell fractional inundated area (unitless)
+  real(r8)          , intent(out):: p3_o(:)           ! output grid: coefficient for qflx_surf_lag for finundated (s/mm)
+  real(r8)          , intent(out):: zwt0_o(:)         ! output grid: decay factor for finundated (m)
+  !
+  real(r8), parameter :: nodata_value    = 0._r8
+  real(r8), parameter :: min_valid_f0    = 0._r8
+  real(r8), parameter :: max_valid_f0    = 1._r8 + 1.0e-14_r8
+  real(r8), parameter :: min_valid_p3    = 0._r8
+  real(r8), parameter :: min_valid_zwt0  = 0._r8
+
+  character(len=32) :: subname = 'mkCH4inversion_pio'
+!-----------------------------------------------------------------------
+
+  write (6,*) 'Attempting to make inversion-derived CH4 parameters.....'
+  call shr_sys_flush(6)
+  write(*,*)'mapfname:' ,trim(mapfname)
+  write(*,*)'datfname:' ,trim(datfname)
+
+  call mkdata_double_2d_pio(ldomain_pio, mapfname=mapfname, datfname=datfname, varname='F0', &
+       data_descrip='F0', ndiag=ndiag, zero_out=.false., nodata_value=nodata_value, data_o=f0_o, &
+       min_valid_value=min_valid_f0, max_valid_value=max_valid_f0)
+
+  call mkdata_double_2d_pio(ldomain_pio, mapfname=mapfname, datfname=datfname, varname='P3', &
+       data_descrip='P3', ndiag=ndiag, zero_out=.false., nodata_value=nodata_value, data_o=p3_o, &
+       min_valid_value=min_valid_p3)
+
+  call mkdata_double_2d_pio(ldomain_pio, mapfname=mapfname, datfname=datfname, varname='ZWT0', &
+       data_descrip='ZWT0', ndiag=ndiag, zero_out=.false., nodata_value=nodata_value, data_o=zwt0_o, &
+       min_valid_value=min_valid_zwt0)
+
+  write (6,*) 'Successfully made inversion-derived CH4 parameters'
+  write (6,*)
+  call shr_sys_flush(6)
+
+end subroutine mkCH4inversion_pio
 
 end module mkCH4inversionMod

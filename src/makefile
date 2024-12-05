@@ -104,26 +104,31 @@ mkharvestMod.o : \
 mkSedMod.o : \
   shr_kind_mod.o \
   shr_sys_mod.o \
+  mkdataPIOMod.o \
   mkdomainMod.o
 
 mksoilphosphorusMod.o : \
   shr_kind_mod.o \
   shr_sys_mod.o \
+  mkdataPIOMod.o \
   mkdomainMod.o
 
 mkvocefMod.o : \
   shr_kind_mod.o \
   shr_sys_mod.o \
+  mkdataPIOMod.o \
   mkdomainMod.o
 
 mkVICparamsMod.o : \
   shr_kind_mod.o \
   shr_sys_mod.o \
+  mkdataPIOMod.o \
   mkdomainMod.o
 
 mkCH4inversionMod : \
   shr_kind_mod.o \
   shr_sys_mod.o \
+  mkdataPIOMod.o \
   mkdomainMod.o
 
 mkindexmapMod.o : \
@@ -188,6 +193,7 @@ nanMod.o :
 mkpeatMod.o : \
   shr_kind_mod.o \
   shr_sys_mod.o \
+  mkdataPIOMod.o \
   mkdomainMod.o
 
 mkagfirepkmonthMod.o : \
@@ -271,6 +277,7 @@ mkchecksMod.o : \
 mkgdpMod.o : \
   shr_kind_mod.o \
   shr_sys_mod.o \
+  mkdataPIOmod.o \
   mkdomainMod.o
 
 mkdiagnosticsMod.o : \
