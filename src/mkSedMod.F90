@@ -23,6 +23,7 @@ module mkSedMod
 ! !PUBLIC MEMBER FUNCTIONS:
 !
   public mksedAtt      ! Add attributes to output file
+  public mksedAttPIO   ! PIO-version to add attributes to output file
 
   public mkgrvl         ! Set soil gravel
   public mkslp10        ! Set slope percentile
@@ -613,6 +614,85 @@ subroutine mksedAtt( ncid, dynlanduse, xtype )
   end if
 
 end subroutine mksedAtt
+
+!-----------------------------------------------------------------------
+subroutine mksedAttPIO(ncid, dynlanduse, xtype, dim_id_gridcell, dim_id_lsmlon, dim_id_lsmlat, dim_id_nlevsoi, dim_id_nlevslp)
+  use fileutils  , only : get_filename
+  use pio
+  use piofileutils
+  use mkvarpar
+  use mkvarctl
+
+  implicit none
+
+  type(file_desc_t) , intent(in)    :: ncid
+  logical           , intent(in)    :: dynlanduse
+  integer           , intent(in)    :: xtype          ! external type to output real data as
+  integer           , intent(in)    :: dim_id_gridcell
+  integer           , intent(in)    :: dim_id_lsmlon
+  integer           , intent(in)    :: dim_id_lsmlat
+  integer           , intent(in)    :: dim_id_nlevsoi
+  integer           , intent(inout) :: dim_id_nlevslp
+
+  character(len=512)                :: str            ! global attribute string
+  character(len=512)                :: att_name, att_value
+  character(len=32)                 :: subname = 'mksedAttPIO'
+  type(var_desc_t)                  :: pioVar
+  integer                           :: dim1d(1), dim2d(2), dim3d(3)
+  integer                           :: ier
+
+  if (.not. dynlanduse) then
+
+     ! Define dimension
+
+     call DefineDimPIO(ncid, 'nlevslp', nlevslp, dim_id_nlevslp)
+
+     ! Add global attribtues to file
+
+     str = get_filename(mksrf_fgrvl)
+     call check_ret(PIO_put_att(ncid, PIO_GLOBAL, 'soil_gravel_raw_data_file_name', trim(str)), subname)
+
+     str = get_filename(mksrf_fslp10)
+     call check_ret(PIO_put_att(ncid, PIO_GLOBAL, 'slope_percentile_raw_data_file_name', trim(str)), subname)
+
+     str = get_filename(mksrf_fero)
+     call check_ret(PIO_put_att(ncid, PIO_GLOBAL, 'erosion_raw_data_file_name', trim(str)), subname)
+
+     if (outnc_1d) then
+
+        dim2d(1) = dim_id_gridcell; dim2d(2) = dim_id_nlevsoi
+        call DefineVarPIO_2d(ncid, 'PCT_GRVL', xtype, dim2d, longName='percent gravel', units='unitless')
+
+        dim2d(1) = dim_id_gridcell; dim2d(2) = dim_id_nlevslp
+        call DefineVarPIO_2d(ncid, 'SLP_P10', xtype, dim2d, longName='Slope at quantiles (minimum and 10 to 100 percentile)', units='km km^-1')
+
+        dim1d(1) = dim_id_gridcell;
+        call DefineVarPIO_1d(ncid, 'parEro_c1', xtype, dim1d, longName='a scalar parameter for rainfall-driven hillslope erosion', units='unitless')
+        call DefineVarPIO_1d(ncid, 'parEro_c2', xtype, dim1d, longName='a scalar parameter for runoff-driven hillslope erosion', units='unitless')
+        call DefineVarPIO_1d(ncid, 'parEro_c3', xtype, dim1d, longName='a scalar parameter for transport capacity of hillslope overland flow', units='unitless')
+        call DefineVarPIO_1d(ncid, 'Tilage', xtype, dim1d, longName='conserved tillage fraction', units='fraction')
+        call DefineVarPIO_1d(ncid, 'Litho', xtype, dim1d, longName='lithology erodibility index', units='unitless')
+
+     else
+
+        dim3d(1) = dim_id_lsmlon; dim3d(2) = dim_id_lsmlat; dim3d(3) = dim_id_nlevsoi
+        call DefineVarPIO_3d(ncid, 'PCT_GRVL', xtype, dim3d, longName='percent gravel', units='unitless')
+
+        dim3d(1) = dim_id_lsmlon; dim3d(2) = dim_id_lsmlat; dim3d(3) = dim_id_nlevslp
+        call DefineVarPIO_3d(ncid, 'SLP_P10', xtype, dim3d, longName='Slope at quantiles (minimum and 10 to 100 percentile)', units='km km^-1')
+
+        dim2d(1) = dim_id_lsmlon; dim2d(2) = dim_id_lsmlat;
+        call DefineVarPIO_2d(ncid, 'parEro_c1', xtype, dim2d, longName='a scalar parameter for rainfall-driven hillslope erosion', units='unitless')
+        call DefineVarPIO_2d(ncid, 'parEro_c2', xtype, dim2d, longName='a scalar parameter for runoff-driven hillslope erosion', units='unitless')
+        call DefineVarPIO_2d(ncid, 'parEro_c3', xtype, dim2d, longName='a scalar parameter for transport capacity of hillslope overland flow', units='unitless')
+        call DefineVarPIO_2d(ncid, 'Tilage', xtype, dim2d, longName='conserved tillage fraction', units='fraction')
+        call DefineVarPIO_2d(ncid, 'Litho', xtype, dim2d, longName='lithology erodibility index', units='unitless')
+
+     end if
+
+  end if
+
+end subroutine mksedAttPIO
 
 !-----------------------------------------------------------------------
 

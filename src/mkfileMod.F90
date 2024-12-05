@@ -18,6 +18,7 @@ module mkfileMod
      integer :: lsmpft
      integer :: natpft
      integer :: cft
+     integer :: nlevslp
   end type dim_id_type
 
   type(dim_id_type) :: dim_id
@@ -1049,6 +1050,7 @@ contains
     use mkdomainPIOMod , only : domain_pio_type
     use mksoilMod      , only : mksoilAttPIO
     use mkpftMod       , only : mkpftAttPIO
+    use mksedMod       , only : mksedAttPIO
     use mkvarctl
     use pio
     use piofileutils
@@ -1091,6 +1093,8 @@ contains
     call mkpftAttPIO(ncid, dynlanduse, xtype, dim_id%gridcell, dim_id%lsmlon, dim_id%lsmlat, &
          dim_id%time, dim_id%lsmpft, dim_id%natpft, dim_id%cft)
 
+    call mksedAttPIO(ncid, dynlanduse, xtype, dim_id%gridcell, dim_id%lsmlon, dim_id%lsmlat, dim_id%nlevsoi, dim_id%nlevslp)
+
     call mkfile_define_variables(ncid, dynlanduse, xtype)
 
     call PIO_closefile(ncid)
@@ -1128,6 +1132,7 @@ contains
     dim_id%lsmpft   = -1
     dim_id%natpft   = -1
     dim_id%cft      = -1
+    dim_id%nlevslp  = -1
 
     call DefineDimPIO(ncid, 'gridcell', domain_pio%ns_glb , dim_id%gridcell)
     call DefineDimPIO(ncid, 'numurbl' , numurbl           , dim_id%numurbl)
