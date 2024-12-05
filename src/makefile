@@ -143,6 +143,7 @@ mkurbanparCommonMod.o : \
 
 mksoilMod.o : \
   shr_kind_mod.o \
+  mkdataPIOMod.o \
   mkdomainMod.o
 
 mkglcmecMod.o : \

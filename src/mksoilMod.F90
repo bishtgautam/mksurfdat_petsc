@@ -32,6 +32,7 @@ module mksoilMod
   public mksoilcol      ! Set soil color
   public mksoilord      ! Set soil order
   public mkfmax         ! Make percent fmax
+  public mkfmax_pio     ! PIO-version of make percent fmax
 
   public mksoiltex_pio  ! Set soil texture
 !
@@ -2019,6 +2020,37 @@ subroutine mkfmax(ldomain, mapfname, datfname, ndiag, fmax_o)
   deallocate (fmax_i)
 
 end subroutine mkfmax
+
+!-----------------------------------------------------------------------
+subroutine mkfmax_pio(ldomain_pio, mapfname, datfname, ndiag, fmax_o)
+  !
+  ! !DESCRIPTION:
+  ! make percent fmax
+  !
+  ! !USES:
+  use mkdomainPIOMod, only : domain_pio_type
+  use mkdataPIOMod
+  !
+  ! !ARGUMENTS:
+  implicit none
+  type(domain_pio_type) , intent(in) :: ldomain_pio
+  character(len=*)      , intent(in) :: mapfname  ! input mapping file name
+  character(len=*)      , intent(in) :: datfname  ! input data file name
+  integer               , intent(in) :: ndiag     ! unit number for diag out
+  real(r8)              , intent(out):: fmax_o(:) ! output grid: %fmax
+
+  write (6,*) 'Attempting to make %fmax .....'
+  call shr_sys_flush(6)
+
+  call mkdata_double_2d_pio(ldomain_pio, mapfname=mapfname, datfname=datfname, varname='FMAX', &
+       data_descrip='%fmax', ndiag=ndiag, zero_out=.false., nodata_value=0.365783_r8, data_o=fmax_o, &
+       threshold_o=0._r8)
+
+  write (6,*) 'Successfully made %fmax'
+  write (6,*)
+  call shr_sys_flush(6)
+
+end subroutine mkfmax_pio
 
 !-----------------------------------------------------------------------
 !BOP
