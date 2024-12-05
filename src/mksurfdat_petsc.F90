@@ -27,6 +27,7 @@ program mksurfdat_petsc
   use fileutils
   use spmdMod
   use mkdataPIOMod
+  use mkfileMod
 
   implicit none
 
@@ -46,69 +47,69 @@ program mksurfdat_petsc
   PetscErrorCode        :: ierr             ! PETSc error status
   integer               :: ndiag
 
-  real(r8), allocatable  :: landfrac_pft(:)    ! PFT data: % land per gridcell
-  real(r8), allocatable  :: pctlnd_pft(:)      ! PFT data: % of gridcell for PFTs
-  real(r8), allocatable  :: pctlnd_pft_dyn(:)  ! PFT data: % of gridcell for dyn landuse PFTs
-  integer , allocatable  :: pftdata_mask(:)    ! mask indicating real or fake land type
+  real(r8), pointer  :: landfrac_pft(:)    ! PFT data: % land per gridcell
+  real(r8), pointer  :: pctlnd_pft(:)      ! PFT data: % of gridcell for PFTs
+  real(r8), pointer  :: pctlnd_pft_dyn(:)  ! PFT data: % of gridcell for dyn landuse PFTs
+  integer , pointer  :: pftdata_mask(:)    ! mask indicating real or fake land type
   real(r8), pointer      :: pctpft_full(:,:)   ! PFT data: % cover of each pft and cft on the vegetated landunits
   ! ('full' denotes inclusion of CFTs as well as natural PFTs in this array)
-  real(r8), allocatable  :: pctnatveg(:)       ! percent of grid cell that is natural veg landunit
-  real(r8), allocatable  :: pctcrop(:)         ! percent of grid cell that is crop landunit
-  real(r8), allocatable  :: pctnatpft(:,:)     ! % of each pft on the natural veg landunit (adds to 100%)
-  real(r8), allocatable  :: pctcft(:,:)        ! % of each cft on the crop landunit (adds to 100%)
+  real(r8), pointer  :: pctnatveg(:)       ! percent of grid cell that is natural veg landunit
+  real(r8), pointer  :: pctcrop(:)         ! percent of grid cell that is crop landunit
+  real(r8), pointer  :: pctnatpft(:,:)     ! % of each pft on the natural veg landunit (adds to 100%)
+  real(r8), pointer  :: pctcft(:,:)        ! % of each cft on the crop landunit (adds to 100%)
   real(r8), pointer      :: harvest(:,:)       ! harvest data: normalized harvesting
-  real(r8), allocatable  :: pctgla(:)          ! percent of grid cell that is glacier
-  real(r8), allocatable  :: pctglc_gic(:)      ! percent of grid cell that is gic (% of glc landunit)
-  real(r8), allocatable  :: pctglc_icesheet(:) ! percent of grid cell that is ice sheet (% of glc landunit)
-  real(r8), allocatable  :: pctglcmec(:,:)     ! glacier_mec pct coverage in each class (% of landunit)
-  real(r8), allocatable  :: topoglcmec(:,:)    ! glacier_mec sfc elevation in each gridcell and class
-  real(r8), allocatable  :: pctglcmec_gic(:,:) ! GIC pct coverage in each class (% of landunit)
-  real(r8), allocatable  :: pctglcmec_icesheet(:,:) ! icesheet pct coverage in each class (% of landunit)
-  real(r8), allocatable  :: elevclass(:)       ! glacier_mec elevation classes
-  real(r8), allocatable  :: pctlak(:)          ! percent of grid cell that is lake
-  real(r8), allocatable  :: pctwet(:)          ! percent of grid cell that is wetland
-  real(r8), allocatable  :: pcturb(:)          ! percent of grid cell that is urbanized (total across all urban classes)
-  real(r8), allocatable  :: urbn_classes(:,:)  ! percent cover of each urban class, as % of total urban area
-  real(r8), allocatable  :: urbn_classes_g(:,:)! percent cover of each urban class, as % of grid cell
-  real(r8), allocatable  :: elev(:)            ! glc elevation (m)
-  real(r8), allocatable  :: topo(:)            ! land elevation (m)
-  real(r8), allocatable  :: fmax(:)            ! fractional saturated area
-  integer , allocatable  :: soicol(:)          ! soil color
-  integer , allocatable  :: soiord(:)          ! soil order
-  real(r8), allocatable  :: pctsand(:,:)       ! soil texture: percent sand
-  real(r8), allocatable  :: pctclay(:,:)       ! soil texture: percent clay
-  real(r8), allocatable  :: ef1_btr(:)         ! Isoprene emission factor for broadleaf
-  real(r8), allocatable  :: ef1_fet(:)         ! Isoprene emission factor for fine/everg
-  real(r8), allocatable  :: ef1_fdt(:)         ! Isoprene emission factor for fine/dec
-  real(r8), allocatable  :: ef1_shr(:)         ! Isoprene emission factor for shrubs
-  real(r8), allocatable  :: ef1_grs(:)         ! Isoprene emission factor for grasses
-  real(r8), allocatable  :: ef1_crp(:)         ! Isoprene emission factor for crops
-  real(r8), allocatable  :: organic(:,:)       ! organic matter density (kg/m3)
-  real(r8), allocatable  :: gdp(:)             ! GDP (x1000 1995 US$/capita)
-  real(r8), allocatable  :: fpeat(:)           ! peatland fraction of gridcell
-  integer , allocatable  :: agfirepkmon(:)     ! agricultural fire peak month
-  integer , allocatable  :: urban_region(:)    ! urban region ID
-  real(r8), allocatable  :: topo_stddev(:)     ! standard deviation of elevation (m)
-  real(r8), allocatable  :: slope(:)           ! topographic slope (degrees)
-  real(r8), allocatable  :: vic_binfl(:)       ! VIC b parameter (unitless)
-  real(r8), allocatable  :: vic_ws(:)          ! VIC Ws parameter (unitless)
-  real(r8), allocatable  :: vic_dsmax(:)       ! VIC Dsmax parameter (mm/day)
-  real(r8), allocatable  :: vic_ds(:)          ! VIC Ds parameter (unitless)
-  real(r8), allocatable  :: lakedepth(:)       ! lake depth (m)
-  real(r8), allocatable  :: f0(:)              ! max fractional inundated area (unitless)
-  real(r8), allocatable  :: p3(:)              ! coefficient for qflx_surf_lag for finundated (s/mm)
-  real(r8), allocatable  :: zwt0(:)            ! decay factor for finundated (m)
-  real(r8), allocatable  :: apatiteP(:)        ! apptite phosphorus
-  real(r8), allocatable  :: labileP(:)         ! labile phosphorus
-  real(r8), allocatable  :: occludedP(:)       ! occluded phosphorus
-  real(r8), allocatable  :: secondaryP(:)      ! secondaryP phosphorus
-  real(r8), allocatable  :: grvl(:,:)          ! soil gravel content (percent)
-  real(r8), allocatable  :: slp10(:,:)         ! slope percentile (km/km)
-  real(r8), allocatable  :: ero_c1(:)          ! ELM-Erosion c1 parameter (unitless)
-  real(r8), allocatable  :: ero_c2(:)          ! ELM-Erosion c2 parameter (unitless)
-  real(r8), allocatable  :: ero_c3(:)          ! ELM-Erosion c3 parameter (unitless)
-  real(r8), allocatable  :: tillage(:)         ! conserved tillage fraction (fraction)
-  real(r8), allocatable  :: litho(:)           ! lithology erodiblity index (unitless)
+  real(r8), pointer  :: pctgla(:)          ! percent of grid cell that is glacier
+  real(r8), pointer  :: pctglc_gic(:)      ! percent of grid cell that is gic (% of glc landunit)
+  real(r8), pointer  :: pctglc_icesheet(:) ! percent of grid cell that is ice sheet (% of glc landunit)
+  real(r8), pointer  :: pctglcmec(:,:)     ! glacier_mec pct coverage in each class (% of landunit)
+  real(r8), pointer  :: topoglcmec(:,:)    ! glacier_mec sfc elevation in each gridcell and class
+  real(r8), pointer  :: pctglcmec_gic(:,:) ! GIC pct coverage in each class (% of landunit)
+  real(r8), pointer  :: pctglcmec_icesheet(:,:) ! icesheet pct coverage in each class (% of landunit)
+  real(r8), pointer  :: elevclass(:)       ! glacier_mec elevation classes
+  real(r8), pointer  :: pctlak(:)          ! percent of grid cell that is lake
+  real(r8), pointer  :: pctwet(:)          ! percent of grid cell that is wetland
+  real(r8), pointer  :: pcturb(:)          ! percent of grid cell that is urbanized (total across all urban classes)
+  real(r8), pointer  :: urbn_classes(:,:)  ! percent cover of each urban class, as % of total urban area
+  real(r8), pointer  :: urbn_classes_g(:,:)! percent cover of each urban class, as % of grid cell
+  real(r8), pointer  :: elev(:)            ! glc elevation (m)
+  real(r8), pointer  :: topo(:)            ! land elevation (m)
+  real(r8), pointer  :: fmax(:)            ! fractional saturated area
+  integer , pointer  :: soicol(:)          ! soil color
+  integer , pointer  :: soiord(:)          ! soil order
+  real(r8), pointer  :: pctsand(:,:)       ! soil texture: percent sand
+  real(r8), pointer  :: pctclay(:,:)       ! soil texture: percent clay
+  real(r8), pointer  :: ef1_btr(:)         ! Isoprene emission factor for broadleaf
+  real(r8), pointer  :: ef1_fet(:)         ! Isoprene emission factor for fine/everg
+  real(r8), pointer  :: ef1_fdt(:)         ! Isoprene emission factor for fine/dec
+  real(r8), pointer  :: ef1_shr(:)         ! Isoprene emission factor for shrubs
+  real(r8), pointer  :: ef1_grs(:)         ! Isoprene emission factor for grasses
+  real(r8), pointer  :: ef1_crp(:)         ! Isoprene emission factor for crops
+  real(r8), pointer  :: organic(:,:)       ! organic matter density (kg/m3)
+  real(r8), pointer  :: gdp(:)             ! GDP (x1000 1995 US$/capita)
+  real(r8), pointer  :: fpeat(:)           ! peatland fraction of gridcell
+  integer , pointer  :: agfirepkmon(:)     ! agricultural fire peak month
+  integer , pointer  :: urban_region(:)    ! urban region ID
+  real(r8), pointer  :: topo_stddev(:)     ! standard deviation of elevation (m)
+  real(r8), pointer  :: slope(:)           ! topographic slope (degrees)
+  real(r8), pointer  :: vic_binfl(:)       ! VIC b parameter (unitless)
+  real(r8), pointer  :: vic_ws(:)          ! VIC Ws parameter (unitless)
+  real(r8), pointer  :: vic_dsmax(:)       ! VIC Dsmax parameter (mm/day)
+  real(r8), pointer  :: vic_ds(:)          ! VIC Ds parameter (unitless)
+  real(r8), pointer  :: lakedepth(:)       ! lake depth (m)
+  real(r8), pointer  :: f0(:)              ! max fractional inundated area (unitless)
+  real(r8), pointer  :: p3(:)              ! coefficient for qflx_surf_lag for finundated (s/mm)
+  real(r8), pointer  :: zwt0(:)            ! decay factor for finundated (m)
+  real(r8), pointer  :: apatiteP(:)        ! apptite phosphorus
+  real(r8), pointer  :: labileP(:)         ! labile phosphorus
+  real(r8), pointer  :: occludedP(:)       ! occluded phosphorus
+  real(r8), pointer  :: secondaryP(:)      ! secondaryP phosphorus
+  real(r8), pointer  :: grvl(:,:)          ! soil gravel content (percent)
+  real(r8), pointer  :: slp10(:,:)         ! slope percentile (km/km)
+  real(r8), pointer  :: ero_c1(:)          ! ELM-Erosion c1 parameter (unitless)
+  real(r8), pointer  :: ero_c2(:)          ! ELM-Erosion c2 parameter (unitless)
+  real(r8), pointer  :: ero_c3(:)          ! ELM-Erosion c3 parameter (unitless)
+  real(r8), pointer  :: tillage(:)         ! conserved tillage fraction (fraction)
+  real(r8), pointer  :: litho(:)           ! lithology erodiblity index (unitless)
 
   type(domain_type) :: ldomain
   type(domain_pio_type) :: ldomain_pio
@@ -245,29 +246,20 @@ program mksurfdat_petsc
   ! ----------------------------------------------------------------------
 
   ! Make PFTs [pctpft_full] from dataset [fvegtyp]
-#if 1
 
-  !call mkpft(ldomain, mapfname=map_fpft, fpft=mksrf_fvegtyp, &
-  !     ndiag=ndiag, pctlnd_o=pctlnd_pft, pctpft_o=pctpft_full )
   call mkpft_pio(ldomain_pio, mapfname=map_fpft, fpft=mksrf_fvegtyp, &
        ndiag=ndiag, pctlnd_o=pctlnd_pft, pctpft_o=pctpft_full )
 
   ! Make inland water [pctlak, pctwet] [flakwat] [fwetlnd]
 
-  !call mklakwat (ldomain, mapfname=map_flakwat, datfname=mksrf_flakwat, &
-  !     ndiag=ndiag, zero_out=all_urban.or.all_veg, lake_o=pctlak)
   call mklakwat_pio (ldomain_pio, mapfname=map_flakwat, datfname=mksrf_flakwat, &
        ndiag=ndiag, zero_out=all_urban.or.all_veg, lake_o=pctlak)
 
-  !call mkwetlnd (ldomain, mapfname=map_fwetlnd, datfname=mksrf_fwetlnd, &
-  !     ndiag=ndiag, zero_out=all_urban.or.all_veg.or.no_inlandwet, swmp_o=pctwet)
   call mkwetlnd_pio (ldomain_pio, mapfname=map_fwetlnd, datfname=mksrf_fwetlnd, &
        ndiag=ndiag, zero_out=all_urban.or.all_veg.or.no_inlandwet, swmp_o=pctwet)
 
   ! Make glacier fraction [pctgla] from [fglacier] dataset
 
-  !call mkglacier (ldomain, mapfname=map_fglacier, datfname=mksrf_fglacier, &
-  !     ndiag=ndiag, zero_out=all_urban.or.all_veg, glac_o=pctgla)
   call mkglacier_pio (ldomain_pio, mapfname=map_fglacier, datfname=mksrf_fglacier, &
        ndiag=ndiag, zero_out=all_urban.or.all_veg, glac_o=pctgla)
 
@@ -275,18 +267,22 @@ program mksurfdat_petsc
 
   call mksoiltex (ldomain, mapfname=map_fsoitex, datfname=mksrf_fsoitex, &
        ndiag=ndiag, sand_o=pctsand, clay_o=pctclay)
-  !call mksoiltex_pio (ldomain_pio, mapfname=map_fsoitex, datfname=mksrf_fsoitex, &
+  !TODO: call mksoiltex_pio (ldomain_pio, mapfname=map_fsoitex, datfname=mksrf_fsoitex, &
   !     ndiag=ndiag, sand_o=pctsand, clay_o=pctclay)
 
   ! Make soil color classes [soicol] [fsoicol]
 
   call mksoilcol (ldomain, mapfname=map_fsoicol, datfname=mksrf_fsoicol, &
        ndiag=ndiag, soil_color_o=soicol, nsoicol=nsoicol)
+  !TODO: call mksoilcol_pio (ldomain_pio, mapfname=map_fsoico, datfname=mksrf_fsoicol, &
+  !     ndiag=ndiag, soil_color_o=soicol, nsoicol=nsoicol)
 
   ! Make soil order classes [soiord] [fsoiord]
 
   call mksoilord (ldomain, mapfname=map_fsoiord, datfname=mksrf_fsoiord, &
        ndiag=ndiag, pctglac_o=pctgla, soil_order_o=soiord, nsoiord=nsoiord)
+  !TODO: call mksoilord_pio (ldomain_pio, mapfname=map_fsoiord, datfname=mksrf_fsoiord, &
+  !     ndiag=ndiag, pctglac_o=pctgla, soil_order_o=soiord, nsoiord=nsoiord)
 
   ! Make fmax [fmax] from [fmax] dataset
 
@@ -322,17 +318,13 @@ program mksurfdat_petsc
 
   ! Make urban fraction [pcturb] from [furban] dataset
 
-  !call mkurban (ldomain, mapfname=map_furban, datfname=mksrf_furban, &
-  !     ndiag=ndiag, zero_out=all_veg, urbn_o=pcturb, urbn_classes_o=urbn_classes, &
-  !     region_o=urban_region)
-#endif
-
-  call mkurban_pio (ldomain_pio, mapfname=map_furban, datfname=mksrf_furban, &
+  call mkurban (ldomain, mapfname=map_furban, datfname=mksrf_furban, &
        ndiag=ndiag, zero_out=all_veg, urbn_o=pcturb, urbn_classes_o=urbn_classes, &
        region_o=urban_region)
-  !call mkdata_double_3d_pio(ldomain_pio, mapfname=map_furban, datfname=mksrf_furban, varname='PCT_URBAN', &
-  !     data_descrip='%urban', ndiag=ndiag, zero_out=all_veg, nodata_value=0._r8, data_o=pcturb, &
-  !     max_valid_value=100.000001_r8)
+
+  !call mkurban_pio (ldomain_pio, mapfname=map_furban, datfname=mksrf_furban, &
+  !     ndiag=ndiag, zero_out=all_veg, urbn_o=pcturb, urbn_classes_o=urbn_classes, &
+  !     region_o=urban_region)
 
   if ( .not. all_urban .and. .not. all_veg )then
      !call mkelev (ldomain, mapfname=map_furbtopo, datfname=mksrf_furbtopo, &
@@ -482,6 +474,7 @@ program mksurfdat_petsc
   ! ----------------------------------------------------------------------
 
   call write_surface_dataset()
+  call write_surface_dataset_pio()
 
   ! ----------------------------------------------------------------------
   ! deallocate memory for all variables
@@ -698,6 +691,13 @@ contains
     call mpi_bcast(map_fgrvl         , len(map_fgrvl)         , MPI_CHARACTER, 0, PETSC_COMM_WORLD, ier) 
     call mpi_bcast(map_fslp10        , len(map_fslp10)        , MPI_CHARACTER, 0, PETSC_COMM_WORLD, ier) 
     call mpi_bcast(map_fero          , len(map_fero)          , MPI_CHARACTER, 0, PETSC_COMM_WORLD, ier) 
+
+    call mpi_bcast(nglcec            , 1                      , MPI_INT      , 0, PETSC_COMM_WORLD, ier)
+    call mpi_bcast(numpft            , 1                      , MPI_INT      , 0, PETSC_COMM_WORLD, ier)
+    call mpi_bcast(soil_color        , 1                      , MPI_INT      , 0, PETSC_COMM_WORLD, ier)
+    call mpi_bcast(soil_order        , 1                      , MPI_INT      , 0, PETSC_COMM_WORLD, ier)
+
+    call mpi_bcast(soil_sand         , 1                      , MPI_DOUBLE   , 0, PETSC_COMM_WORLD, ier)
 
   end subroutine setup_namelist
 
@@ -1578,8 +1578,8 @@ contains
     ! ----------------------------------------------------------------------
 
     write(6,*)'calling mkurbanpar'
-    !call mkurbanpar(datfname=mksrf_furban, ncido=ncid, region_o=urban_region, &
-    !     urbn_classes_gcell_o=urbn_classes_g)
+    call mkurbanpar(datfname=mksrf_furban, ncido=ncid, region_o=urban_region, &
+         urbn_classes_gcell_o=urbn_classes_g)
 
     ! ----------------------------------------------------------------------
     ! Make LAI and SAI from 1/2 degree data and write to surface dataset 
@@ -1600,6 +1600,202 @@ contains
 
   end subroutine write_surface_dataset
 
-end program mksurfdat_petsc
+  ! ----------------------------------------------------------------------
+  subroutine write_surface_dataset_pio()
+
+    use mkfileMod
+    use mklaiMod
+    use pio
+    use piofileutils
+
+    implicit none
+
+    type(iosystem_desc_t) :: pioIoSystem
+    type(file_desc_t)     :: ncid
+    type(var_desc_t)      :: varid
+    type(io_desc_t)       :: iodesc
+    integer               :: vartype
+    integer               :: i, j, count
+    integer               :: ier
+    integer, pointer      :: compdof(:)
+    integer               :: dim2d(2)
+    character(len=32) :: subname = 'write_surface_dataset'
+
+
+    if (fsurdat == ' ') then
+       write(6,*)' must specify fsurdat in namelist'
+       stop
+    end if
+
+    !call mkfile_pio(ldomain, trim(fsurdat), dynlanduse = .false.)
+    call mkfile_pio(ldomain_pio, trim(fsurdat) // '.pio', .false.)
+    call domain_write_pio(ldomain_pio, trim(fsurdat) // '.pio' )
+
+    ! Open the file for writing
+
+    call OpenFilePIO(trim(fsurdat) // '.pio' , pioIoSystem, ncid, PIO_WRITE)
+
+    ! TOWRITE:
+    !   natpft
+    !   cft
+    !   mxsoil_color
+    !   mxsoil_order
+
+
+    ! Write PIO_INT data with dim of (gridcell) or (lsmlat, lsmlon)
+
+    call PIO_initdecomp(pioIoSystem, PIO_INT, ldomain_pio%dim_glb, ldomain_pio%compdof, iodesc)
+
+    call write_integer_1d(ncid, iodesc, 'PFTDATA_MASK', pftdata_mask )
+    call write_integer_1d(ncid, iodesc, 'SOIL_COLOR'  , soicol       )
+    call write_integer_1d(ncid, iodesc, 'SOIL_ORDER'  , soiord       )
+    call write_integer_1d(ncid, iodesc, 'abm'         , agfirepkmon  )
+    call write_integer_1d(ncid, iodesc, 'URBAN_REGION_ID', urban_region  )
+
+    call PIO_freedecomp(pioIoSystem, iodesc)
+
+    ! Write PIO_DOUBLE data with dim of (gridcell) or (lsmlat, lsmlon)
+
+    call PIO_initdecomp(pioIoSystem, PIO_DOUBLE, ldomain_pio%dim_glb, ldomain_pio%compdof, iodesc)
+
+    call write_double_1d(ncid, iodesc, 'LANDFRAC_PFT', landfrac_pft)
+    call write_double_1d(ncid, iodesc, 'PCT_WETLAND' , pctwet)
+    call write_double_1d(ncid, iodesc, 'PCT_LAKE'    , pctlak)
+    call write_double_1d(ncid, iodesc, 'PCT_GLACIER' , pctgla)
+    call write_double_1d(ncid, iodesc, 'PCT_NATVEG'  , pctnatveg)
+    call write_double_1d(ncid, iodesc, 'PCT_CROP'    , pctcrop)
+    call write_double_1d(ncid, iodesc, 'parEro_c1'   , ero_c1)
+    call write_double_1d(ncid, iodesc, 'parEro_c2'   , ero_c2)
+    call write_double_1d(ncid, iodesc, 'parEro_c3'   , ero_c3)
+    call write_double_1d(ncid, iodesc, 'Tilage'      , tillage)
+    call write_double_1d(ncid, iodesc, 'Litho'       , litho)
+
+    if (num_cft > 0) then
+       write(6,*)'error: add code to support output of CFT'
+       call abort()
+    end if
+
+    call write_double_1d(ncid, iodesc, 'FMAX', fmax)
+    call write_double_1d(ncid, iodesc, 'gdp', gdp)
+    call write_double_1d(ncid, iodesc, 'peatf', fpeat)
+    call write_double_1d(ncid, iodesc, 'SLOPE', slope)
+    call write_double_1d(ncid, iodesc, 'STD_ELEV', topo_stddev)
+    call write_double_1d(ncid, iodesc, 'binfl', vic_binfl)
+    call write_double_1d(ncid, iodesc, 'Ws'    , vic_ws)
+    call write_double_1d(ncid, iodesc, 'Dsmax'    , vic_dsmax)
+    call write_double_1d(ncid, iodesc, 'Ds'    , vic_ds)
+    call write_double_1d(ncid, iodesc, 'LAKEDEPTH'    , lakedepth)
+    call write_double_1d(ncid, iodesc, 'F0'    , f0)
+    call write_double_1d(ncid, iodesc, 'P3'    , p3)
+    call write_double_1d(ncid, iodesc, 'ZWT0'    , zwt0)
+    call write_double_1d(ncid, iodesc, 'EF1_BTR'    , ef1_btr)
+    call write_double_1d(ncid, iodesc, 'EF1_FET'    , ef1_fet)
+    call write_double_1d(ncid, iodesc, 'EF1_FDT'    , ef1_fdt)
+    call write_double_1d(ncid, iodesc, 'EF1_SHR'    , ef1_shr)
+    call write_double_1d(ncid, iodesc, 'EF1_GRS'    , ef1_grs)
+    call write_double_1d(ncid, iodesc, 'EF1_CRP'    , ef1_crp)
+    call write_double_1d(ncid, iodesc, 'APATITE_P'  , apatiteP)
+    call write_double_1d(ncid, iodesc, 'LABILE_P'   , labileP)
+    call write_double_1d(ncid, iodesc, 'OCCLUDED_P' , occludedP)
+    call write_double_1d(ncid, iodesc, 'SECONDARY_P', secondaryP)
+
+    call PIO_freedecomp(pioIoSystem, iodesc)
+
+    ! Write PIO_DOUBLE data with dim of (nlevsoi, gridcell) or (nlevsoi, lsmlat, lsmlon)
+
+    allocate(compdof(nlevsoi * ldomain_pio%ns_loc))
+    count = 0
+    do j = 1, nlevsoi
+       do i = 1, ldomain_pio%ns_loc
+          count = count + 1
+          compdof(count) = i + (j-1)*ldomain_pio%ns_glb + (ldomain_pio%begs - 1)
+       end do
+    end do
+    dim2d(1) = ldomain_pio%ns_glb; dim2d(2) = nlevsoi;
+    call PIO_initdecomp(pioIoSystem, PIO_DOUBLE, dim2d, compdof, iodesc)
+
+    call write_double_2d(ncid, iodesc, 'PCT_SAND', pctsand)
+    call write_double_2d(ncid, iodesc, 'PCT_CLAY', pctclay)
+    call write_double_2d(ncid, iodesc, 'ORGANIC' , organic)
+    call write_double_2d(ncid, iodesc, 'PCT_GRVL', grvl)
+
+    call PIO_freedecomp(pioIoSystem, iodesc)
+    deallocate(compdof)
+
+
+    ! Write PIO_DOUBLE data with dim of (nlevslp, gridcell) or (nlevslp, lsmlat, lsmlon)
+
+    allocate(compdof(nlevslp * ldomain_pio%ns_loc))
+    count = 0
+    do j = 1, nlevslp
+       do i = 1, ldomain_pio%ns_loc
+          count = count + 1
+          compdof(count) = i + (j-1)*ldomain_pio%ns_glb + (ldomain_pio%begs - 1)
+       end do
+    end do
+    dim2d(1) = ldomain_pio%ns_glb; dim2d(2) = nlevslp;
+    call PIO_initdecomp(pioIoSystem, PIO_DOUBLE, dim2d, compdof, iodesc)
+
+    call write_double_2d(ncid, iodesc, 'SLP_P10', slp10)
+
+    call PIO_freedecomp(pioIoSystem, iodesc)
+    deallocate(compdof)
+
+    ! Clean up
+
+    call PIO_closefile(ncid)
+    call PIO_finalize(pioIoSystem, ier)
+
+  end subroutine write_surface_dataset_pio
+
+  !------------------------------------------------------------------------------
+  subroutine domain_write_pio(domain_pio, fname)
+    !
+    use pio
+    use piofileutils
+    !
+    implicit none
+    !
+    type(domain_pio_type)        :: domain_pio
+    character(len=*) ,intent(in) :: fname
+    !
+    type(iosystem_desc_t) :: pioIoSystem
+    type(file_desc_t)     :: ncid
+    type(var_desc_t)      :: varid
+    type(io_desc_t)       :: iodescNCells
+    integer               :: vartype
+    integer               :: ier
+    character(len=32)     :: subname = 'domain_write_pio'
+
+    ! Open the file for writing
+
+    call OpenFilePIO(trim(fname), pioIoSystem, ncid, PIO_WRITE)
+
+    ! Write variables
+
+    call check_ret(PIO_inq_varid(ncid, 'AREA', varid), subname)
+    call check_ret(PIO_inq_vartype(ncid, varid, vartype), subname)
+
+    call PIO_initdecomp(pioIoSystem, vartype, domain_pio%dim_glb, domain_pio%compdof, iodescNCells)
+    call PIO_write_darray(ncid, varid, iodescNCells, domain_pio%area1d, ier)
+    call PIO_syncfile(ncid)
+
+    call check_ret(PIO_inq_varid(ncid, 'LONGXY', varid), subname)
+    call PIO_write_darray(ncid, varid, iodescNCells, domain_pio%lonc1d, ier)
+    call PIO_syncfile(ncid)
+
+    call check_ret(PIO_inq_varid(ncid, 'LATIXY', varid), subname)
+    call PIO_write_darray(ncid, varid, iodescNCells, domain_pio%latc1d, ier)
+    call PIO_syncfile(ncid)
+
+    ! Clean up
+
+    call PIO_freedecomp(pioIoSystem, iodescNCells)
+    call PIO_closefile(ncid)
+    call PIO_finalize(pioIoSystem, ier)
+
+  end subroutine domain_write_pio
+
+  end program mksurfdat_petsc
 
 
