@@ -406,7 +406,7 @@ subroutine mkelev_pio(ldomain_pio, mapfname, datfname, varname, ndiag, elev_o)
   call domain_read_pio(tdomain_pio, datfname)
 
   ! Open the netcdf file
-  call OpenFilePIO(datfname, pioIoSystem, ncid)
+  call OpenFilePIO(datfname, pioIoSystem, ncid, PIO_NOWRITE)
 
   ! Read the variable
   call read_float_or_double_2d(tdomain_pio, pioIoSystem, ncid, varname, dim_idx, elev2d_i)

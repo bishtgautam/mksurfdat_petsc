@@ -753,7 +753,7 @@ subroutine mkglacier_pio(ldomain_pio, mapfname, datfname, ndiag, zero_out, glac_
 
   else
 
-     call OpenFilePIO(datfname, pioIoSystem, ncid)
+     call OpenFilePIO(datfname, pioIoSystem, ncid, PIO_NOWRITE)
 
      ! Read the variable
      call read_float_or_double_2d(tdomain_pio, pioIoSystem, ncid, 'PCT_GLACIER', dim_idx, glac2d_i)

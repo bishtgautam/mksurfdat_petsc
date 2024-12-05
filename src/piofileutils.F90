@@ -44,7 +44,7 @@ contains
   end subroutine check_ret
 
   !-----------------------------------------------------------------------
-  subroutine OpenFilePIO(fname, pioIoSystem, ncid)
+  subroutine OpenFilePIO(fname, pioIoSystem, ncid, mode)
 
     use petsc
     use spmdMod, only : iam, npes, masterproc, mpicom
@@ -55,6 +55,7 @@ contains
     character (len=*)     :: fname
     type(file_desc_t)     :: ncid
     type(iosystem_desc_t) :: pioIoSystem
+    integer, intent(in)   :: mode
     !
     integer               :: niotasks
     integer               :: numAggregator
@@ -84,7 +85,7 @@ contains
          pioIoSystem,      & ! iosystem
          optBase)
 
-    call check_ret(PIO_openfile(pioIoSystem, ncid, iotype, trim(fname), PIO_NOWRITE), subname)
+    call check_ret(PIO_openfile(pioIoSystem, ncid, iotype, trim(fname), mode), subname)
 
   end subroutine OpenFilePIO
 

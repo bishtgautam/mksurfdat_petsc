@@ -144,7 +144,7 @@ contains
        ! Obtain input grid info
        call domain_read_pio(tdomain_pio, fpft)
 
-       call OpenFilePIO(fpft, pioIoSystem, ncid)
+       call OpenFilePIO(fpft, pioIoSystem, ncid, PIO_NOWRITE)
 
        call read_float_or_double_3d(tdomain_pio, pioIoSystem, ncid, 'PCT_PFT', 0, dim_idx, pctpft3d_i)
 

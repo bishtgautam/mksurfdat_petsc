@@ -84,7 +84,7 @@ contains
        call domain_read_pio(tdomain_pio, datfname)
 
        ! Open the netcdf file
-       call OpenFilePIO(datfname, pioIoSystem, ncid)
+       call OpenFilePIO(datfname, pioIoSystem, ncid, PIO_NOWRITE)
 
        ! Read the variable
        call read_float_or_double_2d(tdomain_pio, pioIoSystem, ncid, varname, dim_idx, data2d_i)
@@ -221,7 +221,7 @@ contains
 
        ! Open the netcdf file
        write(*,*)'  call OpenFilePIO: '
-       call OpenFilePIO(datfname, pioIoSystem, ncid)
+       call OpenFilePIO(datfname, pioIoSystem, ncid, PIO_NOWRITE)
 
        ! Read the variable
        write(*,*)'  call read_float_or_double_3d(): ',trim(varname)

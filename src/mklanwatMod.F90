@@ -291,7 +291,7 @@ subroutine mklakwat_pio(ldomain_pio, mapfname, datfname, ndiag, zero_out, lake_o
      write(6,*)'Open lake file: ', trim(datfname)
 
      ! Open the netcdf file
-     call OpenFilePIO(datfname, pioIoSystem, ncid)
+     call OpenFilePIO(datfname, pioIoSystem, ncid, PIO_NOWRITE)
 
      ! Read the variable
      call read_float_or_double_2d(tdomain_pio, pioIoSystem, ncid, 'PCT_LAKE', dim_idx, lake2d_i)
@@ -605,7 +605,7 @@ subroutine mkwetlnd_pio(ldomain_pio, mapfname, datfname, ndiag, zero_out, swmp_o
      call domain_read_pio(tdomain_pio, datfname)
 
      ! Open the netcdf file
-     call OpenFilePIO(datfname, pioIoSystem, ncid)
+     call OpenFilePIO(datfname, pioIoSystem, ncid, PIO_NOWRITE)
 
      ! Read the variable
      call read_float_or_double_2d(tdomain_pio, pioIoSystem, ncid, 'PCT_WETLAND', dim_idx, swmp2d_i)
@@ -828,7 +828,7 @@ subroutine mklakparams_pio(ldomain_pio, mapfname, datfname, ndiag, lakedepth_o)
   ! Regrid lake depth
   ! -----------------------------------------------------------------
   ! Open the netcdf file
-  call OpenFilePIO(datfname, pioIoSystem, ncid)
+  call OpenFilePIO(datfname, pioIoSystem, ncid, PIO_NOWRITE)
 
   ! Read the variable
   call read_float_or_double_2d(tdomain_pio, pioIoSystem, ncid, 'LAKEDEPTH', dim_idx, lakedepth2d_i)

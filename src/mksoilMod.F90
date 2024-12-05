@@ -644,7 +644,7 @@ subroutine mksoiltex_pio(ldomain_pio, mapfname, datfname, ndiag, sand_o, clay_o)
 
   call domain_read_pio(tdomain_pio, datfname)
 
-  call OpenFilePIO(datfname, pioIoSystem, ncid)
+  call OpenFilePIO(datfname, pioIoSystem, ncid, PIO_NOWRITE)
 
   call read_float_or_double_2d(tdomain_pio, pioIoSystem, ncid, 'MAPUNITS', dim_idx_2d, mapunit2d_i)
   call read_float_or_double_3d(tdomain_pio, pioIoSystem, ncid, 'PCT_SAND', 0, dim_idx_3d, sand3d_i)
