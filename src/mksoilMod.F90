@@ -2207,7 +2207,7 @@ subroutine mksoilAttPIO( ncid, dynlanduse, xtype, dim_id_gridcell, dim_id_lsmlon
   character(len=512)                :: att_name, att_value
   character(len=32)                 :: subname = 'mksoilAttPIO'
   type(var_desc_t)                  :: pioVar
-  integer                           :: dim1d(1), dim2d(2)
+  integer                           :: dim1d(1), dim2d(2), dim3d(3)
   integer                           :: ier
 
   if (.not.dynlanduse) then
@@ -2269,23 +2269,30 @@ subroutine mksoilAttPIO( ncid, dynlanduse, xtype, dim_id_gridcell, dim_id_lsmlon
 
      if (outnc_1d) then
         dim1d(1) = dim_id_gridcell
-
         call DefineVarPIO_1d(ncid, 'SOIL_COLOR', PIO_INT, dim1d, longName='soil color', units='unitless')
-        call DefineVarPIO_1d(ncid, 'PCT_CLAY', xtype, dim1d, longName='percent sand', units='unitless')
-        call DefineVarPIO_1d(ncid, 'PCT_SAND', xtype, dim1d, longName='percent clay', units='unitless')
-        call DefineVarPIO_1d(ncid, 'ORGANIC', xtype, dim1d, longName='organic matter density at soil levels', &
-             units='kg/m3 (assumed carbon content 0.58 gC per gOM)')
-        call DefineVarPIO_1d(ncid, 'FMAX', xtype, dim1d, longName='maximum fractional saturated area', units='unitless')
+        call DefineVarPIO_1d(ncid, 'SOIL_ORDER', PIO_INT, dim1d, longName='soil order', units='unitless')
 
-     else
-        dim2d(1) = dim_id_lsmlon
-        dim2d(2) = dim_id_lsmlat
-
-        call DefineVarPIO_2d(ncid, 'SOIL_COLOR', PIO_INT, dim2d, longName='soil color', units='unitless')
+        dim2d(1) = dim_id_gridcell; dim2d(2) = dim_id_nlevsoi
         call DefineVarPIO_2d(ncid, 'PCT_CLAY', xtype, dim2d, longName='percent sand', units='unitless')
         call DefineVarPIO_2d(ncid, 'PCT_SAND', xtype, dim2d, longName='percent clay', units='unitless')
         call DefineVarPIO_2d(ncid, 'ORGANIC', xtype, dim2d, longName='organic matter density at soil levels', &
              units='kg/m3 (assumed carbon content 0.58 gC per gOM)')
+
+        dim1d(1) = dim_id_gridcell
+        call DefineVarPIO_1d(ncid, 'FMAX', xtype, dim1d, longName='maximum fractional saturated area', units='unitless')
+
+     else
+        dim2d(1) = dim_id_lsmlon; dim2d(2) = dim_id_lsmlat;
+        call DefineVarPIO_2d(ncid, 'SOIL_COLOR', PIO_INT, dim2d, longName='soil color', units='unitless')
+        call DefineVarPIO_2d(ncid, 'SOIL_ORDER', PIO_INT, dim2d, longName='soil order', units='unitless')
+
+        dim3d(1) = dim_id_lsmlon; dim3d(2) = dim_id_lsmlat; dim3d(3) = dim_id_nlevsoi
+        call DefineVarPIO_3d(ncid, 'PCT_CLAY', xtype, dim3d, longName='percent sand', units='unitless')
+        call DefineVarPIO_3d(ncid, 'PCT_SAND', xtype, dim3d, longName='percent clay', units='unitless')
+        call DefineVarPIO_3d(ncid, 'ORGANIC', xtype, dim3d, longName='organic matter density at soil levels', &
+             units='kg/m3 (assumed carbon content 0.58 gC per gOM)')
+
+        dim2d(1) = dim_id_lsmlon; dim2d(2) = dim_id_lsmlat;
         call DefineVarPIO_2d(ncid, 'FMAX', xtype, dim2d, longName='maximum fractional saturated area', units='unitless')
      end if
 
