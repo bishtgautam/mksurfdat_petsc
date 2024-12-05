@@ -11,6 +11,11 @@ module piofileutils
   public DefineDimPIO
   public read_float_or_double_2d
   public read_float_or_double_3d
+  public write_integer_1d
+  public write_double_1d
+  public write_double_2d
+  public write_double_3d
+  public write_double_4d
   public check_ret
   public DefineVarPIO_1d
   public DefineVarPIO_2d
@@ -443,5 +448,115 @@ contains
     call PIO_freedecomp(pioIoSystem, iodescNCells)
 
   end subroutine read_float_or_double_3d
+
+  !-----------------------------------------------------------------------
+  subroutine write_integer_1d(ncid, iodesc, varname, data1d)
+    !
+    use pio
+
+    implicit none
+
+    type(file_desc_t)     , intent(inout)        :: ncid
+    type(io_desc_t)       , intent (in)          :: iodesc
+    character(len=*)      , intent(in)           :: varname
+    integer               , pointer, intent(in)  :: data1d(:)
+
+    type(var_desc_t)      :: varid
+    integer               :: ier
+    character(len=32)                            :: subname = 'write_double_2d'
+
+    call check_ret(PIO_inq_varid(ncid, varname, varid), subname)
+    call PIO_write_darray(ncid, varid, iodesc, data1d, ier)
+    call PIO_syncfile(ncid)
+
+  end subroutine write_integer_1d
+
+  !-----------------------------------------------------------------------
+  subroutine write_double_1d(ncid, iodesc, varname, data1d)
+    !
+    use pio
+
+    implicit none
+
+    type(file_desc_t)     , intent(inout)        :: ncid
+    type(io_desc_t)       , intent (in)          :: iodesc
+    character(len=*)      , intent(in)           :: varname
+    real(r8)              , pointer, intent(in)  :: data1d(:)
+
+    type(var_desc_t)      :: varid
+    integer               :: ier
+    character(len=32)                            :: subname = 'write_double_2d'
+
+    call check_ret(PIO_inq_varid(ncid, varname, varid), subname)
+    call PIO_write_darray(ncid, varid, iodesc, data1d, ier)
+    call PIO_syncfile(ncid)
+
+  end subroutine write_double_1d
+
+  !-----------------------------------------------------------------------
+  subroutine write_double_2d(ncid, iodesc, varname, data2d)
+    !
+    use pio
+
+    implicit none
+
+    type(file_desc_t)     , intent(inout)        :: ncid
+    type(io_desc_t)       , intent (in)          :: iodesc
+    character(len=*)      , intent(in)           :: varname
+    real(r8)              , pointer, intent(in)  :: data2d(:,:)
+
+    type(var_desc_t)      :: varid
+    integer               :: ier
+    character(len=32)                            :: subname = 'write_double_2d'
+
+    call check_ret(PIO_inq_varid(ncid, varname, varid), subname)
+    call PIO_write_darray(ncid, varid, iodesc, data2d, ier)
+    call PIO_syncfile(ncid)
+
+  end subroutine write_double_2d
+
+  !-----------------------------------------------------------------------
+  subroutine write_double_3d(ncid, iodesc, varname, data3d)
+    !
+    use pio
+
+    implicit none
+
+    type(file_desc_t)     , intent(inout)        :: ncid
+    type(io_desc_t)       , intent (in)          :: iodesc
+    character(len=*)      , intent(in)           :: varname
+    real(r8)              , pointer, intent(in)  :: data3d(:,:,:)
+
+    type(var_desc_t)      :: varid
+    integer               :: ier
+    character(len=32)                            :: subname = 'write_double_2d'
+
+    call check_ret(PIO_inq_varid(ncid, varname, varid), subname)
+    call PIO_write_darray(ncid, varid, iodesc, data3d, ier)
+    call PIO_syncfile(ncid)
+
+  end subroutine write_double_3d
+
+  !-----------------------------------------------------------------------
+  subroutine write_double_4d(ncid, iodesc, varname, data4d)
+    !
+    use pio
+
+    implicit none
+
+    type(file_desc_t)     , intent(inout)        :: ncid
+    type(io_desc_t)       , intent (in)          :: iodesc
+    character(len=*)      , intent(in)           :: varname
+    real(r8)              , pointer, intent(in)  :: data4d(:,:,:,:)
+
+    type(var_desc_t)      :: varid
+    integer               :: ier
+    character(len=32)                            :: subname = 'write_double_2d'
+
+    call check_ret(PIO_inq_varid(ncid, varname, varid), subname)
+    call PIO_write_darray(ncid, varid, iodesc, data4d, ier)
+    call PIO_syncfile(ncid)
+
+  end subroutine write_double_4d
 
 end module piofileutils
