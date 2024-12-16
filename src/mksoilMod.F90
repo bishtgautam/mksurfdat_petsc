@@ -31,7 +31,9 @@ module mksoilMod
   public mkorganic      ! Set organic soil
   public mkorganic_pio  ! PIO-version of set organic soil
   public mksoilcol      ! Set soil color
+  public mksoilcol_pio  ! PIO-version of set soil color
   public mksoilord      ! Set soil order
+  public mksoilord_pio  ! PIO-version of set soil order
   public mkfmax         ! Make percent fmax
   public mkfmax_pio     ! PIO-version of make percent fmax
 
@@ -1266,6 +1268,55 @@ end subroutine mksoilcol
 
 !-----------------------------------------------------------------------
 
+subroutine mksoilcol_pio(ldomain_pio, mapfname, datfname, ndiag, &
+     soil_color_o, nsoicol)
+  !
+  ! !DESCRIPTION:
+  ! make %sand and %clay from IGBP soil data, which includes
+  ! igbp soil 'mapunits' and their corresponding textures
+  !
+  ! !USES:
+  use mkdomainPIOMod, only : domain_pio_type
+  use mkdataPIOMod
+  use mkgridmapMod
+  use mkvarpar	
+  use mkvarctl    
+  use mkncdio
+  !
+  ! !ARGUMENTS:
+  implicit none
+  type(domain_pio_type) , intent(in) :: ldomain_pio
+  character(len=*)      , intent(in) :: mapfname           ! input mapping file name
+  character(len=*)      , intent(in) :: datfname           ! input data file name
+  integer               , intent(in) :: ndiag              ! unit number for diag out
+  integer               , intent(out):: soil_color_o(:)    ! soil color classes
+  integer               , intent(out):: nsoicol            ! number of soil colors 
+  !
+  ! !CALLED FROM:
+  ! subroutine mksrfdat in module mksrfdatMod
+  !
+  ! !REVISION HISTORY:
+  ! Author: Mariana Vertenstein
+  !
+  !
+  ! !LOCAL VARIABLES:
+  integer, parameter :: nodata_value = 0
+  !-----------------------------------------------------------------------
+
+  write (6,*) 'Attempting to make soil color classes .....'
+  call shr_sys_flush(6)
+
+  ! -----------------------------------------------------------------
+  ! Define the model color classes: 0 to nsoicol
+  ! -----------------------------------------------------------------
+  nsoicol = 20
+  call mkdata_dominant_int_2d_pio(ldomain_pio, mapfname=mapfname, datfname=datfname, varname='SOIL_COLOR', &
+       data_descrip='soil_color', ndiag=ndiag, zero_out=.false., nodata_value=nodata_value, &
+       max_value = nsoicol, data_o=soil_color_o)
+
+
+end subroutine mksoilcol_pio
+
 !-----------------------------------------------------------------------
 !BOP
 !
@@ -1563,6 +1614,43 @@ subroutine mksoilord(ldomain, mapfname, datfname, ndiag, &
 
 end subroutine mksoilord
 
+!-----------------------------------------------------------------------
+subroutine mksoilord_pio(ldomain_pio, mapfname, datfname, ndiag, &
+     pctglac_o, soil_order_o, nsoiord)
+  !
+  use mkdomainPIOMod, only : domain_pio_type
+  use mkdataPIOMod
+  use mkgridmapMod
+  use mkvarpar
+  use mkvarctl
+  use mkncdio
+  !
+  ! !ARGUMENTS:
+  implicit none
+  type(domain_pio_type) , intent(in) :: ldomain_pio
+  character(len=*)  , intent(in) :: mapfname           ! input mapping file name
+  character(len=*)  , intent(in) :: datfname           ! input data file name
+  integer           , intent(in) :: ndiag              ! unit number for diagout
+  real(r8)          , intent(in) :: pctglac_o(:)       ! % glac (output grid)
+  integer           , intent(out):: soil_order_o(:)    ! soil order classes
+  integer           , intent(out):: nsoiord            ! number of soil order 
+  ! !LOCAL VARIABLES:
+  integer, parameter :: nodata_value = 0
+
+  write (6,*) 'Attempting to make soil order classes .....'
+  call shr_sys_flush(6)
+
+  nsoiord = 16
+  call mkdata_dominant_int_2d_pio(ldomain_pio, mapfname=mapfname, datfname=datfname, varname='SOILORDER', &
+       data_descrip='soil_color', ndiag=ndiag, zero_out=.false., nodata_value=nodata_value, &
+       max_value = nsoiord, data_o=soil_order_o)
+
+  write (6,*) 'Successfully made soil order classes'
+
+  write (6,*)
+  call shr_sys_flush(6)
+
+end subroutine mksoilord_pio
 !-----------------------------------------------------------------------
 
 !BOP

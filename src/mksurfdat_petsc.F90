@@ -272,17 +272,13 @@ program mksurfdat_petsc
 
   ! Make soil color classes [soicol] [fsoicol]
 
-  call mksoilcol (ldomain, mapfname=map_fsoicol, datfname=mksrf_fsoicol, &
+  call mksoilcol_pio (ldomain_pio, mapfname=map_fsoicol, datfname=mksrf_fsoicol, &
        ndiag=ndiag, soil_color_o=soicol, nsoicol=nsoicol)
-  !TODO: call mksoilcol_pio (ldomain_pio, mapfname=map_fsoico, datfname=mksrf_fsoicol, &
-  !     ndiag=ndiag, soil_color_o=soicol, nsoicol=nsoicol)
 
   ! Make soil order classes [soiord] [fsoiord]
 
-  call mksoilord (ldomain, mapfname=map_fsoiord, datfname=mksrf_fsoiord, &
+  call mksoilord_pio (ldomain_pio, mapfname=map_fsoiord, datfname=mksrf_fsoiord, &
        ndiag=ndiag, pctglac_o=pctgla, soil_order_o=soiord, nsoiord=nsoiord)
-  !TODO: call mksoilord_pio (ldomain_pio, mapfname=map_fsoiord, datfname=mksrf_fsoiord, &
-  !     ndiag=ndiag, pctglac_o=pctgla, soil_order_o=soiord, nsoiord=nsoiord)
 
   ! Make fmax [fmax] from [fmax] dataset
 

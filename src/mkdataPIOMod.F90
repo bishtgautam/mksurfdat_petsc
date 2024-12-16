@@ -8,6 +8,7 @@ module mkdataPIOMod
 
   public mkdata_double_2d_pio
   public mkdata_double_3d_pio
+  public mkdata_dominant_int_2d_pio
 
 contains
 
@@ -286,5 +287,103 @@ contains
     call shr_sys_flush(6)
 
   end subroutine mkdata_double_3d_pio
+
+  !-----------------------------------------------------------------------
+  subroutine mkdata_dominant_int_2d_pio(ldomain_pio, mapfname, datfname, varname, data_descrip, &
+       ndiag, zero_out, nodata_value, max_value, data_o)
+    !
+    ! !DESCRIPTION:
+    !
+    ! !USES:
+    use mkdomainPIOMod, only : domain_pio_type, domain_clean_pio, domain_read_pio
+    use mkgridmapPIOMod
+    use mkvarpar
+    use mkvarctl
+    use mkncdio
+    use pio
+    use piofileutils
+    use utils
+    !
+    ! !ARGUMENTS:
+
+    implicit none
+    type(domain_pio_type) , intent(in)  :: ldomain_pio
+    character(len=*)      , intent(in)  :: mapfname          ! input mapping file name
+    character(len=*)      , intent(in)  :: datfname          ! input data file name
+    character(len=*)      , intent(in)  :: varname           ! input data file name
+    character(len=*)      , intent(in)  :: data_descrip      ! data description
+    integer               , intent(in)  :: ndiag             ! variable name
+    logical               , intent(in)  :: zero_out          ! if should zero glacier out
+    integer               , intent(in)  :: nodata_value      !
+    integer               , intent(in)  :: max_value         ! max value
+    integer               , intent(out) :: data_o(:)         ! output grid
+    !
+    type(gridmap_pio_type)                       :: tgridmap_pio
+    type(domain_pio_type)                        :: tdomain_pio       ! local domain
+    integer                                      :: no
+    integer                                      :: ns_loc_i,ns_loc_o !  indices
+    integer                                      :: ierr              ! error status
+    integer, parameter                           :: min_value = 1
+    type(file_desc_t)                            :: ncid
+    type(iosystem_desc_t)                        :: pioIoSystem
+    real(r8) , pointer                           :: data2d_i(:,:)
+    real(r8) , pointer                           :: data1d_i(:)
+    integer                                      :: dim_idx(2,2)
+    !-----------------------------------------------------------------------
+
+    write (6,*) 'Attempting to make ' // trim(data_descrip) // ' .....'
+    call shr_sys_flush(6)
+
+    ! -----------------------------------------------------------------
+    ! Read input file
+    ! -----------------------------------------------------------------
+
+    if ( .not. zero_out )then
+
+       write(6,*)'Open file: ', trim(datfname)
+
+       ! Obtain input grid info, read local fields
+
+       call domain_read_pio(tdomain_pio, datfname)
+
+       ! Open the netcdf file
+       call OpenFilePIO(datfname, pioIoSystem, ncid, PIO_NOWRITE)
+
+       ! Read the variable
+       call read_float_or_double_2d(tdomain_pio, pioIoSystem, ncid, varname, dim_idx, data2d_i)
+
+       call PIO_closefile(ncid)
+       call PIO_finalize(pioIoSystem, ierr)
+
+       ! Read the map
+       call gridmap_mapread_pio(tgridmap_pio, mapfname )
+
+       ! Convert 2D vector to 1D vector
+       ns_loc_i = (dim_idx(1,2) - dim_idx(1,1) + 1) * (dim_idx(2,2) - dim_idx(2,1) + 1)
+       allocate(data1d_i(ns_loc_i))
+       call convert_2d_to_1d_array(dim_idx(1,1), dim_idx(1,2), dim_idx(2,1), dim_idx(2,2), data2d_i, data1d_i)
+
+       ! Determine data_o on output grid
+       call gridmap_dominant_value_pio(tgridmap_pio, data1d_i(:), min_value, max_value, nodata_value, data_o)
+
+    else
+       data_o(:) = 0._r8
+    end if
+
+    ! Deallocate dynamic memory
+
+    if ( .not. zero_out )then
+       call domain_clean_pio(tdomain_pio)
+
+       call gridmap_clean_pio(tgridmap_pio)
+       deallocate (data2d_i)
+       deallocate (data1d_i)
+    end if
+
+    write (6,*) 'Successfully made ' // trim(data_descrip)
+    write (6,*)
+    call shr_sys_flush(6)
+
+  end subroutine mkdata_dominant_int_2d_pio
 
 end module mkdataPIOMod
