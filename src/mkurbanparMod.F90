@@ -426,9 +426,14 @@ subroutine mkurban_pio(ldomain_pio, mapfname, datfname, ndiag, zero_out, &
    write (6,*) 'Successfully made %urban'
 
    ! TODO: Determine dominant region for each output cell
-   !write(6,*) 'Attempting to make urban region .....'
-   !write (6,*) 'Successfully made urban region'
-   !write (6,*)
+   write(6,*) 'Attempting to make urban region .....'
+   write (6,*) 'Successfully made urban region'
+   write (6,*)
+
+   max_region = 33
+   call mkdata_dominant_int_2d_pio(ldomain_pio, mapfname=mapfname, datfname=datfname, varname='REGION_ID', &
+        data_descrip='region_id', ndiag=ndiag, zero_out=.false., nodata_value=0, &
+        max_value = max_region, data_o=region_o)
 
    ! Deallocate dynamic memory & other clean up
    deallocate (urbn_classes_gcell_o)
