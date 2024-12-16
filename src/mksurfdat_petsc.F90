@@ -286,25 +286,18 @@ program mksurfdat_petsc
 
   ! Make fmax [fmax] from [fmax] dataset
 
-  !call mkfmax (ldomain, mapfname=map_fmax, datfname=mksrf_fmax, &
-  !     ndiag=ndiag, fmax_o=fmax)
   call mkfmax_pio (ldomain_pio, mapfname=map_fmax, datfname=mksrf_fmax, &
        ndiag=ndiag, fmax_o=fmax)
 
   ! Make GDP data [gdp] from [gdp]
 
-  !call mkgdp (ldomain, mapfname=map_fgdp, datfname=mksrf_fgdp, &
-  !     ndiag=ndiag, gdp_o=gdp)
   call mkgdp_pio (ldomain_pio, mapfname=map_fgdp, datfname=mksrf_fgdp, &
        ndiag=ndiag, gdp_o=gdp)
 
   ! Make peat data [fpeat] from [peatf]
 
-  !call mkpeat (ldomain, mapfname=map_fpeat, datfname=mksrf_fpeat, &
-  !     ndiag=ndiag, peat_o=fpeat)
-  call mkdata_double_2d_pio(ldomain_pio, mapfname=map_fpeat, datfname=mksrf_fpeat, varname='peatf', &
-       data_descrip='peatf', ndiag=ndiag, zero_out=.false., nodata_value=0._r8, data_o=fpeat, &
-       min_valid_value=0._r8, max_valid_value=100.000001_r8)
+  call mkpeat_pio (ldomain_pio, mapfname=map_fpeat, datfname=mksrf_fpeat, &
+       ndiag=ndiag, peat_o=fpeat)
 
   ! Make agricultural fire peak month data [abm] from [abm]
 
