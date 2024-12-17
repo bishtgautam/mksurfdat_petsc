@@ -694,7 +694,6 @@ subroutine mkglacier_pio(ldomain_pio, mapfname, datfname, ndiag, zero_out, glac_
   use mkncdio
   use pio
   use piofileutils
-  use utils
   !
   ! !ARGUMENTS:
   implicit none
@@ -729,6 +728,7 @@ subroutine mkglacier_pio(ldomain_pio, mapfname, datfname, ndiag, zero_out, glac_
   real(r8) , pointer    :: glac1d_i(:)
   integer               :: ierr
   integer               :: dim_idx(2,2)
+  integer               :: i, j, count
 !-----------------------------------------------------------------------
 
   write (6,*) 'Attempting to make %glacier .....'
@@ -765,7 +765,13 @@ subroutine mkglacier_pio(ldomain_pio, mapfname, datfname, ndiag, zero_out, glac_
      ns_loc_i = (dim_idx(1,2) - dim_idx(1,1) + 1) * (dim_idx(2,2) - dim_idx(2,1) + 1)
      allocate(glac1d_i(ns_loc_i))
 
-     call convert_2d_to_1d_array(dim_idx(1,1), dim_idx(1,2), dim_idx(2,1), dim_idx(2,2), glac2d_i, glac1d_i)
+     count = 0
+     do j = dim_idx(2,1), dim_idx(2,2)
+        do i = dim_idx(1,1), dim_idx(1,2)
+           count = count + 1
+           glac1d_i(count) = glac2d_i(i,j)
+        end do
+     end do
 
      ! Read the map
      call gridmap_mapread_pio(tgridmap_pio, mapfname )

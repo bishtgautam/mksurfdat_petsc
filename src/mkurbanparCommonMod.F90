@@ -366,7 +366,6 @@ subroutine mkelev_pio(ldomain_pio, mapfname, datfname, varname, ndiag, elev_o)
   use mkncdio
   use pio
   use piofileutils
-  use utils
   !
   ! !ARGUMENTS:
   implicit none
@@ -388,10 +387,11 @@ subroutine mkelev_pio(ldomain_pio, mapfname, datfname, varname, ndiag, elev_o)
   integer  :: ns_i,ns_o                       ! indices
   integer  :: dimid,varid               ! input netCDF id's
   integer  :: ns_loc_i,ns_loc_o               ! indices
+  integer  :: i, j, count
   integer               :: ierr
   integer               :: dim_idx(2,2)
   character(len=256) :: name                  ! name of attribute
-  character(len=256) :: unit                  ! units of attribute
+  character(len=256) :: unit                  ! units of attribute  
   character(len= 32) :: subname = 'mkelev_pi'
   !-----------------------------------------------------------------------
 
@@ -423,7 +423,13 @@ subroutine mkelev_pio(ldomain_pio, mapfname, datfname, varname, ndiag, elev_o)
 
   allocate(elev1d_i(ns_loc_i))
 
-  call convert_2d_to_1d_array(dim_idx(1,1), dim_idx(1,2), dim_idx(2,1), dim_idx(2,2), elev2d_i, elev1d_i)
+  count = 0
+  do j = dim_idx(2,1), dim_idx(2,2)
+     do i = dim_idx(1,1), dim_idx(1,2)
+        count = count + 1
+        elev1d_i(count) = elev2d_i(i,j)
+     end do
+  end do
 
   ! Determine elev_o on output grid
 

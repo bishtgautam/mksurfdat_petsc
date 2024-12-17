@@ -554,7 +554,6 @@ subroutine mksoiltex_pio(ldomain_pio, mapfname, datfname, ndiag, sand_o, clay_o)
   use mkvarctl    
   use mkncdio
   use pio
-  use utils
   use piofileutils
   !
   ! !ARGUMENTS:
@@ -667,11 +666,14 @@ subroutine mksoiltex_pio(ldomain_pio, mapfname, datfname, ndiag, sand_o, clay_o)
   allocate(tmp1d_i(ns_loc_i))
 
   do l = 1, nlay
-     call convert_2d_to_1d_array(dim_idx_3d(1,1), dim_idx_3d(1,2), dim_idx_3d(2,1), dim_idx_3d(2,2), sand3d_i(:,:,m), tmp1d_i)
-     sand2d_i(:,m) = tmp1d_i(:)
-
-     call convert_2d_to_1d_array(dim_idx_3d(1,1), dim_idx_3d(1,2), dim_idx_3d(2,1), dim_idx_3d(2,2), clay3d_i(:,:,m), tmp1d_i)
-     clay2d_i(:,m) = tmp1d_i(:)
+     count = 0
+     do j = dim_idx_3d(2,1), dim_idx_3d(2,2)
+        do i = dim_idx_3d(1,1), dim_idx_3d(1,2)
+           count = count + 1
+           sand2d_i(count,m) = sand3d_i(i,j,m)
+           clay2d_i(count,m) = clay3d_i(i,j,m)
+        end do
+     end do
   end do
   
   ! Compute local fields _o
@@ -679,7 +681,13 @@ subroutine mksoiltex_pio(ldomain_pio, mapfname, datfname, ndiag, sand_o, clay_o)
 
      allocate(mapunit1d_i(ns_loc_i))
 
-     call convert_2d_to_1d_array(dim_idx_2d(1,1), dim_idx_2d(1,2), dim_idx_2d(2,1), dim_idx_2d(2,2), mapunit2d_i, mapunit1d_i)
+     count = 0
+     do j = dim_idx_2d(2,1), dim_idx_2d(2,2)
+        do i = dim_idx_2d(1,1), dim_idx_2d(1,2)
+           count = count + 1
+           mapunit1d_i(count) = mapunit2d_i(i,j)
+        end do
+     end do
 
      ! kmap_max are the maximum number of mapunits that will consider on
      ! any output gridcell - this is set currently above and can be changed

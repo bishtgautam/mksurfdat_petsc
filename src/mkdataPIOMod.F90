@@ -26,7 +26,6 @@ contains
     use mkncdio
     use pio
     use piofileutils
-    use utils
     !
     ! !ARGUMENTS:
 
@@ -58,6 +57,7 @@ contains
     logical                                      :: threshold_specified
     logical                                      :: min_valid_specified
     logical                                      :: max_valid_specified
+    integer                                      :: i, j, count
 
     !-----------------------------------------------------------------------
 
@@ -99,7 +99,14 @@ contains
        ! Convert 2D vector to 1D vector
        ns_loc_i = (dim_idx(1,2) - dim_idx(1,1) + 1) * (dim_idx(2,2) - dim_idx(2,1) + 1)
        allocate(data1d_i(ns_loc_i))
-       call convert_2d_to_1d_array(dim_idx(1,1), dim_idx(1,2), dim_idx(2,1), dim_idx(2,2), data2d_i, data1d_i)
+
+       count = 0
+       do j = dim_idx(2,1), dim_idx(2,2)
+          do i = dim_idx(1,1), dim_idx(1,2)
+             count = count + 1
+             data1d_i(count) = data2d_i(i,j)
+          end do
+       end do
 
        ! Determine data_o on output grid
        call gridmap_areaave_pio(tgridmap_pio, data1d_i(:), data_o, nodata=nodata_value)
@@ -160,7 +167,6 @@ contains
     use mkncdio
     use pio
     use piofileutils
-    use utils
     !
     ! !ARGUMENTS:
 
@@ -193,6 +199,7 @@ contains
     logical                                      :: threshold_specified
     logical                                      :: min_valid_specified
     logical                                      :: max_valid_specified
+    integer                                      :: i, j, count
 
     !-----------------------------------------------------------------------
 
@@ -241,7 +248,13 @@ contains
        do m = start_id_for_dim3, start_id_for_dim3 + (dim_idx(3,2) - dim_idx(3,1))
 
           ! Convert data from 2D to 1D
-          call convert_2d_to_1d_array(dim_idx(1,1), dim_idx(1,2), dim_idx(2,1), dim_idx(2,2), data3d_i(:,:,m), data1d_i)
+          count = 0
+          do j = dim_idx(2,1), dim_idx(2,2)
+             do i = dim_idx(1,1), dim_idx(1,2)
+                count = count + 1
+                data1d_i(count) = data3d_i(i,j,m)
+             end do
+          end do
 
           ! Determine data_o on output grid
           call gridmap_areaave_pio(tgridmap_pio, data1d_i(:), data_o(:,m), nodata=nodata_value)
@@ -302,7 +315,6 @@ contains
     use mkncdio
     use pio
     use piofileutils
-    use utils
     !
     ! !ARGUMENTS:
 
@@ -329,6 +341,7 @@ contains
     real(r8) , pointer                           :: data2d_i(:,:)
     real(r8) , pointer                           :: data1d_i(:)
     integer                                      :: dim_idx(2,2)
+    integer                                      :: i, j, count
     !-----------------------------------------------------------------------
 
     write (6,*) 'Attempting to make ' // trim(data_descrip) // ' .....'
@@ -361,7 +374,13 @@ contains
        ! Convert 2D vector to 1D vector
        ns_loc_i = (dim_idx(1,2) - dim_idx(1,1) + 1) * (dim_idx(2,2) - dim_idx(2,1) + 1)
        allocate(data1d_i(ns_loc_i))
-       call convert_2d_to_1d_array(dim_idx(1,1), dim_idx(1,2), dim_idx(2,1), dim_idx(2,2), data2d_i, data1d_i)
+       count = 0
+       do j = dim_idx(2,1), dim_idx(2,2)
+          do i = dim_idx(1,1), dim_idx(1,2)
+             count = count + 1
+             data1d_i(count) = data2d_i(i,j)
+          end do
+       end do
 
        ! Determine data_o on output grid
        call gridmap_dominant_value_pio(tgridmap_pio, data1d_i(:), min_value, max_value, nodata_value, data_o)

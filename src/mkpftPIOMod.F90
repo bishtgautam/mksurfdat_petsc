@@ -51,7 +51,6 @@ contains
     use mkvarpar      , only : numstdpft, numstdcft
     use mkgridmapPIOMod
     use pio
-    use utils
 
     implicit none
     type(domain_pio_type) , intent(inout) :: ldomain_pio
@@ -191,7 +190,13 @@ contains
 
        do m = 0, numpft
 
-          call convert_2d_to_1d_array(dim_idx(1,1), dim_idx(1,2), dim_idx(2,1), dim_idx(2,2), pctpft3d_i(:,:,m), pctpft1d_i)
+          count = 0
+          do j = dim_idx(2,1), dim_idx(2,2)
+             do i = dim_idx(1,1), dim_idx(1,2)
+                count = count + 1
+                pctpft1d_i(count) = pctpft3d_i(i,j,m)
+             end do
+          end do
 
           call gridmap_areaave_pio(tgridmap_pio, pctpft1d_i(:), pctpft_o(:,m), nodata=0._r8)
 

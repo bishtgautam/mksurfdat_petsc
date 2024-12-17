@@ -239,7 +239,6 @@ subroutine mklakwat_pio(ldomain_pio, mapfname, datfname, ndiag, zero_out, lake_o
   use mkncdio
   use pio
   use piofileutils
-  use utils
 !
 ! !ARGUMENTS:
 
@@ -273,8 +272,9 @@ subroutine mklakwat_pio(ldomain_pio, mapfname, datfname, ndiag, zero_out, lake_o
   real(r8) , pointer    :: lake1d_i(:)
   integer               :: ierr
   integer               :: dim_idx(2,2)
+  integer               :: i, j, count
 
-    !-----------------------------------------------------------------------
+  !-----------------------------------------------------------------------
 
   write (6,*) 'Attempting to make %lake and %wetland .....'
   call shr_sys_flush(6)
@@ -311,7 +311,13 @@ subroutine mklakwat_pio(ldomain_pio, mapfname, datfname, ndiag, zero_out, lake_o
 
      allocate(lake1d_i(ns_loc_i))
 
-     call convert_2d_to_1d_array(dim_idx(1,1), dim_idx(1,2), dim_idx(2,1), dim_idx(2,2), lake2d_i, lake1d_i)
+     count = 0
+     do j = dim_idx(2,1), dim_idx(2,2)
+        do i = dim_idx(1,1), dim_idx(1,2)
+           count = count + 1
+           lake1d_i(count) = lake2d_i(i,j)
+        end do
+     end do
 
      ! Determine lake_o on output grid
 
@@ -541,7 +547,6 @@ subroutine mkwetlnd_pio(ldomain_pio, mapfname, datfname, ndiag, zero_out, swmp_o
   use mkncdio
   use pio
   use piofileutils
-  use utils
   !
   ! !ARGUMENTS:
 
@@ -585,6 +590,7 @@ subroutine mkwetlnd_pio(ldomain_pio, mapfname, datfname, ndiag, zero_out, swmp_o
   real(r8) , pointer    :: swmp1d_i(:)
   integer               :: ierr
   integer               :: dim_idx(2,2)
+  integer               :: i, j, count
   !-----------------------------------------------------------------------
 
   write (6,*) 'Attempting to make %wetland .....'
@@ -625,7 +631,13 @@ subroutine mkwetlnd_pio(ldomain_pio, mapfname, datfname, ndiag, zero_out, swmp_o
 
      allocate(swmp1d_i(ns_loc_i))
 
-     call convert_2d_to_1d_array(dim_idx(1,1), dim_idx(1,2), dim_idx(2,1), dim_idx(2,2), swmp2d_i, swmp1d_i)
+     count = 0
+     do j = dim_idx(2,1), dim_idx(2,2)
+        do i = dim_idx(1,1), dim_idx(1,2)
+           count = count + 1
+           swmp1d_i(count) = swmp2d_i(i,j)
+        end do
+     end do
 
      ! Determine swmp_o on output grid
 

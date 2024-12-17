@@ -66,8 +66,7 @@ mksurfdat_petsc_obj = mksurfdat_petsc.o \
   mkharvestMod.o \
   mklaiMod.o \
   mkdataPIOMod.o \
-  spmdMod.o \
-  utils.o
+  spmdMod.o
 
 mksurfdat_petsc : $(mksurfdat_petsc_obj)
 	${FLINKER} -o mksurfdat_petsc $(mksurfdat_petsc_obj) ${PETSC_LIB} ${LIBS} ${FFLAGS} ${LDFLAGS}
@@ -185,8 +184,7 @@ mkpftPIOMod.o : \
   mkgridmapPIOMod.o \
   shr_string_mod.o \
   piofileutils.o \
-  fileutils.o \
-  utils.o
+  fileutils.o
 
 nanMod.o :
 
@@ -258,8 +256,7 @@ mkdataPIOMod.o : \
   mkgridmapMod.o \
   mkvarpar.o \
   mkchecksMod.o \
-  piofileutils.o \
-  utils.o
+  piofileutils.o
 
 mklanwatMod.o	: \
   shr_kind_mod.o \
@@ -267,8 +264,7 @@ mklanwatMod.o	: \
   mkdomainMod.o \
   mkdiagnosticsMod.o \
   mkchecksMod.o \
-  piofileutils.o \
-  utils.o
+  piofileutils.o
 
 mkchecksMod.o : \
   shr_kind_mod.o \
@@ -317,6 +313,3 @@ shr_file_mod.o : \
   shr_kind_mod.o \
   shr_sys_mod.o \
   shr_log_mod.o
-
-utils.o : \
-  shr_kind_mod.o
