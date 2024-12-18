@@ -321,7 +321,7 @@ subroutine mklakwat_pio(ldomain_pio, mapfname, datfname, ndiag, zero_out, lake_o
 
      ! Determine lake_o on output grid
 
-     call gridmap_areaave_pio(tgridmap_pio, lake1d_i(:), lake_o, nodata=0._r8)
+     call gridmap_areaave_pio(tgridmap_pio, vec_row_indices, lake1d_i(:), lake_o, nodata=0._r8)
 
      ns_loc_o = ldomain_pio%ns_loc
      do no = 1, ns_loc_o
@@ -643,7 +643,7 @@ subroutine mkwetlnd_pio(ldomain_pio, mapfname, datfname, ndiag, zero_out, swmp_o
 
      ! Determine swmp_o on output grid
 
-     call gridmap_areaave_pio(tgridmap_pio, swmp1d_i(:), swmp_o, nodata=0._r8)
+     call gridmap_areaave_pio(tgridmap_pio, vec_row_indices, swmp1d_i(:), swmp_o, nodata=0._r8)
 
      ns_loc_o = ldomain_pio%ns_loc
      do no = 1,ns_loc_o

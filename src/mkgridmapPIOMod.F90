@@ -396,14 +396,15 @@ contains
   end subroutine gridmap_mapread_pio
 
   !------------------------------------------------------------------------------
-  subroutine gridmap_areaave_default_pio(gridmap_pio, src_array, dst_array, nodata)
+  subroutine gridmap_areaave_default_pio(gridmap_pio, row_indices, src_array, dst_array, nodata)
 
     implicit none
 
-    type(gridmap_pio_type) , intent(in)  :: gridmap_pio
-    real(r8)               , intent(in)  :: src_array(:)
-    real(r8)               , intent(out) :: dst_array(:)
-    real(r8)               , intent(in)  :: nodata               ! value to apply where there are no input data
+    type(gridmap_pio_type)           , intent(in)  :: gridmap_pio
+    integer                , pointer , intent (in) :: row_indices(:)
+    real(r8)                         , intent(in)  :: src_array(:)
+    real(r8)                         , intent(out) :: dst_array(:)
+    real(r8)                         , intent(in)  :: nodata               ! value to apply where there are no input data
 
     integer                              :: ni, no, idx
     PetscReal              , pointer     :: src_p(:), dst_p(:)
@@ -413,11 +414,9 @@ contains
     call gridmap_checkifset_pio(gridmap_pio, subname)
 
     ! fill the source Vec
-    PetscCallA(VecGetArrayF90(gridmap_pio%src_vec, src_p, ierr))
-    do ni = 1, gridmap_pio%dim_na%nloc
-       src_p(ni) = src_array(ni)
-    end do
-    PetscCallA(VecRestoreArrayF90(gridmap_pio%src_vec, src_p, ierr))
+    PetscCallA(VecSetValues(gridmap_pio%src_vec, gridmap_pio%dim_na%nloc, row_indices, src_array, INSERT_VALUES, ierr))
+    PetscCallA(VecAssemblyBegin(gridmap_pio%src_vec, ierr))
+    PetscCallA(VecAssemblyEnd(gridmap_pio%src_vec, ierr))
 
     ! do matrix-vec multiplication
     PetscCallA(MatMult(gridmap_pio%map_frac_mat, gridmap_pio%src_vec, gridmap_pio%dst_vec, ierr))
@@ -437,15 +436,16 @@ contains
   end subroutine gridmap_areaave_default_pio
 
   !------------------------------------------------------------------------------
-  subroutine gridmap_areaave_srcmask_pio(gridmap_pio, src_array, dst_array, nodata, mask_src)
+  subroutine gridmap_areaave_srcmask_pio(gridmap_pio, row_indices, src_array, dst_array, nodata, mask_src)
 
     implicit none
 
-    type(gridmap_pio_type) , intent(in)  :: gridmap_pio
-    real(r8)               , intent(in)  :: src_array(:)
-    real(r8)               , intent(out) :: dst_array(:)
-    real(r8)               , intent(in)  :: nodata               ! value to apply where there are no input data
-    real(r8)               , intent(in)  :: mask_src(:)
+    type(gridmap_pio_type)           , intent(in)  :: gridmap_pio
+    integer                , pointer , intent(in)  :: row_indices(:)
+    real(r8)                         , intent(in)  :: src_array(:)
+    real(r8)                         , intent(out) :: dst_array(:)
+    real(r8)                         , intent(in)  :: nodata               ! value to apply where there are no input data
+    real(r8)                         , intent(in)  :: mask_src(:)
 
     integer                              :: ni, no, idx
     PetscReal              , pointer     :: src_p(:), dst_p(:), tmp_p(:)
@@ -460,14 +460,13 @@ contains
     PetscCallA(VecDuplicate(gridmap_pio%dst_vec, tmp_dst_vec, ierr))
 
     ! fill the source and temporary Vec
-    PetscCallA(VecGetArrayF90(gridmap_pio%src_vec, src_p, ierr))
-    PetscCallA(VecGetArrayF90(tmp_src_vec        , tmp_p, ierr))
-    do ni = 1, gridmap_pio%dim_na%nloc
-       src_p(ni) = src_array(ni)
-       tmp_p(ni) = mask_src(ni)
-    end do
-    PetscCallA(VecRestoreArrayF90(tmp_src_vec        , tmp_p, ierr))
-    PetscCallA(VecRestoreArrayF90(gridmap_pio%src_vec, src_p, ierr))
+    PetscCallA(VecSetValues(gridmap_pio%src_vec, gridmap_pio%dim_na%nloc, row_indices, src_array, INSERT_VALUES, ierr))
+    PetscCallA(VecAssemblyBegin(gridmap_pio%src_vec, ierr))
+    PetscCallA(VecAssemblyEnd(gridmap_pio%src_vec, ierr))
+
+    PetscCallA(VecSetValues(tmp_src_vec, gridmap_pio%dim_na%nloc, row_indices, mask_src, INSERT_VALUES, ierr))
+    PetscCallA(VecAssemblyBegin(tmp_src_vec, ierr))
+    PetscCallA(VecAssemblyEnd(tmp_src_vec, ierr))
 
     ! do matrix-vec multiplication
     PetscCallA(MatMult(gridmap_pio%map_frac_mat, gridmap_pio%src_vec, gridmap_pio%dst_vec, ierr))

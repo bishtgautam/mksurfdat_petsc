@@ -436,7 +436,7 @@ subroutine mkelev_pio(ldomain_pio, mapfname, datfname, varname, ndiag, elev_o)
 
   elev_o(:) = 0._r8
 
-  call gridmap_areaave_pio(tgridmap_pio, elev1d_i, elev_o, nodata=0._r8)
+  call gridmap_areaave_pio(tgridmap_pio, vec_row_indices, elev1d_i, elev_o, nodata=0._r8)
 
   call domain_clean_pio(tdomain_pio)
 

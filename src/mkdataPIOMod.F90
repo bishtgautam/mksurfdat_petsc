@@ -110,7 +110,7 @@ contains
        end do
 
        ! Determine data_o on output grid
-       call gridmap_areaave_pio(tgridmap_pio, data1d_i(:), data_o, nodata=nodata_value)
+       call gridmap_areaave_pio(tgridmap_pio, vec_row_indices, data1d_i(:), data_o, nodata=nodata_value)
 
        if (min_valid_specified) then
           if (min_bad(data_o, min_valid_value, data_descrip)) then
@@ -260,7 +260,7 @@ contains
           end do
 
           ! Determine data_o on output grid
-          call gridmap_areaave_pio(tgridmap_pio, data1d_i(:), data_o(:,m), nodata=nodata_value)
+          call gridmap_areaave_pio(tgridmap_pio, vec_row_indices, data1d_i(:), data_o(:,m), nodata=nodata_value)
 
           if (min_valid_specified) then
              if (min_bad(data_o(:,m), min_valid_value, data_descrip)) then

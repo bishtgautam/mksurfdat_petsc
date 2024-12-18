@@ -199,7 +199,7 @@ contains
              end do
           end do
 
-          call gridmap_areaave_pio(tgridmap_pio, pctpft1d_i(:), pctpft_o(:,m), nodata=0._r8)
+          call gridmap_areaave_pio(tgridmap_pio, vec_row_indices, pctpft1d_i(:), pctpft_o(:,m), nodata=0._r8)
 
           do no = 1, ns_loc_o
              if (pctlnd_o(no) < 1.0e-6) then

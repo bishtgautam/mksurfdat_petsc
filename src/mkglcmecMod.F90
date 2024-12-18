@@ -779,7 +779,7 @@ subroutine mkglacier_pio(ldomain_pio, mapfname, datfname, ndiag, zero_out, glac_
 
      ! Determine glac_o on output grid
 
-     call gridmap_areaave_pio(tgridmap_pio, glac1d_i, glac_o, nodata=0._r8)
+     call gridmap_areaave_pio(tgridmap_pio, vec_row_indices, glac1d_i, glac_o, nodata=0._r8)
 
      ns_loc_o = ldomain_pio%ns_loc
      do no = 1, ns_loc_o
