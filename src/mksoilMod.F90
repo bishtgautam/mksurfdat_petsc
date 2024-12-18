@@ -612,6 +612,7 @@ subroutine mksoiltex_pio(ldomain_pio, mapfname, datfname, ndiag, sand_o, clay_o)
   integer  :: kmap_max                      ! maximum overlap weights
   integer, parameter :: kmap_max_min   = 90 ! kmap_max mininum value
   integer, parameter :: km_mx_ns_prod = 160000 ! product of kmap_max*ns_o to keep constant
+  integer, pointer    :: vec_row_indices(:)
 
   type(file_desc_t)     :: ncid
   type(iosystem_desc_t) :: pioIoSystem
@@ -650,8 +651,8 @@ subroutine mksoiltex_pio(ldomain_pio, mapfname, datfname, ndiag, sand_o, clay_o)
   call OpenFilePIO(datfname, pioIoSystem, ncid, PIO_NOWRITE)
 
   call read_float_or_double_2d(tdomain_pio, pioIoSystem, ncid, 'MAPUNITS', dim_idx_2d, mapunit2d_i)
-  call read_float_or_double_3d(tdomain_pio, pioIoSystem, ncid, 'PCT_SAND', 0, dim_idx_3d, sand3d_i)
-  call read_float_or_double_3d(tdomain_pio, pioIoSystem, ncid, 'PCT_CLAY', 0, dim_idx_3d, clay3d_i)
+  call read_float_or_double_3d(tdomain_pio, pioIoSystem, ncid, 'PCT_SAND', 0, dim_idx_3d, vec_row_indices, sand3d_i)
+  call read_float_or_double_3d(tdomain_pio, pioIoSystem, ncid, 'PCT_CLAY', 0, dim_idx_3d, vec_row_indices, clay3d_i)
 
   call PIO_closefile(ncid)
   call PIO_finalize(pioIoSystem, ierr)
@@ -945,6 +946,7 @@ subroutine mksoiltex_pio(ldomain_pio, mapfname, datfname, ndiag, sand_o, clay_o)
      deallocate (kmap, kwgt, kmax, wst)
      deallocate (sand2d_i,clay2d_i,mapunit2d_i)
      deallocate (sand3d_i,clay3d_i,mapunit1d_i,tmp1d_i)
+     deallocate (vec_row_indices)
   end if
 
 

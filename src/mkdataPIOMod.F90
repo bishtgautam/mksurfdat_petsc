@@ -196,6 +196,7 @@ contains
     real(r8) , pointer                           :: data3d_i(:,:,:)
     real(r8) , pointer                           :: data1d_i(:)
     integer                                      :: dim_idx(3,2)
+    integer  , pointer                           :: vec_row_indices(:)
     logical                                      :: threshold_specified
     logical                                      :: min_valid_specified
     logical                                      :: max_valid_specified
@@ -233,7 +234,7 @@ contains
 
        ! Read the variable
        write(*,*)'  call read_float_or_double_3d(): ',trim(varname)
-       call read_float_or_double_3d(tdomain_pio, pioIoSystem, ncid, varname, start_id_for_dim3, dim_idx, data3d_i)
+       call read_float_or_double_3d(tdomain_pio, pioIoSystem, ncid, varname, start_id_for_dim3, dim_idx, vec_row_indices, data3d_i)
 
        call PIO_closefile(ncid)
        call PIO_finalize(pioIoSystem, ierr)
@@ -293,6 +294,7 @@ contains
        call gridmap_clean_pio(tgridmap_pio)
        deallocate (data3d_i)
        deallocate (data1d_i)
+       deallocate (vec_row_indices)
     end if
 
     write (6,*) 'Successfully made ' // trim(data_descrip)

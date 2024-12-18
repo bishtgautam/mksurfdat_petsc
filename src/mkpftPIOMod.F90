@@ -88,6 +88,7 @@ contains
     integer  , pointer    :: var_dim_ids(:), dim_glb(:)
     integer               :: count, i, j, vartype, ierr
     integer               :: dim_idx(3,2)
+    integer  , pointer    :: vec_row_indices(:)
 
     character(len=35)  veg(0:maxpft)            ! vegetation types
     character(len=32) :: subname = 'mkpft'
@@ -145,7 +146,7 @@ contains
 
        call OpenFilePIO(fpft, pioIoSystem, ncid, PIO_NOWRITE)
 
-       call read_float_or_double_3d(tdomain_pio, pioIoSystem, ncid, 'PCT_PFT', 0, dim_idx, pctpft3d_i)
+       call read_float_or_double_3d(tdomain_pio, pioIoSystem, ncid, 'PCT_PFT', 0, dim_idx, vec_row_indices, pctpft3d_i)
 
        call PIO_closefile(ncid)
        call PIO_finalize(pioIoSystem, ierr)
@@ -214,6 +215,7 @@ contains
 
        deallocate(pctpft3d_i)
        deallocate(pctpft1d_i)
+       deallocate(vec_row_indices)
 
     end if
 

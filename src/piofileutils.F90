@@ -357,7 +357,7 @@ contains
   end subroutine read_float_or_double_2d
 
   !-----------------------------------------------------------------------
-  subroutine read_float_or_double_3d(domain, pioIoSystem, ncid, varname, start_id_for_dim3, dim_idx, data3d)
+  subroutine read_float_or_double_3d(domain, pioIoSystem, ncid, varname, start_id_for_dim3, dim_idx, vec_row_indices, data3d)
 
     use mkdomainPIOMod
     use pio
@@ -370,6 +370,7 @@ contains
     character(len=*)      , intent(in)           :: varname
     integer                                      :: start_id_for_dim3
     integer               , intent(out)          :: dim_idx(3,2)
+    integer               , pointer, intent(out) :: vec_row_indices(:)
     real(r8)              , pointer, intent(out) :: data3d(:,:,:)
     !
     type(var_desc_t)                             :: varid
@@ -420,12 +421,16 @@ contains
 
     allocate(compdof(numi * numj * numk))
 
+    allocate(vec_row_indices(numi * numj))
     count = 0;
     do k = 1, numk
        do j = 1, numj
           do i = 1, numi
              count = count + 1
              compdof(count) = (domain%begi - 1) + i + (j-1)*dim_glb(1) + (k-1)*dim_glb(1)*dim_glb(2)
+             if (k == 1) then
+                vec_row_indices(count) = compdof(count) - 1
+             end if
           end do
        end do
     end do
