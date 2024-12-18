@@ -297,10 +297,8 @@ program mksurfdat_petsc
 
   ! Make agricultural fire peak month data [abm] from [abm]
 
-  call mkagfirepkmon (ldomain, mapfname=map_fabm, datfname=mksrf_fabm, &
+  call mkagfirepkmon_pio (ldomain_pio, mapfname=map_fabm, datfname=mksrf_fabm, &
        ndiag=ndiag, agfirepkmon_o=agfirepkmon)
-  !TODO: call mkagfirepkmon_pio (ldomain_pio, mapfname=map_fabm, datfname=mksrf_fabm, &
-  !     ndiag=ndiag, agfirepkmon_o=agfirepkmon)
 
   ! Make urban fraction [pcturb] from [furban] dataset
 

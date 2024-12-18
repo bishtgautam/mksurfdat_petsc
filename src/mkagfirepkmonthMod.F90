@@ -23,6 +23,7 @@ module mkagfirepkmonthMod
 ! !PUBLIC MEMBER FUNCTIONS:
 !
   public mkagfirepkmon        ! Set agricultural fire peak month
+  public mkagfirepkmon_pio    ! PIO-version of set agricultural fire peak month
 !
 ! !PRIVATE MEMBER FUNCTIONS:
   private define_months       ! define month strings
@@ -256,5 +257,63 @@ subroutine define_months(nagfirepkmon, month)
 end subroutine define_months
 !-----------------------------------------------------------------------
 
+subroutine mkagfirepkmon_pio(ldomain_pio, mapfname, datfname, ndiag, &
+     agfirepkmon_o)
+  !
+  ! !DESCRIPTION:
+  ! Make agricultural fire peak month data from higher resolution data
+  !
+  ! !USES:
+  use mkdomainPIOMod, only : domain_pio_type, domain_read_pio, domain_clean_pio
+  use mkgridmapMod
+  use mkindexmapMod, only : get_dominant_indices
+  use mkvarpar, only : re
+  use mkncdio
+  use mkchecksMod, only : min_bad, max_bad
+  use mkdataPIOMod
+  !
+  ! !ARGUMENTS:
+  implicit none
+  type(domain_pio_type) , intent(inout) :: ldomain_pio
+  character(len=*)  , intent(in) :: mapfname           ! input mapping file name
+  character(len=*)  , intent(in) :: datfname           ! input data file name
+  integer           , intent(in) :: ndiag              ! unit number for diag out
+  integer           , intent(out):: agfirepkmon_o(:)   ! agricultural fire peak month
+  !
+  ! !CALLED FROM:
+  ! subroutine mksrfdat in module mksrfdatMod
+  !
+  ! !REVISION HISTORY:
+  ! Author: Sam Levis and Bill Sacks
+  !
+  !
+  ! !LOCAL VARIABLES:
+  !EOP
+  integer, parameter :: miss   = unsetmon   ! missing data indicator
+  integer, parameter :: min_valid = 1       ! minimum valid value
+  integer, parameter :: max_valid = 13      ! maximum valid value
+  !-----------------------------------------------------------------------
+
+  write (6,*) 'Attempting to make agricultural fire peak month data .....'
+  call shr_sys_flush(6)
+  write(*,*)'mapfname:' ,trim(mapfname)
+  write(*,*)'datfname:' ,trim(datfname)
+
+  call mkdata_dominant_int_2d_pio(ldomain_pio, mapfname=mapfname, datfname=datfname, varname='abm', &
+       data_descrip='agfirepkmon', ndiag=ndiag, zero_out=.false., nodata_value=0, &
+       max_value = max_valid, data_o=agfirepkmon_o)
+
+  ! Check validity of output data
+  if (min_bad(agfirepkmon_o, min_valid, 'agfirepkmon') .or. &
+      max_bad(agfirepkmon_o, max_valid, 'agfirepkmon')) then
+     stop
+  end if
+
+  write (6,*) 'Successfully made Agricultural fire peak month'
+  write (6,*)
+  call shr_sys_flush(6)
+
+end subroutine mkagfirepkmon_pio
+!-----------------------------------------------------------------------
 
 end module mkagfirepkmonthMod
