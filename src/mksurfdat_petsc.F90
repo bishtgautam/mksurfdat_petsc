@@ -304,12 +304,9 @@ program mksurfdat_petsc
 
   ! Make urban fraction [pcturb] from [furban] dataset
 
-  call mkurban (ldomain, mapfname=map_furban, datfname=mksrf_furban, &
+  call mkurban_pio (ldomain_pio, mapfname=map_furban, datfname=mksrf_furban, &
        ndiag=ndiag, zero_out=all_veg, urbn_o=pcturb, urbn_classes_o=urbn_classes, &
        region_o=urban_region)
-  !TODO: call mkurban_pio (ldomain_pio, mapfname=map_furban, datfname=mksrf_furban, &
-  !     ndiag=ndiag, zero_out=all_veg, urbn_o=pcturb, urbn_classes_o=urbn_classes, &
-  !     region_o=urban_region)
 
   if ( .not. all_urban .and. .not. all_veg )then
      call mkelev_pio (ldomain_pio, mapfname=map_furbtopo, datfname=mksrf_furbtopo, &

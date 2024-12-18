@@ -341,8 +341,8 @@ contains
     integer, parameter                           :: min_value = 1
     type(file_desc_t)                            :: ncid
     type(iosystem_desc_t)                        :: pioIoSystem
-    real(r8) , pointer                           :: data2d_i(:,:)
-    real(r8) , pointer                           :: data1d_i(:)
+    integer , pointer                            :: data2d_i(:,:)
+    integer , pointer                            :: data1d_i(:)
     integer                                      :: dim_idx(2,2)
     integer                                      :: i, j, count
     integer  , pointer                           :: vec_row_indices(:)
@@ -367,7 +367,7 @@ contains
        call OpenFilePIO(datfname, pioIoSystem, ncid, PIO_NOWRITE)
 
        ! Read the variable
-       call read_float_or_double_2d(tdomain_pio, pioIoSystem, ncid, varname, dim_idx, vec_row_indices, data2d_i)
+       call read_integer_2d(tdomain_pio, pioIoSystem, ncid, varname, dim_idx, vec_row_indices, data2d_i)
 
        call PIO_closefile(ncid)
        call PIO_finalize(pioIoSystem, ierr)
@@ -387,7 +387,7 @@ contains
        end do
 
        ! Determine data_o on output grid
-       call gridmap_dominant_value_pio(tgridmap_pio, data1d_i(:), min_value, max_value, nodata_value, data_o)
+       call gridmap_dominant_value_pio(tgridmap_pio, vec_row_indices, data1d_i(:), min_value, max_value, nodata_value, data_o)
 
     else
        data_o(:) = 0._r8

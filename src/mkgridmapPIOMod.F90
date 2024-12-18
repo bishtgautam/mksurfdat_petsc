@@ -489,20 +489,22 @@ contains
   end subroutine gridmap_areaave_srcmask_pio
 
   !------------------------------------------------------------------------------
-  subroutine gridmap_dominant_value_pio(gridmap_pio, src_array, minval_int, maxval_int, nodata, dst_array)
+  subroutine gridmap_dominant_value_pio(gridmap_pio, row_indices, src_array, minval_int, maxval_int, nodata, dst_array)
 
     implicit none
 
-    type(gridmap_pio_type) , intent(in)  :: gridmap_pio
-    real(r8)               , intent(in)  :: src_array(:)
-    integer                , intent(in)  :: minval_int
-    integer                , intent(in)  :: maxval_int
-    integer                , intent(in)  :: nodata               ! value to apply where there are no input data
-    integer                , intent(out) :: dst_array(:)
+    type(gridmap_pio_type)           , intent(in)  :: gridmap_pio
+    integer                , pointer , intent(in)  :: row_indices(:)
+    integer                          , intent(in)  :: src_array(:)
+    integer                          , intent(in)  :: minval_int
+    integer                          , intent(in)  :: maxval_int
+    integer                          , intent(in)  :: nodata               ! value to apply where there are no input data
+    integer                          , intent(out) :: dst_array(:)
 
     integer                              :: ni, no, idx, ival
-    PetscReal              , pointer     :: src_p(:), dst_p(:)
+    PetscReal              , pointer     :: dst_p(:)
     real(r8)               , pointer     :: max_wts(:)
+    real(r8)               , pointer     :: src_values(:)
     PetscErrorCode                       :: ierr
     character(*)           , parameter   :: subName = '(gridmap_domainant_value_pio) '
 
@@ -511,21 +513,24 @@ contains
 
     ! allocate memory to save the maximum wt
     allocate(max_wts(gridmap_pio%dim_nb%nloc))
+    allocate(src_values(gridmap_pio%dim_na%nloc))
+
     max_wts(:) = 0._r8
     dst_array(:) = nodata
 
     do ival = minval_int, maxval_int
 
        ! fill the value only for the cells that have values corresponding to 'ival'
-       PetscCallA(VecGetArrayF90(gridmap_pio%src_vec, src_p, ierr))
        do ni = 1, gridmap_pio%dim_na%nloc
           if (src_array(ni) == ival) then
-             src_p(ni) = 1._r8
+             src_values(ni) = 1._r8
           else
-             src_p(ni) = 0._r8
+             src_values(ni) = 0._r8
           end if
        end do
-       PetscCallA(VecRestoreArrayF90(gridmap_pio%src_vec, src_p, ierr))
+       PetscCallA(VecSetValues(gridmap_pio%src_vec, gridmap_pio%dim_na%nloc, row_indices, src_values, INSERT_VALUES, ierr))
+       PetscCallA(VecAssemblyBegin(gridmap_pio%src_vec, ierr))
+       PetscCallA(VecAssemblyEnd(gridmap_pio%src_vec, ierr))
 
        ! do matrix-vec multiplication
        PetscCallA(MatMult(gridmap_pio%map_frac_mat, gridmap_pio%src_vec, gridmap_pio%dst_vec, ierr))
@@ -552,6 +557,7 @@ contains
 
     ! free up memory
     deallocate(max_wts)
+    deallocate(src_values)
 
   end subroutine gridmap_dominant_value_pio
 
