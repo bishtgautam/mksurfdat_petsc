@@ -273,7 +273,7 @@ subroutine mklakwat_pio(ldomain_pio, mapfname, datfname, ndiag, zero_out, lake_o
   integer               :: ierr
   integer               :: dim_idx(2,2)
   integer               :: i, j, count
-
+  integer  , pointer    :: vec_row_indices(:)
   !-----------------------------------------------------------------------
 
   write (6,*) 'Attempting to make %lake and %wetland .....'
@@ -295,7 +295,7 @@ subroutine mklakwat_pio(ldomain_pio, mapfname, datfname, ndiag, zero_out, lake_o
      call OpenFilePIO(datfname, pioIoSystem, ncid, PIO_NOWRITE)
 
      ! Read the variable
-     call read_float_or_double_2d(tdomain_pio, pioIoSystem, ncid, 'PCT_LAKE', dim_idx, lake2d_i)
+     call read_float_or_double_2d(tdomain_pio, pioIoSystem, ncid, 'PCT_LAKE', dim_idx, vec_row_indices, lake2d_i)
 
      call PIO_closefile(ncid)
      call PIO_finalize(pioIoSystem, ierr)
@@ -337,6 +337,7 @@ subroutine mklakwat_pio(ldomain_pio, mapfname, datfname, ndiag, zero_out, lake_o
      call gridmap_clean_pio(tgridmap_pio)
      deallocate (lake2d_i)
      deallocate (lake1d_i)
+     deallocate (vec_row_indices)
   end if
 
   write (6,*) 'Successfully made %lake'
@@ -591,6 +592,7 @@ subroutine mkwetlnd_pio(ldomain_pio, mapfname, datfname, ndiag, zero_out, swmp_o
   integer               :: ierr
   integer               :: dim_idx(2,2)
   integer               :: i, j, count
+  integer  , pointer    :: vec_row_indices(:)
   !-----------------------------------------------------------------------
 
   write (6,*) 'Attempting to make %wetland .....'
@@ -615,7 +617,7 @@ subroutine mkwetlnd_pio(ldomain_pio, mapfname, datfname, ndiag, zero_out, swmp_o
      call OpenFilePIO(datfname, pioIoSystem, ncid, PIO_NOWRITE)
 
      ! Read the variable
-     call read_float_or_double_2d(tdomain_pio, pioIoSystem, ncid, 'PCT_WETLAND', dim_idx, swmp2d_i)
+     call read_float_or_double_2d(tdomain_pio, pioIoSystem, ncid, 'PCT_WETLAND', dim_idx, vec_row_indices, swmp2d_i)
 
      call PIO_closefile(ncid)
      call PIO_finalize(pioIoSystem, ierr)
@@ -665,6 +667,7 @@ subroutine mkwetlnd_pio(ldomain_pio, mapfname, datfname, ndiag, zero_out, swmp_o
      call gridmap_clean_pio(tgridmap_pio)
      deallocate (swmp2d_i)
      deallocate (swmp1d_i)
+     deallocate (vec_row_indices)
   end if
 
   write (6,*) 'Successfully made %wetland'

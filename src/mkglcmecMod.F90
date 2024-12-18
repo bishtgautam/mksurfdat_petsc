@@ -729,7 +729,8 @@ subroutine mkglacier_pio(ldomain_pio, mapfname, datfname, ndiag, zero_out, glac_
   integer               :: ierr
   integer               :: dim_idx(2,2)
   integer               :: i, j, count
-!-----------------------------------------------------------------------
+  integer  , pointer    :: vec_row_indices(:)
+  !-----------------------------------------------------------------------
 
   write (6,*) 'Attempting to make %glacier .....'
   call shr_sys_flush(6)
@@ -756,7 +757,7 @@ subroutine mkglacier_pio(ldomain_pio, mapfname, datfname, ndiag, zero_out, glac_
      call OpenFilePIO(datfname, pioIoSystem, ncid, PIO_NOWRITE)
 
      ! Read the variable
-     call read_float_or_double_2d(tdomain_pio, pioIoSystem, ncid, 'PCT_GLACIER', dim_idx, glac2d_i)
+     call read_float_or_double_2d(tdomain_pio, pioIoSystem, ncid, 'PCT_GLACIER', dim_idx, vec_row_indices, glac2d_i)
 
      call PIO_closefile(ncid)
      call PIO_finalize(pioIoSystem, ierr)
@@ -793,6 +794,7 @@ subroutine mkglacier_pio(ldomain_pio, mapfname, datfname, ndiag, zero_out, glac_
      call gridmap_clean_pio(tgridmap_pio)
      deallocate (glac1d_i)
      deallocate (glac2d_i)
+     deallocate (vec_row_indices)
   end if
 
   write (6,*) 'Successfully made %glacier'

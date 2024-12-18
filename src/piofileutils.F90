@@ -271,7 +271,7 @@ contains
   end subroutine DefineVarPIO_4d
 
   !-----------------------------------------------------------------------
-  subroutine read_float_or_double_2d(domain, pioIoSystem, ncid, varname, dim_idx, data2d)
+  subroutine read_float_or_double_2d(domain, pioIoSystem, ncid, varname, dim_idx, vec_row_indices, data2d)
 
     use mkdomainPIOMod
     use pio
@@ -283,6 +283,7 @@ contains
     type(file_desc_t)     , intent(in)           :: ncid
     character(len=*)      , intent(in)           :: varname
     integer               , intent(out)          :: dim_idx(2,2)
+    integer               , pointer, intent(out) :: vec_row_indices(:)
     real(r8)              , pointer, intent(out) :: data2d(:,:)
     !
     type(var_desc_t)                             :: varid
@@ -328,12 +329,14 @@ contains
     numj = domain%endj - domain%begj + 1
 
     allocate(compdof(numi * numj))
+    allocate(vec_row_indices(numi * numj))
 
     count = 0;
     do j = 1, numj
        do i = 1, numi
           count = count + 1
           compdof(count) = (domain%begi - 1) + i + (j-1)*dim_glb(1)
+          vec_row_indices(count) = compdof(count) - 1
        end do
     end do
 

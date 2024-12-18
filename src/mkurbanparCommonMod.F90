@@ -393,6 +393,7 @@ subroutine mkelev_pio(ldomain_pio, mapfname, datfname, varname, ndiag, elev_o)
   character(len=256) :: name                  ! name of attribute
   character(len=256) :: unit                  ! units of attribute  
   character(len= 32) :: subname = 'mkelev_pi'
+  integer  , pointer :: vec_row_indices(:)
   !-----------------------------------------------------------------------
 
   write (6,*) 'Attempting to make elevation .....'
@@ -409,7 +410,7 @@ subroutine mkelev_pio(ldomain_pio, mapfname, datfname, varname, ndiag, elev_o)
   call OpenFilePIO(datfname, pioIoSystem, ncid, PIO_NOWRITE)
 
   ! Read the variable
-  call read_float_or_double_2d(tdomain_pio, pioIoSystem, ncid, varname, dim_idx, elev2d_i)
+  call read_float_or_double_2d(tdomain_pio, pioIoSystem, ncid, varname, dim_idx, vec_row_indices, elev2d_i)
 
   call PIO_closefile(ncid)
   call PIO_finalize(pioIoSystem, ierr)
@@ -442,6 +443,7 @@ subroutine mkelev_pio(ldomain_pio, mapfname, datfname, varname, ndiag, elev_o)
   call gridmap_clean_pio(tgridmap_pio)
   deallocate (elev2d_i)
   deallocate (elev1d_i)
+  deallocate (vec_row_indices)
 
   write (6,*) 'Successfully made elevation'
   write (6,*)

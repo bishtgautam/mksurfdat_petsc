@@ -58,6 +58,7 @@ contains
     logical                                      :: min_valid_specified
     logical                                      :: max_valid_specified
     integer                                      :: i, j, count
+    integer  , pointer                           :: vec_row_indices(:)
 
     !-----------------------------------------------------------------------
 
@@ -88,7 +89,7 @@ contains
        call OpenFilePIO(datfname, pioIoSystem, ncid, PIO_NOWRITE)
 
        ! Read the variable
-       call read_float_or_double_2d(tdomain_pio, pioIoSystem, ncid, varname, dim_idx, data2d_i)
+       call read_float_or_double_2d(tdomain_pio, pioIoSystem, ncid, varname, dim_idx, vec_row_indices, data2d_i)
 
        call PIO_closefile(ncid)
        call PIO_finalize(pioIoSystem, ierr)
@@ -144,6 +145,7 @@ contains
        call gridmap_clean_pio(tgridmap_pio)
        deallocate (data2d_i)
        deallocate (data1d_i)
+       deallocate (vec_row_indices)
     end if
 
     write (6,*) 'Successfully made ' // trim(data_descrip)
@@ -344,6 +346,7 @@ contains
     real(r8) , pointer                           :: data1d_i(:)
     integer                                      :: dim_idx(2,2)
     integer                                      :: i, j, count
+    integer  , pointer                           :: vec_row_indices(:)
     !-----------------------------------------------------------------------
 
     write (6,*) 'Attempting to make ' // trim(data_descrip) // ' .....'
@@ -365,7 +368,7 @@ contains
        call OpenFilePIO(datfname, pioIoSystem, ncid, PIO_NOWRITE)
 
        ! Read the variable
-       call read_float_or_double_2d(tdomain_pio, pioIoSystem, ncid, varname, dim_idx, data2d_i)
+       call read_float_or_double_2d(tdomain_pio, pioIoSystem, ncid, varname, dim_idx, vec_row_indices, data2d_i)
 
        call PIO_closefile(ncid)
        call PIO_finalize(pioIoSystem, ierr)
@@ -399,6 +402,7 @@ contains
        call gridmap_clean_pio(tgridmap_pio)
        deallocate (data2d_i)
        deallocate (data1d_i)
+       deallocate (vec_row_indices)
     end if
 
     write (6,*) 'Successfully made ' // trim(data_descrip)
