@@ -239,7 +239,7 @@ program mksurfdat_petsc
   end if
 
   ! allocate memory for all variables
-  call allocate_memory(ldomain)
+  call allocate_memory(ldomain_pio%ns_loc)
 
   ! ----------------------------------------------------------------------
   ! Make surface dataset fields
@@ -595,6 +595,8 @@ contains
     call mpi_bcast(map_fslp10        , len(map_fslp10)        , MPI_CHARACTER, 0, PETSC_COMM_WORLD, ier) 
     call mpi_bcast(map_fero          , len(map_fero)          , MPI_CHARACTER, 0, PETSC_COMM_WORLD, ier) 
 
+    call mpi_bcast(fsurdat           , len(fsurdat)           , MPI_CHARACTER, 0, PETSC_COMM_WORLD, ier)
+
     call mpi_bcast(nglcec            , 1                      , MPI_INT      , 0, PETSC_COMM_WORLD, ier)
     call mpi_bcast(numpft            , 1                      , MPI_INT      , 0, PETSC_COMM_WORLD, ier)
     call mpi_bcast(soil_color        , 1                      , MPI_INT      , 0, PETSC_COMM_WORLD, ier)
@@ -619,15 +621,11 @@ contains
   end subroutine check_namelist_variable
 
   !-----------------------------------------------------------------------
-  subroutine allocate_memory(ldomain)
+  subroutine allocate_memory(ns_o)
 
     implicit none
 
-    type(domain_type) :: ldomain
-
-    integer :: ns_o
-
-    ns_o = ldomain%ns
+    integer, intent (in) :: ns_o
 
     allocate ( landfrac_pft(ns_o)                  , &
          pctlnd_pft(ns_o)                    , &
