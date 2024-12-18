@@ -164,14 +164,7 @@ contains
     integer :: n       ! generic loop indicies
     integer :: na      ! size of source domain
     integer :: nb      ! size of destination domain
-    integer :: igrow   ! aVect index for matrix row
-    integer :: igcol   ! aVect index for matrix column
-    integer :: iwgt    ! aVect index for matrix element
-    integer :: iarea   ! aVect index for area
 
-
-    character,allocatable :: str(:)  ! variable length char string
-    character(len=256)    :: attstr  ! netCDF attribute name string
     integer               :: rcode   ! netCDF routine return code
     integer               :: fid     ! netCDF file      ID
     integer               :: vid     ! netCDF variable  ID
@@ -475,9 +468,8 @@ contains
 !   Created by Mariana Vertenstein
 !
 ! !LOCAL VARIABLES:
-    integer :: n,ns,ni,no
-    real(r8):: wt,frac
-    real(r8), allocatable :: sum_weights(:)      ! sum of weights on the output grid
+    integer :: ni,no
+    real(r8):: frac
     character(*),parameter :: subName = '(gridmap_areaave_default) '
     PetscReal, pointer :: src_p(:), dst_p(:)
     PetscErrorCode :: ierr
@@ -485,28 +477,6 @@ contains
 !------------------------------------------------------------------------------
     call gridmap_checkifset( gridmap, subname )
 
-#if 0
-    allocate(sum_weights(size(dst_array)))
-    sum_weights = 0._r8
-    dst_array = 0._r8
-
-    do n = 1,gridmap%ns
-       ni = gridmap%src_indx(n)
-       no = gridmap%dst_indx(n)
-       wt = gridmap%wovr(n)
-       frac = gridmap%frac_dst(no)
-       if (frac > 0.) then  
-          dst_array(no) = dst_array(no) + wt * src_array(ni)/frac
-          sum_weights(no) = sum_weights(no) + wt
-       end if
-    end do
-
-    where (sum_weights == 0._r8)
-       dst_array = nodata
-    end where
-
-    deallocate(sum_weights)
-#endif
 
     PetscCallA(VecGetArrayF90(gridmap%src_vec, src_p, ierr))
     do ni = 1, gridmap%na
@@ -552,9 +522,8 @@ contains
 !   Created by Mariana Vertenstein
 !
 ! !LOCAL VARIABLES:
-    integer :: n,ns,ni,no
+    integer :: n,ni,no
     real(r8):: wt
-    real(r8), allocatable :: wtnorm(:)
     character(*),parameter :: subName = '(gridmap_areaave_srcmask) '
     PetscReal, pointer :: src_p(:), dst_p(:), vec_p(:), wtnorm_p(:)
     Vec                :: ones_vec, wtnorm_vec
@@ -564,38 +533,6 @@ contains
     !------------------------------------------------------------------------------
 
     call gridmap_checkifset( gridmap, subname )
-
-#if 0
-    ns = size(dst_array)
-    allocate(wtnorm(ns)) 
-    wtnorm(:) = 0._r8
-
-    do n = 1,gridmap%ns
-       ni = gridmap%src_indx(n)
-       no = gridmap%dst_indx(n)
-       wt = gridmap%wovr(n)
-       if (mask_src(ni) > 0) then
-          wtnorm(no) = wtnorm(no) + wt*mask_src(ni)
-       end if
-    end do
-
-    dst_array = 0._r8
-    do n = 1,gridmap%ns
-       ni = gridmap%src_indx(n)
-       no = gridmap%dst_indx(n)
-       wt = gridmap%wovr(n)
-       if (mask_src(ni) > 0) then 
-          dst_array(no) = dst_array(no) + wt*mask_src(ni)*src_array(ni)/wtnorm(no)
-       end if
-    end do
-
-    where (wtnorm == 0._r8)
-       dst_array = nodata
-    end where
-
-    deallocate(wtnorm)
-
-#endif
 
     ! Create a temporary matrix and two temporary vectors
     PetscCallA(MatDuplicate(gridmap%map_mat, MAT_SHARE_NONZERO_PATTERN, new_wt_mat, ierr))

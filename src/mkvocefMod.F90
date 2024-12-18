@@ -43,7 +43,7 @@ subroutine mkvocef(ldomain, mapfname, datfname, ndiag, &
 ! !USES:
   use mkdomainMod, only : domain_type, domain_clean, domain_read
   use mkgridmapMod
-  use mkvarpar	
+  use mkvarpar
   use mkvarctl    
   use mkncdio
 !
@@ -80,8 +80,8 @@ subroutine mkvocef(ldomain, mapfname, datfname, ndiag, &
   real(r8), allocatable :: ef_crp_i(:)      ! input grid: EFs for crops
   real(r8) :: sum_fldo                      ! global sum of dummy input fld
   real(r8) :: sum_fldi                      ! global sum of dummy input fld
-  integer  :: k,n,no,ni,ns_o,ns_i           ! indices
-  integer  :: ncid,dimid,varid              ! input netCDF id's
+  integer  :: no,ni,ns_o,ns_i               ! indices
+  integer  :: ncid,varid                    ! input netCDF id's
   integer  :: ier                           ! error status
   real(r8) :: relerr = 0.00001_r8           ! max error: sum overlap wts ne 1
   character(len=32) :: subname = 'mkvocef'

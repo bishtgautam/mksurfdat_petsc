@@ -233,7 +233,7 @@ subroutine mkharvest(ldomain, mapfname, datfname, ndiag, harv_o)
 ! !USES:
   use mkdomainMod, only : domain_type, domain_clean, domain_read
   use mkgridmapMod
-  use mkvarpar	
+  use mkvarpar
   use mkvarctl    
   use mkncdio
 !
@@ -257,13 +257,12 @@ subroutine mkharvest(ldomain, mapfname, datfname, ndiag, harv_o)
   type(gridmap_type)    :: tgridmap
   type(domain_type)     :: tdomain            ! local domain
   real(r8), allocatable :: harv_i(:,:)        ! input grid: harvest/grazing percent
-  real(r8), allocatable :: pctlnd_o(:)        ! output grid: percent land 
   real(r8) :: gharv_o(numharv)                ! output grid: global area harvesting
   real(r8) :: garea_o                         ! output grid: global area
   real(r8) :: gharv_i(numharv)                ! input grid: global area harvesting
   real(r8) :: garea_i                         ! input grid: global area
   integer  :: ifld                            ! indices
-  integer  :: k,n,m,ni,no,ns_i,ns_o           ! indices
+  integer  :: k,m,ni,no,ns_i,ns_o           ! indices
   integer  :: ncid,varid                      ! input netCDF id's
   integer  :: ier                             ! error status
 
@@ -387,6 +386,8 @@ subroutine mkharvest(ldomain, mapfname, datfname, ndiag, harv_o)
             call abort()
         end if
      end do
+
+     ns_o = ldomain%ns
      do no = 1,ns_o
         do m = 1, numharv
            harv_o(no,m) = oride_harv(m)

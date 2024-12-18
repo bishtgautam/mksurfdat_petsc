@@ -157,7 +157,6 @@ subroutine mkpeat_pio(ldomain_pio, mapfname, datfname, ndiag, peat_o)
   real(r8), parameter :: nodata_value = 0._r8
   real(r8), parameter :: min_valid = 0._r8          ! minimum valid value
   real(r8), parameter :: max_valid = 100.000001_r8  ! maximum valid value
-  character(len=32) :: subname = 'mkpeat_pio'
 
   !-----------------------------------------------------------------------
 

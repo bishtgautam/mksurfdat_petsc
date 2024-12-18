@@ -50,7 +50,7 @@ subroutine mklakwat(ldomain, mapfname, datfname, ndiag, zero_out, lake_o)
 ! !USES:
   use mkdomainMod, only : domain_type, domain_clean, domain_read
   use mkgridmapMod
-  use mkvarpar	
+  use mkvarpar
   use mkvarctl    
   use mkncdio
 !
@@ -82,8 +82,8 @@ subroutine mklakwat(ldomain, mapfname, datfname, ndiag, zero_out, lake_o)
   real(r8) :: garea_i                         ! input  grid: global area
   real(r8) :: glake_o                         ! output grid: global lake
   real(r8) :: garea_o                         ! output grid: global area
-  integer  :: ni,no,k,n,m,ns_i,ns_o           ! indices
-  integer  :: ncid,dimid,varid                ! input netCDF id's
+  integer  :: ni,no,k,ns_i,ns_o               ! indices
+  integer  :: ncid,varid                      ! input netCDF id's
   integer  :: ier                             ! error status
   real(r8) :: relerr = 0.00001                ! max error: sum overlap wts ne 1
   character(len=32) :: subname = 'mklakwat'
@@ -252,22 +252,11 @@ subroutine mklakwat_pio(ldomain_pio, mapfname, datfname, ndiag, zero_out, lake_o
   !
   type(gridmap_pio_type) :: tgridmap_pio
   type(domain_pio_type)    :: tdomain_pio            ! local domain
-  real(r8) :: sum_fldi                        ! global sum of dummy input fld
-  real(r8) :: sum_fldo                        ! global sum of dummy output fld
-  real(r8) :: glake_i                         ! input  grid: global lake
-  real(r8) :: garea_i                         ! input  grid: global area
-  real(r8) :: glake_o                         ! output grid: global lake
-  real(r8) :: garea_o                         ! output grid: global area
-  integer  :: ni,no,k,n,m
+  integer  :: no
   integer  :: ns_loc_i,ns_loc_o               !  indices
-  integer  :: dimid,varid                     ! input netCDF id's
-  integer  :: ier                             ! error status
-  real(r8) :: relerr = 0.00001                ! max error: sum overlap wts ne 1
-  character(len=32) :: subname = 'mklakwat'
 
   type(file_desc_t)     :: ncid
   type(iosystem_desc_t) :: pioIoSystem
-  type(io_desc_t)       :: iodescNCells
   real(r8) , pointer    :: lake2d_i(:,:)
   real(r8) , pointer    :: lake1d_i(:)
   integer               :: ierr
@@ -360,7 +349,7 @@ subroutine mkwetlnd(ldomain, mapfname, datfname, ndiag, zero_out, swmp_o)
 ! !USES:
   use mkdomainMod, only : domain_type, domain_clean, domain_read
   use mkgridmapMod
-  use mkvarpar	
+  use mkvarpar
   use mkvarctl    
   use mkncdio
 !
@@ -392,8 +381,8 @@ subroutine mkwetlnd(ldomain, mapfname, datfname, ndiag, zero_out, swmp_o)
   real(r8) :: garea_i                         ! input  grid: global area
   real(r8) :: gswmp_o                         ! output grid: global swamp
   real(r8) :: garea_o                         ! output grid: global area
-  integer  :: ni,no,k,n,m,ns_i,ns_o           ! indices
-  integer  :: ncid,dimid,varid                ! input netCDF id's
+  integer  :: ni,no,k,ns_i,ns_o               ! indices
+  integer  :: ncid,varid                      ! input netCDF id's
   integer  :: ier                             ! error status
   real(r8) :: relerr = 0.00001                ! max error: sum overlap wts ne 1
   character(len=32) :: subname = 'mkwetlnd'
@@ -570,23 +559,11 @@ subroutine mkwetlnd_pio(ldomain_pio, mapfname, datfname, ndiag, zero_out, swmp_o
   !EOP
   type(gridmap_pio_type)    :: tgridmap_pio
   type(domain_pio_type)    :: tdomain_pio            ! local domain
-  real(r8), allocatable :: swmp_i(:)          ! input grid: percent swamp
-  real(r8) :: sum_fldi                        ! global sum of dummy input fld
-  real(r8) :: sum_fldo                        ! global sum of dummy output fld
-  real(r8) :: gswmp_i                         ! input  grid: global swamp
-  real(r8) :: garea_i                         ! input  grid: global area
-  real(r8) :: gswmp_o                         ! output grid: global swamp
-  real(r8) :: garea_o                         ! output grid: global area
-  integer  :: ni,no,k
+  integer  :: no
   integer  :: ns_loc_i,ns_loc_o               ! indices
-  integer  :: dimid,varid                     ! input netCDF id's
-  integer  :: ier                             ! error status
-  real(r8) :: relerr = 0.00001                ! max error: sum overlap wts ne 1
-  character(len=32) :: subname = 'mkwetlnd_pio'
 
   type(file_desc_t)     :: ncid
   type(iosystem_desc_t) :: pioIoSystem
-  type(io_desc_t)       :: iodescNCells
   real(r8) , pointer    :: swmp2d_i(:,:)
   real(r8) , pointer    :: swmp1d_i(:)
   integer               :: ierr

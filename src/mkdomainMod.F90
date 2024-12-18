@@ -238,13 +238,11 @@ end subroutine domain_check
 ! !LOCAL VARIABLES:
 !EOP
     include 'netcdf.inc'
-    integer :: i,j,n                           ! indices
     integer :: grid_rank                       ! rank of domain grid 
     integer :: ns                              ! size of domain grid
     integer :: ncid                            ! netCDF file id
     integer :: dimid                           ! netCDF dimension id
     integer :: varid                           ! netCDF variable id
-    integer :: ndims                           ! number of dims for variable
     integer :: ier                             ! error status
     real(r8), allocatable :: xv(:,:)           ! local array for corner lons
     real(r8), allocatable :: yv(:,:)           ! local array for corner lats
@@ -362,11 +360,7 @@ end subroutine domain_check
 ! !LOCAL VARIABLES:
 !EOP
     include 'netcdf.inc'
-    integer :: i,j,n
-    real(r8), allocatable :: lon1d(:)          ! local array for 1d lon
-    real(r8), allocatable :: lat1d(:)          ! local array for 1d lat
-    real(r8), allocatable :: xv(:,:)           ! local array for corner lons
-    real(r8), allocatable :: yv(:,:)           ! local array for corner lats
+    integer :: n
     integer :: ncid                            ! netCDF file id
     integer :: varid                           ! netCDF variable id
     logical :: edgeNESWset                     ! local EDGE[NESW]
@@ -374,7 +368,6 @@ end subroutine domain_check
     logical :: llneswset                       ! local lat[ns],lon[we]
     logical :: landfracset                     ! local landfrac
     logical :: maskset                         ! local mask
-    integer :: ndims                           ! number of dims for variable
     integer :: ier                             ! error status
     logical :: lreadmask                       ! local readmask
     character(len= 32) :: lonvar               ! name of 2-d longitude variable
@@ -817,12 +810,10 @@ end subroutine domain_check
      integer :: n, ni                  ! indices
      real(r8), pointer :: xc_src(:)    ! Source longitude
      real(r8), pointer :: yc_src(:)    ! Source latitude
-     real(r8), pointer :: frac_src(:)  ! Source fraction
      integer,  pointer :: mask_src(:)  ! Source mask
      integer,  pointer :: src_indx(:)  ! Source index
      real(r8), pointer :: xc_dst(:)    ! Destination longitude
      real(r8), pointer :: yc_dst(:)    ! Destination latitude
-     real(r8), pointer :: frac_dst(:)  ! Destination fraction
      integer,  pointer :: mask_dst(:)  ! Destination mask
      integer,  pointer :: dst_indx(:)  ! Destination index
      character(len= 32) :: subname = 'domain_checksame'

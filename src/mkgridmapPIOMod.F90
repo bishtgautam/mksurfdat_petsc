@@ -406,8 +406,8 @@ contains
     real(r8)                         , intent(out) :: dst_array(:)
     real(r8)                         , intent(in)  :: nodata               ! value to apply where there are no input data
 
-    integer                              :: ni, no, idx
-    PetscReal              , pointer     :: src_p(:), dst_p(:)
+    integer                              :: no, idx
+    PetscReal              , pointer     :: dst_p(:)
     PetscErrorCode                       :: ierr
     character(*)           , parameter   :: subName = '(gridmap_areaave_default_pio) '
 
@@ -447,8 +447,8 @@ contains
     real(r8)                         , intent(in)  :: nodata               ! value to apply where there are no input data
     real(r8)                         , intent(in)  :: mask_src(:)
 
-    integer                              :: ni, no, idx
-    PetscReal              , pointer     :: src_p(:), dst_p(:), tmp_p(:)
+    integer                              :: no, idx
+    PetscReal              , pointer     :: dst_p(:), tmp_p(:)
     Vec                                  :: tmp_src_vec, tmp_dst_vec
     PetscErrorCode                       :: ierr
     character(*)           , parameter   :: subName = '(gridmap_areaave_srcmask_pio) '
@@ -500,7 +500,7 @@ contains
     integer                , intent(in)  :: nodata               ! value to apply where there are no input data
     integer                , intent(out) :: dst_array(:)
 
-    integer                              :: ni, no, idx, nval, ival
+    integer                              :: ni, no, idx, ival
     PetscReal              , pointer     :: src_p(:), dst_p(:)
     real(r8)               , pointer     :: max_wts(:)
     PetscErrorCode                       :: ierr

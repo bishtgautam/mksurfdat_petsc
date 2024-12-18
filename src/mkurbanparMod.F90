@@ -363,18 +363,10 @@ subroutine mkurban_pio(ldomain_pio, mapfname, datfname, ndiag, zero_out, &
    !
    ! !LOCAL VARIABLES:
    !EOP
-   real(r8), allocatable :: urbn_classes_gcell_i(:,:) ! input grid: percent urban in each density class
-                                                      ! (% of total grid cell area)
    real(r8), allocatable :: urbn_classes_gcell_o(:,:) ! output grid: percent urban in each density class
                                                       ! (% of total grid cell area)
-   integer , allocatable :: region_i(:)               ! input grid: region ID
-   real(r8), allocatable :: gar_i(:)                  ! input grid: global area of each urban region ID
-   real(r8), allocatable :: gar_o(:)                  ! output grid: global area of each urban region ID
-   integer  :: ni,no,ns_loc_o,k                             ! indices
-   integer  :: ncid,dimid,varid                       ! input netCDF id's
-   integer  :: dimlen                                 ! netCDF dimension length
+   integer  :: no,ns_loc_o                            ! indices
    integer  :: max_region                             ! maximum region index
-   integer  :: ier                                    ! error status
 
    character(len=*), parameter :: subname = 'mkurban'
 !-----------------------------------------------------------------------
@@ -603,7 +595,7 @@ subroutine mkurbanpar(datfname, ncido, region_o, urbn_classes_gcell_o)
    integer  :: nlevurb_i                         ! input  grid: number of urban vertical levels
    integer  :: numsolar_i                        ! input  grid: number of solar type (DIR/DIF)
    integer  :: numrad_i                          ! input  grid: number of solar bands (VIS/NIR)
-   integer  :: m,n,no,ns_o,p,k                   ! indices
+   integer  :: m,n,ns_o,p,k                      ! indices
    integer  :: ncidi,dimid,varid                 ! netCDF id's
    integer  :: ier                               ! error status
    character(len=nf_max_name) :: varname         ! variable name

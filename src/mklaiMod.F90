@@ -80,10 +80,6 @@ subroutine mklai(ldomain, mapfname, datfname, ndiag, ncido)
   real(r8), allocatable :: msai_o(:,:)      ! monthly sai
   real(r8), allocatable :: mhgtt_o(:,:)     ! monthly height (top)
   real(r8), allocatable :: mhgtb_o(:,:)     ! monthly height (bottom)
-  real(r8), allocatable :: mlai_max(:,:)    ! monthly lai
-  real(r8), allocatable :: msai_max(:,:)    ! monthly sai
-  real(r8), allocatable :: mhgtt_max(:,:)   ! monthly height (top)
-  real(r8), allocatable :: mhgtb_max(:,:)   ! monthly height (bottom)
   real(r8), allocatable :: mlai_i(:,:)      ! monthly lai in
   real(r8), allocatable :: msai_i(:,:)      ! monthly sai in
   real(r8), allocatable :: mhgtt_i(:,:)     ! monthly height (top) in
@@ -92,9 +88,8 @@ subroutine mklai(ldomain, mapfname, datfname, ndiag, ncido)
   integer,  pointer     :: laimask(:,:)     ! lai+sai output mask for each plant function type
   real(r8) :: garea_i                       ! input  grid: global area
   real(r8) :: garea_o                       ! output grid: global area
-  integer  :: mwts                          ! number of weights
   integer  :: ni,no,ns_i,ns_o               ! indices
-  integer  :: k,l,n,m                       ! indices
+  integer  :: k,l,m                         ! indices
   integer  :: ncidi,dimid,varid             ! input netCDF id's
   integer  :: ndimsi,ndimso                 ! netCDF dimension sizes 
   integer  :: dimids(4)                     ! netCDF dimension ids
@@ -102,9 +97,6 @@ subroutine mklai(ldomain, mapfname, datfname, ndiag, ncido)
   integer  :: begi(4),leni(4)               ! netCDF bounds 
   integer  :: ntim                          ! number of input time samples
   integer  :: ier                           ! error status
-  real(r8) :: relerr = 0.00001              ! max error: sum overlap wts ne 1
-  character(len=256) :: name                ! name of attribute
-  character(len=256) :: unit                ! units of attribute
   character(len= 32) :: subname = 'mklai'
 !-----------------------------------------------------------------------
 

@@ -85,7 +85,6 @@ subroutine mksoilInit( )
 !
 ! !LOCAL VARIABLES:
 !EOP
-  character(len=32) :: subname = 'mksoilInit'
 !-----------------------------------------------------------------------
   call mksoiltexInit()
   call mksoilcolInit()
@@ -156,7 +155,7 @@ subroutine mksoiltex(ldomain, mapfname, datfname, ndiag, sand_o, clay_o)
 ! !USES:
   use mkdomainMod, only : domain_type, domain_clean, domain_read
   use mkgridmapMod
-  use mkvarpar	
+  use mkvarpar
   use mkvarctl    
   use mkncdio
 !
@@ -310,7 +309,7 @@ subroutine mksoiltex(ldomain, mapfname, datfname, ndiag, sand_o, clay_o)
         no = tgridmap%dst_indx(n)
         wt = tgridmap%wovr(n)
         if (tgridmap%frac_src(ni) > 0) then
-           k = mapunit_i(ni) 
+           k = int(mapunit_i(ni))
         else
            k = 0
         end if
@@ -550,7 +549,7 @@ subroutine mksoiltex_pio(ldomain_pio, mapfname, datfname, ndiag, sand_o, clay_o)
   ! !USES:
   use mkdomainPIOMod, only : domain_pio_type, domain_read_pio, domain_clean_pio
   use mkgridmapMod
-  use mkvarpar	
+  use mkvarpar
   use mkvarctl    
   use mkncdio
   use pio
@@ -578,7 +577,6 @@ subroutine mksoiltex_pio(ldomain_pio, mapfname, datfname, ndiag, sand_o, clay_o)
   type(domain_pio_type) :: tdomain_pio     ! local domain
   character(len=38)  :: typ                 ! soil texture based on ...
   integer  :: nlay                          ! number of soil layers
-  integer  :: mapunitmax                    ! max value of igbp soil mapunits
   integer  :: mapunittemp                   ! temporary igbp soil mapunit
   integer  :: maxovr
   integer , allocatable :: novr(:)
@@ -602,9 +600,8 @@ subroutine mksoiltex_pio(ldomain_pio, mapfname, datfname, ndiag, sand_o, clay_o)
   real(r8) :: wt                            ! map overlap weight
   real(r8) :: sum_fldi                      ! global sum of dummy input fld
   real(r8) :: sum_fldo                      ! global sum of dummy output fld
-  integer  :: l,k,n,m,ni,no,ns_i,ns_loc_i,ns_loc_o       ! indices
+  integer  :: l,k,n,m,ni,no,ns_loc_i,ns_loc_o       ! indices
   integer  :: k1,k2                         ! indices
-  integer  :: dimid,varid              ! input netCDF id's
   integer  :: ier                           ! error status
   integer  :: miss = 99999                  ! missing data indicator
   real(r8) :: relerr = 0.00001              ! max error: sum overlap wts ne 1
@@ -616,12 +613,10 @@ subroutine mksoiltex_pio(ldomain_pio, mapfname, datfname, ndiag, sand_o, clay_o)
 
   type(file_desc_t)     :: ncid
   type(iosystem_desc_t) :: pioIoSystem
-  type(io_desc_t)       :: iodescNCells
-  integer               :: count, i, j, vartype, ierr
+  integer               :: count, i, j, ierr
   integer               :: dim_idx_3d(3,2)
   integer               :: dim_idx_2d(3,2)
-  character(len=32) :: subname = 'mksoiltex'
-!-----------------------------------------------------------------------
+  !-----------------------------------------------------------------------
 
   write (6,*) 'Attempting to make %sand and %clay .....'
   call shr_sys_flush(6)
@@ -662,6 +657,7 @@ subroutine mksoiltex_pio(ldomain_pio, mapfname, datfname, ndiag, sand_o, clay_o)
   ! Convert 2D vector to 1D vector
   ns_loc_i = (dim_idx_2d(1,2) - dim_idx_2d(1,1) + 1) * (dim_idx_2d(2,2) - dim_idx_2d(2,1) + 1)
 
+  nlay = dim_idx_3d(3,2)
   allocate(sand2d_i(ns_loc_i,nlay))
   allocate(clay2d_i(ns_loc_i,nlay))
   allocate(tmp1d_i(ns_loc_i))
@@ -671,8 +667,8 @@ subroutine mksoiltex_pio(ldomain_pio, mapfname, datfname, ndiag, sand_o, clay_o)
      do j = dim_idx_3d(2,1), dim_idx_3d(2,2)
         do i = dim_idx_3d(1,1), dim_idx_3d(1,2)
            count = count + 1
-           sand2d_i(count,m) = sand3d_i(i,j,m)
-           clay2d_i(count,m) = clay3d_i(i,j,m)
+           sand2d_i(count,l) = sand3d_i(i,j,l)
+           clay2d_i(count,l) = clay3d_i(i,j,l)
         end do
      end do
   end do
@@ -729,7 +725,7 @@ subroutine mksoiltex_pio(ldomain_pio, mapfname, datfname, ndiag, sand_o, clay_o)
         no = tgridmap%dst_indx(n)
         wt = tgridmap%wovr(n)
         if (tgridmap%frac_src(ni) > 0) then
-           k = mapunit1d_i(ni) 
+           k = int(mapunit1d_i(ni))
         else
            k = 0
         end if
@@ -821,7 +817,7 @@ subroutine mksoiltex_pio(ldomain_pio, mapfname, datfname, ndiag, sand_o, clay_o)
      ! Global sum of output field 
 
      sum_fldi = 0.0_r8
-     do ni = 1,ns_i
+     do ni = 1,ns_loc_i
         sum_fldi = sum_fldi + tgridmap%area_src(ni)*tgridmap%frac_src(ni)*re**2
      enddo
 
@@ -853,7 +849,7 @@ subroutine mksoiltex_pio(ldomain_pio, mapfname, datfname, ndiag, sand_o, clay_o)
 
      gast_i(:) = 0.
      do l = 1, nlay
-        do ni = 1,ns_i
+        do ni = 1,ns_loc_i
            mapunittemp = nint(mapunit1d_i(ni))
            if (mapunittemp==0) then
               typ = 'no soil: ocean, glacier, lake, no data'
@@ -977,8 +973,6 @@ subroutine mksoilcolInit( )
 !
 ! !LOCAL VARIABLES:
 !EOP
-  real(r8) :: sumtex
-  character(len=32) :: subname = 'mksoilcolInit'
 !-----------------------------------------------------------------------
 
   ! Error check soil_color if it is set
@@ -1008,7 +1002,7 @@ subroutine mksoilcol(ldomain, mapfname, datfname, ndiag, &
 ! !USES:
   use mkdomainMod, only : domain_type, domain_clean, domain_read
   use mkgridmapMod
-  use mkvarpar	
+  use mkvarpar
   use mkvarctl    
   use mkncdio
 !
@@ -1043,8 +1037,8 @@ subroutine mksoilcol(ldomain, mapfname, datfname, ndiag, &
   real(r8) :: sum_fldi                      ! global sum of dummy input fld
   real(r8) :: sum_fldo                      ! global sum of dummy output fld
   character(len=35), allocatable :: col(:)  ! name of each color
-  integer  :: k,l,n,m,ni,no,ns_i,ns_o       ! indices
-  integer  :: ncid,dimid,varid              ! input netCDF id's
+  integer  :: k,n,ni,no,ns_i,ns_o           ! indices
+  integer  :: ncid,varid                    ! input netCDF id's
   integer  :: ier                           ! error status
   integer  :: miss = 99999                  ! missing data indicator
   real(r8) :: relerr = 0.00001              ! max error: sum overlap wts ne 1
@@ -1289,7 +1283,7 @@ subroutine mksoilcol_pio(ldomain_pio, mapfname, datfname, ndiag, &
   use mkdomainPIOMod, only : domain_pio_type
   use mkdataPIOMod
   use mkgridmapMod
-  use mkvarpar	
+  use mkvarpar
   use mkvarctl    
   use mkncdio
   !
@@ -1348,8 +1342,6 @@ subroutine mksoilordInit( )
 !
 ! !LOCAL VARIABLES:
 !EOP
-  real(r8) :: sumtex
-  character(len=32) :: subname = 'mksoilordInit'
 !-----------------------------------------------------------------------
 
   ! Error check soil_order if it is set
@@ -1413,8 +1405,8 @@ subroutine mksoilord(ldomain, mapfname, datfname, ndiag, &
   real(r8) :: sum_fldi                      ! global sum of dummy input fld
   real(r8) :: sum_fldo                      ! global sum of dummy output fld
   character(len=35), allocatable :: ord(:)  ! name of each ord 
-  integer  :: k,l,n,m,ni,no,ns_i,ns_o       ! indices
-  integer  :: ncid,dimid,varid              ! input netCDF id's
+  integer  :: k,n,ni,no,ns_i,ns_o           ! indices
+  integer  :: ncid,varid                    ! input netCDF id's
   integer  :: ier                           ! error status
   integer  :: miss = 99999                  ! missing data indicator
   real(r8) :: relerr = 0.00001              ! max error: sum overlap wts ne 1
@@ -1676,7 +1668,7 @@ subroutine mkorganic(ldomain, mapfname, datfname, ndiag, organic_o)
 ! !USES:
   use mkdomainMod, only : domain_type, domain_clean, domain_read
   use mkgridmapMod
-  use mkvarpar	
+  use mkvarpar
   use mkvarctl    
   use mkncdio
 !
@@ -1701,18 +1693,11 @@ subroutine mkorganic(ldomain, mapfname, datfname, ndiag, organic_o)
   type(gridmap_type)    :: tgridmap
   type(domain_type)    :: tdomain         ! local domain
   real(r8), allocatable :: organic_i(:,:)  ! input grid: total column organic matter
-  real(r8) :: sum_fldi                     ! global sum of dummy input fld
-  real(r8) :: sum_fldo                     ! global sum of dummy output fld
-  real(r8) :: gomlev_i                     ! input  grid: global organic on lev
-  real(r8) :: garea_i                      ! input  grid: global area
-  real(r8) :: gomlev_o                     ! output grid: global organic on lev
-  real(r8) :: garea_o                      ! output grid: global area
-  integer  :: k,n,m,ni,no,ns_i             ! indices
+  integer  :: no,ns_i                      ! indices
   integer  :: lev                          ! level index
   integer  :: nlay                         ! number of soil layers
   integer  :: ncid,dimid,varid             ! input netCDF id's
   integer  :: ier                          ! error status
-  real(r8) :: relerr = 0.00001             ! max error: sum overlap wts ne 1
   character(len=32) :: subname = 'mkorganic'
 !-----------------------------------------------------------------------
 
@@ -1951,8 +1936,6 @@ subroutine mksoilfmaxInit( )
 !
 ! !LOCAL VARIABLES:
 !EOP
-  real(r8) :: sumtex
-  character(len=32) :: subname = 'mksoilfmaxInit'
 !-----------------------------------------------------------------------
 
   ! Error check soil_fmax if it is set
@@ -1980,8 +1963,8 @@ subroutine mkfmax(ldomain, mapfname, datfname, ndiag, fmax_o)
 ! !USES:
   use mkdomainMod, only : domain_type, domain_clean, domain_read
   use mkgridmapMod
-  use mkvarpar	
-  use mkvarctl    
+  use mkvarpar
+  use mkvarctl
   use mkncdio
 !
 ! !ARGUMENTS:
@@ -2011,8 +1994,8 @@ subroutine mkfmax(ldomain, mapfname, datfname, ndiag, fmax_o)
   real(r8) :: garea_i                      ! input  grid: global area
   real(r8) :: gfmax_o                      ! output grid: global fmax
   real(r8) :: garea_o                      ! output grid: global area
-  integer  :: k,n,m,ni,no,ns_i,ns_o        ! indices
-  integer  :: ncid,dimid,varid             ! input netCDF id's
+  integer  :: k,ni,no,ns_i,ns_o            ! indices
+  integer  :: ncid,varid                   ! input netCDF id's
   integer  :: ier                          ! error status
   real(r8) :: relerr = 0.00001             ! max error: sum overlap wts ne 1
   character(len=32) :: subname = 'mkfmax'
@@ -2223,7 +2206,7 @@ subroutine mksoilAtt( ncid, dynlanduse, xtype )
 ! !LOCAL VARIABLES:
 !EOP
   integer :: dimid                ! temporary
-  character(len=256) :: str       ! global attribute string
+  character(len=512) :: str       ! global attribute string
   character(len=32) :: subname = 'mksoilAtt'
 !-----------------------------------------------------------------------
 
@@ -2377,7 +2360,6 @@ subroutine mksoilAttPIO( ncid, dynlanduse, xtype, dim_id_gridcell, dim_id_lsmlon
   character(len=32)                 :: subname = 'mksoilAttPIO'
   type(var_desc_t)                  :: pioVar
   integer                           :: dim1d(1), dim2d(2), dim3d(3)
-  integer                           :: ier
 
   if (.not.dynlanduse) then
 

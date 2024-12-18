@@ -216,8 +216,6 @@ subroutine mkVICparams_pio(ldomain_pio, mapfname, datfname, ndiag, &
   real(r8), parameter :: min_valid_dsmax = 0._r8
   real(r8), parameter :: min_valid_ds    = 0._r8
 
-  character(len=32) :: subname = 'mkVICparams_pio'
-
   write (6,*) 'Attempting to make VIC parameters.....'
   call shr_sys_flush(6)
 

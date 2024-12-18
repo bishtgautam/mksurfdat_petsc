@@ -185,7 +185,7 @@ subroutine mkpft(ldomain, mapfname, fpft, ndiag, pctlnd_o, pctpft_o)
 ! !USES:
   use mkdomainMod, only : domain_type, domain_clean, domain_read
   use mkgridmapMod
-  use mkvarpar	
+  use mkvarpar
   use mkvarctl    
   use mkncdio
 !
@@ -211,18 +211,14 @@ subroutine mkpft(ldomain, mapfname, fpft, ndiag, pctlnd_o, pctpft_o)
   type(gridmap_type)    :: tgridmap           ! local gridmap
   real(r8), allocatable :: pctpft_i(:,:)      ! input grid: PFT percent
   integer  :: numpft_i                        ! num of plant types input data
-  real(r8) :: sum_fldo                        ! global sum of dummy output fld
-  real(r8) :: sum_fldi                        ! global sum of dummy input fld
-  real(r8) :: wst(0:numpft)                   ! as pft_o at specific no
   real(r8) :: wst_sum                         ! sum of %pft
   real(r8) :: gpft_o(0:numpft)                ! output grid: global area pfts
   real(r8) :: garea_o                         ! output grid: global area
   real(r8) :: gpft_i(0:numpft)                ! input grid: global area pfts
   real(r8) :: garea_i                         ! input grid: global area
-  integer  :: k,n,m,ni,no,ns_i,ns_o           ! indices
+  integer  :: k,m,ni,no,ns_i,ns_o             ! indices
   integer  :: ncid,dimid,varid                ! input netCDF id's
   integer  :: ier                             ! error status
-  real(r8) :: relerr = 0.00001                ! max error: sum overlap wts ne 1
 
   character(len=35)  veg(0:maxpft)            ! vegetation types
   character(len=32) :: subname = 'mkpft'
@@ -744,7 +740,7 @@ subroutine mkpftAtt( ncid, dynlanduse, xtype )
   integer :: pftsize              ! size of lsmpft dimension
   integer :: natpftsize           ! size of natpft dimension
   integer :: dimid                ! input netCDF id's
-  character(len=256) :: str       ! global attribute string
+  character(len=512) :: str       ! global attribute string
   character(len=32) :: subname = 'mkpftAtt'
 
   ! Define dimensions
@@ -967,11 +963,8 @@ subroutine mkpftAttPIO( ncid, dynlanduse, xtype, dim_id_gridcell, dim_id_lsmlon,
   integer           , intent(inout) :: dim_id_cft
 
   character(len=512)                :: str            ! global attribute string
-  character(len=512)                :: att_name, att_value
   character(len=32)                 :: subname = 'mkpftAttPIO'
-  type(var_desc_t)                  :: pioVar
   integer                           :: dim1d(1), dim2d(2), dim3d(3), dim4d(4)
-  integer                           :: ier
   integer :: pftsize              ! size of lsmpft dimension
   integer :: natpftsize           ! size of natpft dimension
 

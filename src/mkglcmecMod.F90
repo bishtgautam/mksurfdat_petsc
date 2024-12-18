@@ -153,7 +153,7 @@ subroutine mkglcmec(ldomain, mapfname, &
 ! !USES:
   use mkdomainMod, only : domain_type, domain_clean, domain_read
   use mkgridmapMod
-  use mkvarpar	
+  use mkvarpar
   use mkutilsMod, only : slightly_below, slightly_above
   use mkncdio
 !
@@ -495,7 +495,7 @@ subroutine mkglacier(ldomain, mapfname, datfname, ndiag, zero_out, glac_o)
 ! !USES:
   use mkdomainMod , only : domain_type, domain_clean, domain_read
   use mkgridmapMod
-  use mkvarpar	
+  use mkvarpar
   use mkvarctl    
   use mkncdio
 !
@@ -526,8 +526,8 @@ subroutine mkglacier(ldomain, mapfname, datfname, ndiag, zero_out, glac_o)
   real(r8) :: garea_i                         ! input  grid: global area
   real(r8) :: gglac_o                         ! output grid: global glac
   real(r8) :: garea_o                         ! output grid: global area
-  integer  :: ni,no,k,n,m,ns                  ! indices
-  integer  :: ncid,dimid,varid                ! input netCDF id's
+  integer  :: ni,no,k,ns                      ! indices
+  integer  :: ncid,varid                      ! input netCDF id's
   integer  :: ier                             ! error status
   real(r8) :: relerr = 0.00001                ! max error: sum overlap wts ne 1
   character(len=32) :: subname = 'mkglacier'
@@ -707,23 +707,11 @@ subroutine mkglacier_pio(ldomain_pio, mapfname, datfname, ndiag, zero_out, glac_
   !
   type(gridmap_pio_type):: tgridmap_pio
   type(domain_pio_type) :: tdomain_pio        ! local domain
-  real(r8), allocatable :: glac_i(:)          ! input grid: percent glac
-  real(r8)              :: sum_fldi           ! global sum of dummy input fld
-  real(r8)              :: sum_fldo           ! global sum of dummy output fld
-  real(r8)              :: gglac_i            ! input  grid: global glac
-  real(r8)              :: garea_i            ! input  grid: global area
-  real(r8)              :: gglac_o            ! output grid: global glac
-  real(r8)              :: garea_o            ! output grid: global area
-  integer               :: ni,no,k,n,m
+  integer               :: no
   integer               :: ns_loc_i, ns_loc_o ! indices
-  integer               :: dimid,varid        ! input netCDF id's
-  integer               :: ier                ! error status
-  real(r8)              :: relerr = 0.00001   ! max error: sum overlap wts ne 1
-  character(len=32)     :: subname = 'mkglacier_pio'
 
   type(file_desc_t)     :: ncid
   type(iosystem_desc_t) :: pioIoSystem
-  type(io_desc_t)       :: iodescNCells
   real(r8) , pointer    :: glac2d_i(:,:)
   real(r8) , pointer    :: glac1d_i(:)
   integer               :: ierr

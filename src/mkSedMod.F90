@@ -83,18 +83,11 @@ subroutine mkgrvl(ldomain, mapfname, datfname, ndiag, grvl_o)
   type(gridmap_type)    :: tgridmap
   type(domain_type)    :: tdomain         ! local domain
   real(r8), allocatable :: grvl_i(:,:)     ! input grid: total column gravel 
-  real(r8) :: sum_fldi                     ! global sum of dummy input fld
-  real(r8) :: sum_fldo                     ! global sum of dummy output fld
-  real(r8) :: gomlev_i                     ! input  grid: global gravel on lev
-  real(r8) :: garea_i                      ! input  grid: global area
-  real(r8) :: gomlev_o                     ! output grid: global gravel on lev
-  real(r8) :: garea_o                      ! output grid: global area
-  integer  :: k,n,m,ni,no,ns_i             ! indices
+  integer  :: no,ns_i                      ! indices
   integer  :: lev                          ! level index
   integer  :: nlay                         ! number of soil layers
   integer  :: ncid,dimid,varid             ! input netCDF id's
   integer  :: ier                          ! error status
-  real(r8) :: relerr = 0.00001             ! max error: sum overlap wts ne 1
   character(len=32) :: subname = 'mkgrvl'
 !-----------------------------------------------------------------------
 
@@ -247,18 +240,11 @@ subroutine mkslp10(ldomain, mapfname, datfname, ndiag, slp10_o)
   type(gridmap_type)    :: tgridmap
   type(domain_type)    :: tdomain         ! local domain
   real(r8), allocatable :: slp10_i(:,:)    ! input grid: total column slope
-  real(r8) :: sum_fldi                     ! global sum of dummy input fld
-  real(r8) :: sum_fldo                     ! global sum of dummy output fld
-  real(r8) :: gomlev_i                     ! input  grid: global slope on lev
-  real(r8) :: garea_i                      ! input  grid: global area
-  real(r8) :: gomlev_o                     ! output grid: global slope on lev
-  real(r8) :: garea_o                      ! output grid: global area
-  integer  :: k,n,m,ni,no,ns_i             ! indices
+  integer  :: no,ns_i             ! indices
   integer  :: lev                          ! level index
   integer  :: nlay                         ! number of slope percentile layers
   integer  :: ncid,dimid,varid             ! input netCDF id's
   integer  :: ier                          ! error status
-  real(r8) :: relerr = 0.00001             ! max error: sum overlap wts ne 1
   character(len=32) :: subname = 'mkslp10'
 !-----------------------------------------------------------------------
 
@@ -629,7 +615,7 @@ subroutine mksedAtt( ncid, dynlanduse, xtype )
 ! !LOCAL VARIABLES:
 !EOP
   integer :: dimid                ! temporary
-  character(len=256) :: str       ! global attribute string
+  character(len=512) :: str       ! global attribute string
   character(len=32) :: subname = 'mksedAtt'
 !-----------------------------------------------------------------------
 
@@ -762,11 +748,8 @@ subroutine mksedAttPIO(ncid, dynlanduse, xtype, dim_id_gridcell, dim_id_lsmlon, 
   integer           , intent(inout) :: dim_id_nlevslp
 
   character(len=512)                :: str            ! global attribute string
-  character(len=512)                :: att_name, att_value
   character(len=32)                 :: subname = 'mksedAttPIO'
-  type(var_desc_t)                  :: pioVar
   integer                           :: dim1d(1), dim2d(2), dim3d(3)
-  integer                           :: ier
 
   if (.not. dynlanduse) then
 

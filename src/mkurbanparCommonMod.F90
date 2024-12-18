@@ -240,7 +240,6 @@ subroutine mkurban_pct_diagnostics(ldomain, tdomain, tgridmap, urbn_i, urbn_o, n
    write (ndiag,*)
    write (ndiag,2003) gurbn_i*1.e-06,gurbn_o*1.e-06
    write (ndiag,2004) garea_i*1.e-06,garea_o*1.e-06
-2002 format (1x,'urban       ',f14.3,f17.3)
 2003 format (1x,'urban       ',f14.3,f22.8)
 2004 format (1x,'all surface ',f14.3,f17.3)
 
@@ -261,7 +260,7 @@ subroutine mkelev(ldomain, mapfname, datfname, varname, ndiag, elev_o)
 ! !USES:
   use mkdomainMod  , only : domain_type, domain_clean, domain_read, domain_checksame
   use mkgridmapMod
-  use mkvarpar	
+  use mkvarpar
   use mkvarctl    
   use mkncdio
 !
@@ -288,13 +287,9 @@ subroutine mkelev(ldomain, mapfname, datfname, varname, ndiag, elev_o)
   type(gridmap_type)    :: tgridmap           ! local gridmap
 
   real(r8), allocatable :: elev_i(:)          ! canyon_height to width ratio in
-  real(r8), allocatable :: mask_i(:)          ! input grid: mask (0, 1)
   integer  :: ns_i,ns_o                       ! indices
-  integer  :: k,l,n,m,ni                      ! indices
-  integer  :: ncidi,dimid,varid               ! input netCDF id's
+  integer  :: ncidi,varid                     ! input netCDF id's
   integer  :: ier                             ! error status
-  character(len=256) :: name                  ! name of attribute
-  character(len=256) :: unit                  ! units of attribute
   character(len= 32) :: subname = 'mkelev'
 !-----------------------------------------------------------------------
 
@@ -384,15 +379,10 @@ subroutine mkelev_pio(ldomain_pio, mapfname, datfname, varname, ndiag, elev_o)
   type(iosystem_desc_t) :: pioIoSystem
   real(r8) , pointer    :: elev2d_i(:,:)
   real(r8) , pointer    :: elev1d_i(:)
-  integer  :: ns_i,ns_o                       ! indices
-  integer  :: dimid,varid               ! input netCDF id's
-  integer  :: ns_loc_i,ns_loc_o               ! indices
+  integer  :: ns_loc_i               ! indices
   integer  :: i, j, count
   integer               :: ierr
   integer               :: dim_idx(2,2)
-  character(len=256) :: name                  ! name of attribute
-  character(len=256) :: unit                  ! units of attribute  
-  character(len= 32) :: subname = 'mkelev_pi'
   integer  , pointer :: vec_row_indices(:)
   !-----------------------------------------------------------------------
 

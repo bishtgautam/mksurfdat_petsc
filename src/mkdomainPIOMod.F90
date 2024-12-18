@@ -206,7 +206,6 @@ contains
 
     type(var_desc_t)   :: varid
     type(io_desc_t)    :: iodescNCells
-    integer            :: vartype
     integer            :: ier
     character(len= 32) :: subname = 'read_float_or_double'
 
@@ -296,8 +295,6 @@ contains
     integer               :: dimid
     integer               :: nlon,nlat
     integer               :: ier
-    type(var_desc_t)      :: varid
-    type(io_desc_t)       :: iodescNCells
 
     character(len= 32) :: subname = 'domain_read_dims_2d_pio'
 
@@ -350,17 +347,13 @@ contains
 
     integer               :: i,j,n
     type(file_desc_t)     :: ncid
-    type(var_desc_t)      :: varid
     type(iosystem_desc_t) :: pioIoSystem
-    type(io_desc_t)       :: iodescNCells
     logical :: edgeNESWset                     ! local EDGE[NESW]
     logical :: lonlatset                       ! local lon(:,:), lat(:,:)
     logical :: llneswset                       ! local lat[ns],lon[we]
     logical :: landfracset                     ! local landfrac
     logical :: maskset                         ! local mask
     logical :: lreadmask                       ! local readmask
-    character(len= 32) :: lonvar               ! name of 2-d longitude variable
-    character(len= 32) :: latvar               ! name of 2-d latitude variable
 
     character(len= 32)    :: subname = 'domain_read_pio'
 
@@ -631,17 +624,11 @@ contains
     integer               :: stride
     integer               :: optBase
     integer               :: iotype
-    integer               :: retVal, ier
+    integer               :: ier
     integer               :: dimid
     integer               :: grid_rank                       ! rank of domain grid 
-    integer               :: ns                              ! size of domain grid
-    integer               :: vartype
-    integer               :: i,j
-
     type(file_desc_t)     :: ncid
-    type(var_desc_t)      :: varid
     type(iosystem_desc_t) :: pioIoSystem
-    type(io_desc_t)       :: iodescNCells
 
     character(len= 32)    :: subname = 'domain_read_map_pio'
 

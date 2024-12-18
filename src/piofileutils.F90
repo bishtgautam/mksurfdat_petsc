@@ -52,7 +52,7 @@ contains
   subroutine OpenFilePIO(fname, pioIoSystem, ncid, mode)
 
     use petsc
-    use spmdMod, only : iam, npes, masterproc, mpicom
+    use spmdMod, only : iam, npes
     use pio
 
     implicit none
@@ -67,7 +67,6 @@ contains
     integer               :: stride
     integer               :: optBase
     integer               :: iotype
-    integer               :: retVal, ier
     character(len= 32)    :: subname = 'OpenFilePIO'
 
     stride        = 1
@@ -97,7 +96,7 @@ contains
   !-----------------------------------------------------------------------
   subroutine CreateFilePIO(fname, pioIoSystem, ncid)
     use petsc
-    use spmdMod, only : iam, npes, masterproc, mpicom
+    use spmdMod, only : iam, npes
     use pio
 
     implicit none
@@ -111,7 +110,6 @@ contains
     integer               :: stride
     integer               :: optBase
     integer               :: iotype
-    integer               :: retVal, ier
     character(len= 32)    :: subname = 'CreateFilePIO'
 
     stride        = 1

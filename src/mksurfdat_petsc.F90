@@ -49,7 +49,7 @@ program mksurfdat_petsc
 
   real(r8), pointer  :: landfrac_pft(:)    ! PFT data: % land per gridcell
   real(r8), pointer  :: pctlnd_pft(:)      ! PFT data: % of gridcell for PFTs
-  real(r8), pointer  :: pctlnd_pft_dyn(:)  ! PFT data: % of gridcell for dyn landuse PFTs
+  !real(r8), pointer  :: pctlnd_pft_dyn(:)  ! PFT data: % of gridcell for dyn landuse PFTs
   integer , pointer  :: pftdata_mask(:)    ! mask indicating real or fake land type
   real(r8), pointer      :: pctpft_full(:,:)   ! PFT data: % cover of each pft and cft on the vegetated landunits
   ! ('full' denotes inclusion of CFTs as well as natural PFTs in this array)
@@ -57,14 +57,14 @@ program mksurfdat_petsc
   real(r8), pointer  :: pctcrop(:)         ! percent of grid cell that is crop landunit
   real(r8), pointer  :: pctnatpft(:,:)     ! % of each pft on the natural veg landunit (adds to 100%)
   real(r8), pointer  :: pctcft(:,:)        ! % of each cft on the crop landunit (adds to 100%)
-  real(r8), pointer      :: harvest(:,:)       ! harvest data: normalized harvesting
+  !real(r8), pointer      :: harvest(:,:)       ! harvest data: normalized harvesting
   real(r8), pointer  :: pctgla(:)          ! percent of grid cell that is glacier
   real(r8), pointer  :: pctglc_gic(:)      ! percent of grid cell that is gic (% of glc landunit)
   real(r8), pointer  :: pctglc_icesheet(:) ! percent of grid cell that is ice sheet (% of glc landunit)
   real(r8), pointer  :: pctglcmec(:,:)     ! glacier_mec pct coverage in each class (% of landunit)
   real(r8), pointer  :: topoglcmec(:,:)    ! glacier_mec sfc elevation in each gridcell and class
-  real(r8), pointer  :: pctglcmec_gic(:,:) ! GIC pct coverage in each class (% of landunit)
-  real(r8), pointer  :: pctglcmec_icesheet(:,:) ! icesheet pct coverage in each class (% of landunit)
+  !real(r8), pointer  :: pctglcmec_gic(:,:) ! GIC pct coverage in each class (% of landunit)
+  !real(r8), pointer  :: pctglcmec_icesheet(:,:) ! icesheet pct coverage in each class (% of landunit)
   real(r8), pointer  :: elevclass(:)       ! glacier_mec elevation classes
   real(r8), pointer  :: pctlak(:)          ! percent of grid cell that is lake
   real(r8), pointer  :: pctwet(:)          ! percent of grid cell that is wetland
@@ -626,7 +626,6 @@ contains
     type(domain_type) :: ldomain
 
     integer :: ns_o
-    integer :: ier
 
     ns_o = ldomain%ns
 
@@ -1279,9 +1278,6 @@ contains
     integer  :: ncid                        ! netCDF id
     integer  :: omode                       ! netCDF output mode
     integer  :: varid                       ! netCDF variable id
-    integer  :: ndims                       ! netCDF number of dimensions
-    integer  :: beg(4),len(4),dimids(4)     ! netCDF dimension sizes 
-    integer  :: ret                         ! netCDF return status
     character(len=32) :: subname = 'write_surface_dataset'
 
     ns_o = ldomain%ns
@@ -1515,15 +1511,11 @@ contains
 
     type(iosystem_desc_t) :: pioIoSystem
     type(file_desc_t)     :: ncid
-    type(var_desc_t)      :: varid
     type(io_desc_t)       :: iodesc
-    integer               :: vartype
     integer               :: i, j, count
     integer               :: ier
     integer, pointer      :: compdof(:)
     integer               :: dim2d(2)
-    character(len=32) :: subname = 'write_surface_dataset'
-
 
     if (fsurdat == ' ') then
        write(6,*)' must specify fsurdat in namelist'

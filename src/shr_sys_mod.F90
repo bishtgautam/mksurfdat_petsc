@@ -175,8 +175,10 @@ SUBROUTINE shr_sys_getenv(name, val, rcode)
 
    !----- local -----
    integer(SHR_KIND_IN)             :: lenname ! length of env var name
+#if (defined AIX || defined OSF1 || defined SUNOS || defined LINUX || defined NEC_SX)
    integer(SHR_KIND_IN)             :: lenval  ! length of env var value
    character(SHR_KIND_CL)           :: tmpval  ! temporary env var value
+#endif
 
    !----- formats -----
    character(*),parameter :: subName =   '(shr_sys_getenv) '

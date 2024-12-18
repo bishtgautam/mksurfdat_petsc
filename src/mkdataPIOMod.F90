@@ -336,8 +336,7 @@ contains
     !
     type(gridmap_pio_type)                       :: tgridmap_pio
     type(domain_pio_type)                        :: tdomain_pio       ! local domain
-    integer                                      :: no
-    integer                                      :: ns_loc_i,ns_loc_o !  indices
+    integer                                      :: ns_loc_i          !  indices
     integer                                      :: ierr              ! error status
     integer, parameter                           :: min_value = 1
     type(file_desc_t)                            :: ncid

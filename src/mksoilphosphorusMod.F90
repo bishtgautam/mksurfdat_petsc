@@ -44,7 +44,7 @@ contains
     ! !USES:
     use mkdomainMod, only : domain_type, domain_clean, domain_read
     use mkgridmapMod
-    use mkvarpar	
+    use mkvarpar
     use mkvarctl    
     use mkncdio
     !
@@ -71,7 +71,6 @@ contains
     !EOP
     type(gridmap_type)    :: tgridmap
     type(domain_type)     :: tdomain                      ! local domain
-    logical               :: found                        ! temporary
     integer               :: ncid,varid                   ! input netCDF id's
     integer               :: ier                          ! error status
     real(r8), allocatable :: data_i(:)                    ! data on input grid

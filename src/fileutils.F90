@@ -99,8 +99,6 @@ contains
 !
 ! !LOCAL VARIABLES:
 !EOP
-     integer i               !loop index
-     integer klen            !length of fulpath character string
      logical lexist          !true if local file exists
 !------------------------------------------------------------------------
 
@@ -108,7 +106,7 @@ contains
 
      locfn = get_filename( fulpath )
      if (len_trim(locfn) == 0) then
-	write(iulog,*)'(GETFIL): local filename has zero length'
+        write(iulog,*)'(GETFIL): local filename has zero length'
         call shr_sys_abort
      else
         write(iulog,*)'(GETFIL): attempting to find local file ',  &

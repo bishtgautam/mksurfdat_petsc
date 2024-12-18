@@ -199,7 +199,6 @@ subroutine mkCH4inversion_pio(ldomain_pio, mapfname, datfname, ndiag, &
   real(r8), parameter :: min_valid_p3    = 0._r8
   real(r8), parameter :: min_valid_zwt0  = 0._r8
 
-  character(len=32) :: subname = 'mkCH4inversion_pio'
 !-----------------------------------------------------------------------
 
   write (6,*) 'Attempting to make inversion-derived CH4 parameters.....'

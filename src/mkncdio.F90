@@ -29,7 +29,6 @@ module mkncdio
 ! !PRIVATE MEMBER FUNCTIONS:
 !
   logical  :: masterproc = .true. ! always use 1 proc
-  real(r8) :: spval = 1.e36       ! special value
 
   public :: nf_open
   public :: nf_close
@@ -130,7 +129,6 @@ contains
     integer :: ndims          ! dimension counter
     integer :: dimid(5)       ! dimension ids
     integer :: varid          ! variable id
-    integer :: itmp           ! temporary
     character(len=256) :: str ! temporary
     character(len=32) :: subname='NCD_DEFVAR_REAL' ! subroutine name
 !-----------------------------------------------------------------------

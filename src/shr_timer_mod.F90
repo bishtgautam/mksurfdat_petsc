@@ -182,7 +182,6 @@ subroutine shr_timer_stop(n)
    integer(SHR_KIND_IN), intent(in) :: n  ! timer number
 
    !----- local -----
-   real (SHR_KIND_R8) :: elapse      ! elapsed time returned by system counter
 #if (defined UNICOSMP)
    integer(kind=8) :: irtc
 #endif

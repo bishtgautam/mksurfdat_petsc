@@ -52,14 +52,11 @@ contains
     integer :: j                    ! index
     integer :: dimid                ! temporary
     integer :: values(8)            ! temporary
-    character(len=256) :: str       ! global attribute string
-    character(len=256) :: name      ! name of attribute
-    character(len=256) :: unit      ! units of attribute
+    character(len=512) :: str       ! global attribute string
     character(len= 18) :: datetime  ! temporary
     character(len=  8) :: date      ! temporary
     character(len= 10) :: time      ! temporary
     character(len=  5) :: zone      ! temporary
-    integer            :: ier       ! error status
     integer            :: omode     ! netCDF output mode
     integer            :: xtype     ! external type
     character(len=32)  :: subname = 'mkfile'  ! subroutine name
@@ -1046,7 +1043,7 @@ contains
 !-----------------------------------------------------------------------
   subroutine mkfile_pio(domain_pio, fname, dynlanduse)
 
-    use spmdMod        , only : iam, npes, masterproc, mpicom
+    use spmdMod        , only : iam
     use mkdomainPIOMod , only : domain_pio_type
     use mksoilMod      , only : mksoilAttPIO
     use mkpftMod       , only : mkpftAttPIO
@@ -1064,13 +1061,6 @@ contains
     type(iosystem_desc_t) :: pioIoSystem
     type(file_desc_t)     :: ncid
     integer               :: ier
-    integer               :: values(8)              ! temporary
-    character(len= 18)    :: datetime               ! temporary
-    character(len=  8)    :: date                   ! temporary
-    character(len= 10)    :: time                   ! temporary
-    character(len=  5)    :: zone                   ! temporary
-    character(len=256)    :: str                    ! global attribute string
-    character(len=32)     :: subname = 'mkfile_pio' ! subroutine name
     integer :: xtype
 
     if (iam == 0) then
@@ -1108,7 +1098,6 @@ contains
     use mkdomainPIOMod , only : domain_pio_type
     use mkvarpar       , only : nlevsoi, nlevurb, numrad
     use mkurbanparMod  , only : numurbl
-    use mkglcmecMod    , only : nglcec
     use pio
     use piofileutils
 
@@ -1159,7 +1148,7 @@ contains
     character(len=  8)             :: date                                           ! temporary
     character(len= 10)             :: time                                           ! temporary
     character(len=  5)             :: zone                                           ! temporary
-    character(len=256)             :: str                                            ! global attribute string
+    character(len=512)             :: str                                            ! global attribute string
     character(len=64)              :: subname = 'mkfile_write_global_attributes_pio' ! subroutine name
 
     str = 'NCAR-CSM'
@@ -1325,7 +1314,6 @@ contains
   subroutine mkfile_define_variables( ncid, dynlanduse, xtype)
 
     use fileutils   , only : get_filename
-    use mkglcmecMod , only : nglcec
     use mkharvestMod, only : mkharvest_fieldname, mkharvest_numtypes, mkharvest_longname
     use pio
     use piofileutils
@@ -1337,10 +1325,6 @@ contains
     type(file_desc_t) , intent(in)    :: ncid
     logical           , intent(in)    :: dynlanduse
     integer           , intent(in)    :: xtype          ! external type to output real data as
-
-    type(var_desc_t)                  :: pioVar
-    integer                           :: dim1d(1), dim2d(2), dim3d(3), j
-    character(len=32)                 :: subname = 'mkfile_define_variables'
 
     if (outnc_1d) then
        call mkfile_define_variables_for_1d_grid( ncid, dynlanduse, xtype)
@@ -1367,9 +1351,7 @@ contains
     logical           , intent(in)    :: dynlanduse
     integer           , intent(in)    :: xtype          ! external type to output real data as
 
-    type(var_desc_t)                  :: pioVar
     integer                           :: dim1d(1), dim2d(2), dim3d(3), j
-    character(len=32)                 :: subname = 'mkfile_define_variables'
 
     dim1d(1) = dim_id%gridcell
     call DefineVarPIO_1d(ncid, 'AREA', xtype, dim1d, longName='area', units='km^2')
@@ -1511,9 +1493,7 @@ contains
     logical           , intent(in)    :: dynlanduse
     integer           , intent(in)    :: xtype          ! external type to output real data as
 
-    type(var_desc_t)                  :: pioVar
     integer                           :: dim1d(1), dim2d(2), dim3d(3), dim4d(4), j
-    character(len=32)                 :: subname = 'mkfile_define_variables'
 
     dim2d(1) = dim_id%lsmlon; dim2d(2) = dim_id%lsmlat
     call DefineVarPIO_2d(ncid, 'AREA', xtype, dim2d, longName='area', units='km^2')

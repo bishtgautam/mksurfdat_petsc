@@ -36,7 +36,6 @@ module mkpftPIOMod
   !
   logical, private :: zero_out      = .false. ! Flag to zero out PFT
   logical, private :: use_input_pft = .false. ! Flag to override PFT with input values
-  integer, private :: nzero                   ! index of first zero fraction
 
   !
   ! !PUBLIC MEMBER FUNCTIONS:
@@ -63,30 +62,13 @@ contains
     type(domain_pio_type) :: tdomain_pio     ! local domain
     type(gridmap_pio_type):: tgridmap_pio
     real(r8) , pointer    :: pctpft3d_i(:,:,:)      ! input grid: PFT percent
-    integer               :: numpft_i                        ! num of plant types input data
-    real(r8)              :: sum_fldo                        ! global sum of dummy output fld
-    real(r8)              :: sum_fldi                        ! global sum of dummy input fld
-    real(r8)              :: wst(0:numpft)                   ! as pft_o at specific no
     real(r8)              :: wst_sum                         ! sum of %pft
-    real(r8)              :: gpft_o(0:numpft)                ! output grid: global area pfts
-    real(r8)              :: garea_o                         ! output grid: global area
-    real(r8)              :: gpft_i(0:numpft)                ! input grid: global area pfts
-    real(r8)              :: garea_i                         ! input grid: global area
-    integer               :: k,n,m,ni,no,ns_loc_i,ns_loc_o   ! indices
-    integer               :: dimid                           ! input netCDF id's
-    type(var_desc_t)      :: varid
-    integer               :: ier                             ! error status
-    real(r8)              :: relerr = 0.00001                ! max error: sum overlap wts ne 1
+    integer               :: m,no,ns_loc_i,ns_loc_o   ! indices
 
     type(file_desc_t)     :: ncid
     type(iosystem_desc_t) :: pioIoSystem
-    type(io_desc_t)       :: iodescNCells
-    real     , pointer    :: dataBufferReal(:,:,:)
     real(r8) , pointer    :: pctpft1d_i(:)
-    integer  , pointer    :: dataBuffer_int(:,:,:)
-    integer  , pointer    :: compdof(:)
-    integer  , pointer    :: var_dim_ids(:), dim_glb(:)
-    integer               :: count, i, j, vartype, ierr
+    integer               :: count, i, j, ierr
     integer               :: dim_idx(3,2)
     integer  , pointer    :: vec_row_indices(:)
 
