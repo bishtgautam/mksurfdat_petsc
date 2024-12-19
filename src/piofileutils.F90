@@ -343,7 +343,17 @@ contains
 
     allocate(data2d(begi:endi, begj:endj))
 
-    call PIO_read_darray(ncid, varid, iodescNCells, data2d, ierr)
+    if (vartype == PIO_INT) then
+      call PIO_read_darray(ncid, varid, iodescNCells, data2d, ierr)
+    elseif (vartype == PIO_DOUBLE .or. vartype == PIO_REAL) then
+      allocate(dataReal2d(begi:endi, begj:endj))
+      call PIO_read_darray(ncid, varid, iodescNCells, dataReal2d, ierr)
+      data2d = int(dataReal2d)
+      deallocate(dataReal2d)
+    else
+      write(*,*) 'Unknown vartype = ', vartype
+      call exit(0)
+    endif
 
     ! Free up memory
     deallocate(compdof)
