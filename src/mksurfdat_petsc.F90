@@ -1613,6 +1613,25 @@ contains
     call PIO_freedecomp(pioIoSystem, iodesc)
     deallocate(compdof)
 
+    ! Write PIO_DOUBLE data with dim of (nlevslp, gridcell) or (nlevslp, lsmlat, lsmlon)
+
+    allocate(compdof((natpft_ub - natpft_lb + 1) * ldomain_pio%ns_loc))
+
+    count = 0
+    do j = natpft_lb, natpft_ub
+      do i = 1, ldomain_pio%ns_loc
+         count = count + 1
+         compdof(count) = i + (j-1)*ldomain_pio%ns_glb + (ldomain_pio%begs - 1)
+      end do
+   end do
+
+   dim2d(1) = ldomain_pio%ns_glb; dim2d(2) = natpft_ub - natpft_lb + 1;
+   call PIO_initdecomp(pioIoSystem, PIO_DOUBLE, dim2d, compdof, iodesc)
+
+   call write_double_2d(ncid, iodesc, 'PCT_NAT_PFT', pctnatpft)
+
+   call PIO_freedecomp(pioIoSystem, iodesc)
+   deallocate(compdof)
 
     ! Write PIO_DOUBLE data with dim of (nlevslp, gridcell) or (nlevslp, lsmlat, lsmlon)
 
