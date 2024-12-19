@@ -1304,7 +1304,7 @@ subroutine mksoilcol_pio(ldomain_pio, mapfname, datfname, ndiag, &
   !
   !
   ! !LOCAL VARIABLES:
-  integer, parameter :: nodata_value = 0
+  integer :: nodata_value
   !-----------------------------------------------------------------------
 
   write (6,*) 'Attempting to make soil color classes .....'
@@ -1314,6 +1314,16 @@ subroutine mksoilcol_pio(ldomain_pio, mapfname, datfname, ndiag, &
   ! Define the model color classes: 0 to nsoicol
   ! -----------------------------------------------------------------
   nsoicol = 20
+
+  if (nsoicol == 8) then
+     nodata_value = 4
+  else if (nsoicol == 20) then
+     nodata_value = 15
+  else
+     write(*,*)'Unsupported nsoilcol = ', nsoicol
+     call exit(0)
+  end if
+
   call mkdata_dominant_int_2d_pio(ldomain_pio, mapfname=mapfname, datfname=datfname, varname='SOIL_COLOR', &
        data_descrip='soil_color', ndiag=ndiag, zero_out=.false., nodata_value=nodata_value, &
        max_value = nsoicol, data_o=soil_color_o)

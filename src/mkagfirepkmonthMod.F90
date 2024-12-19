@@ -300,7 +300,7 @@ subroutine mkagfirepkmon_pio(ldomain_pio, mapfname, datfname, ndiag, &
   write(*,*)'datfname:' ,trim(datfname)
 
   call mkdata_dominant_int_2d_pio(ldomain_pio, mapfname=mapfname, datfname=datfname, varname='abm', &
-       data_descrip='agfirepkmon', ndiag=ndiag, zero_out=.false., nodata_value=0, &
+       data_descrip='agfirepkmon', ndiag=ndiag, zero_out=.false., nodata_value=unsetmon, &
        max_value = max_valid, data_o=agfirepkmon_o)
 
   ! Check validity of output data
