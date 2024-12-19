@@ -1062,6 +1062,15 @@ subroutine mkpftAttPIO( ncid, dynlanduse, xtype, dim_id_gridcell, dim_id_lsmlon,
         dim3d(1) = dim_id_lsmlon; dim3d(2) = dim_id_lsmlat; dim3d(3) = dim_id_cft
         call DefineVarPIO_3d(ncid, 'PCT_CFT', xtype, dim3d, longName='percent crop functional type on the crop landunit (% of landunit)', units='unitless')
      end if
+
+     if (.not. dynlanduse) then
+        dim4d(1) = dim_id_lsmlon; dim4d(2) = dim_id_lsmlat; dim4d(3) = dim_id_lsmpft; dim4d(4) = dim_id_time
+        call DefineVarPIO_4d(ncid, 'MONTHLY_LAI'        , xtype, dim4d, longName='monthly leaf area index' , units='unitless')
+        call DefineVarPIO_4d(ncid, 'MONTHLY_SAI'        , xtype, dim4d, longName='monthly stem area index' , units='unitless')
+        call DefineVarPIO_4d(ncid, 'MONTHLY_HEIGHT_TOP' , xtype, dim4d, longName='monthly height top'      , units='meters')
+        call DefineVarPIO_4d(ncid, 'MONTHLY_HEIGHT_BOT' , xtype, dim4d, longName='monthly height bot'      , units='meters')
+     end if
+
   end if
 
 end subroutine mkpftAttPIO
