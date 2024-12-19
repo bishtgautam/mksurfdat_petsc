@@ -1584,6 +1584,7 @@ contains
     call write_double_1d(ncid, iodesc, 'EF1_SHR'    , ef1_shr)
     call write_double_1d(ncid, iodesc, 'EF1_GRS'    , ef1_grs)
     call write_double_1d(ncid, iodesc, 'EF1_CRP'    , ef1_crp)
+    call write_double_1d(ncid, iodesc, 'TOPO'       , topo)
     call write_double_1d(ncid, iodesc, 'APATITE_P'  , apatiteP)
     call write_double_1d(ncid, iodesc, 'LABILE_P'   , labileP)
     call write_double_1d(ncid, iodesc, 'OCCLUDED_P' , occludedP)
