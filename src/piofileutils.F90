@@ -12,6 +12,7 @@ module piofileutils
   public read_integer_2d
   public read_float_or_double_2d
   public read_float_or_double_3d
+  public read_float_or_double_4d
   public write_integer_1d
   public write_double_1d
   public write_double_2d
@@ -547,6 +548,105 @@ contains
     call PIO_freedecomp(pioIoSystem, iodescNCells)
 
   end subroutine read_float_or_double_3d
+
+ !-----------------------------------------------------------------------
+  subroutine read_float_or_double_4d(domain, pioIoSystem, ncid, varname, dim_idx, vec_row_indices, data4d)
+
+    use mkdomainPIOMod
+    use pio
+
+    implicit none
+
+    type(domain_pio_type) , intent(in)           :: domain
+    type(iosystem_desc_t) , intent(in)           :: pioIoSystem
+    type(file_desc_t)     , intent(in)           :: ncid
+    character(len=*)      , intent(in)           :: varname
+    integer               , intent(out)          :: dim_idx(4,2)
+    integer               , pointer, intent(out) :: vec_row_indices(:)
+    real(r8)              , pointer, intent(out) :: data4d(:,:,:,:)
+    !
+    type(var_desc_t)                             :: varid
+    type(io_desc_t)                              :: iodescNCells
+    integer                                      :: ndims, idim
+    integer                                      :: begi, endi, begj, endj, begk, endk, begl, endl
+    integer                                      :: numi, numj, numk, numl
+    integer                                      :: i, j, k, l, count
+    integer                                      :: vartype
+    integer                                      :: ierr
+    integer               , pointer              :: var_dim_ids(:), dim_glb(:), compdof(:)
+    real                  , pointer              :: dataReal4d(:,:,:,:)
+    character(len=32)                            :: subname = 'read_float_or_double_4d'
+
+    call check_ret(PIO_inq_varid(ncid, varname, varid), subname)
+
+    call check_ret(PIO_inq_varndims(ncid, varid, ndims), subname)
+    if (ndims /= 4) then
+       write(6,*)trim(varname),' is not a 4D variable.'
+       call abort()
+    end if
+
+    allocate(var_dim_ids(ndims))
+    allocate(dim_glb(ndims))
+
+    call check_ret(PIO_inq_vardimid(ncid, varid, var_dim_ids), subname)
+
+    do idim = 1, ndims
+       call check_ret(PIO_inq_dimlen(ncid, var_dim_ids(idim), dim_glb(idim)), subname)
+    end do
+
+    call check_ret(PIO_inq_vartype(ncid, varid, vartype), subname)
+
+    begi = domain%begi; endi = domain%endi
+    begj = domain%begj; endj = domain%endj
+    begk = 1;           endk = dim_glb(3)
+    begl = 1;           endl = dim_glb(4)
+
+    dim_idx(1,1) = begi; dim_idx(1,2) = endi
+    dim_idx(2,1) = begj; dim_idx(2,2) = endj
+    dim_idx(3,1) = begk; dim_idx(3,2) = endk
+    dim_idx(4,1) = begl; dim_idx(4,2) = endl
+
+    numi = domain%endi - domain%begi + 1
+    numj = domain%endj - domain%begj + 1
+    numk = dim_glb(3)
+    numl = dim_glb(4)
+
+    allocate(compdof        (numi * numj * numk * numl))
+    allocate(vec_row_indices(numi * numj))
+
+    count = 0;
+    do l = 1, numl
+       do k = 1, numk
+          do j = 1, numj
+             do i = 1, numi
+                count = count + 1
+                compdof(count) = (domain%begi - 1) + i + (j-1)*dim_glb(1) + (k-1)*dim_glb(1)*dim_glb(2) + (l-1)*dim_glb(1)*dim_glb(2)*dim_glb(3)
+                if (k == 1 .and. l == 1) then
+                   vec_row_indices(count) = compdof(count) - 1
+                end if
+             end do
+          end do
+       end do
+    end do
+
+    call PIO_initdecomp(pioIoSystem, vartype, dim_glb, compdof, iodescNCells)
+
+    allocate(data4d(begi:endi, begj:endj, begk:endk, begl:endl))
+
+    if (vartype == PIO_REAL) then
+       allocate(dataReal4d(begi:endi, begj:endj, begk:endk, begl:endl))
+       call PIO_read_darray(ncid, varid, iodescNCells, dataReal4d, ierr)
+       data4d = dble(dataReal4d)
+       deallocate(dataReal4d)
+    else
+       call PIO_read_darray(ncid, varid, iodescNCells, data4d, ierr)
+    end if
+
+    ! Free up memory
+    deallocate(compdof)
+    call PIO_freedecomp(pioIoSystem, iodescNCells)
+
+  end subroutine read_float_or_double_4d
 
   !-----------------------------------------------------------------------
   subroutine write_integer_1d(ncid, iodesc, varname, data1d)
