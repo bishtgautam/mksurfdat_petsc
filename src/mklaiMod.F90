@@ -22,6 +22,7 @@ module mklaiMod
   private
 
   public  :: mklai
+  public  :: mklai_pio
   private :: pft_laicheck
 
 contains
@@ -417,5 +418,139 @@ subroutine pft_laicheck( ni_s, pctpft_i, laimask )
 end subroutine pft_laicheck
 
 !-----------------------------------------------------------------------
+subroutine mklai_pio(ldomain_pio, mapfname, datfname, ndiag, pioIoSystem_o, ncid_o)
+
+  use mkdomainPIOMod, only : domain_pio_type, domain_read_pio, domain_clean_pio
+  use mkvarpar      , only : numstdpft, numstdcft
+  use mkvarctl      , only : outnc_1d
+  use mkgridmapPIOMod
+  use piofileutils
+  use pio
+
+  implicit none
+
+  type(domain_pio_type) , intent(inout) :: ldomain_pio
+  character(len=*)      , intent(in)    :: mapfname              ! input mapping file name
+  character(len=*)      , intent(in)    :: datfname              ! input dataset file name
+  integer               , intent(in)    :: ndiag                 ! unit number for diag out
+  type(iosystem_desc_t) , intent(in)    :: pioIoSystem_o
+  type(file_desc_t)                     :: ncid_o                ! file descriptor of the output file
+
+  type(domain_pio_type)                 :: tdomain_pio           ! local domain
+  type(gridmap_pio_type)                :: tgridmap_pio
+  type(file_desc_t)                     :: ncid_i
+  type(iosystem_desc_t)                 :: pioIoSystem_i
+  type(io_desc_t)                       :: iodesc
+  integer               , pointer       :: compdof(:)
+  real(r8)              , pointer       :: mlai4d_i(:,:,:,:)  , mlai1d_i(:)  , mlai3d_o(:,:,:)  ! monthly lai
+  real(r8)              , pointer       :: msai4d_i(:,:,:,:)  , msai1d_i(:)  , msai3d_o(:,:,:)  ! monthly sai
+  real(r8)              , pointer       :: mhgtt4d_i(:,:,:,:) , mhgtt1d_i(:) , mhgtt3d_o(:,:,:) ! monthly vegetation height top
+  real(r8)              , pointer       :: mhgtb4d_i(:,:,:,:) , mhgtb1d_i(:) , mhgtb3d_o(:,:,:) ! monthly vegetation height bottom
+  integer               , pointer       :: vec_row_indices(:)
+  integer                               :: dim_idx(4,2), dim3d(3)
+  integer                               :: i,j,p,t
+  integer                               :: ns_loc_i,np,nt,count
+  integer                               :: ierr
+
+  !
+  ! Obtain input grid info
+  !
+
+  call domain_read_pio(tdomain_pio, datfname)
+
+  !
+  ! Read the data from source file
+  !
+
+  call OpenFilePIO(datfname, pioIoSystem_i, ncid_i, PIO_NOWRITE)
+
+  call read_float_or_double_4d(tdomain_pio, pioIoSystem_i, ncid_i, 'MONTHLY_LAI', dim_idx, vec_row_indices, mlai4d_i)
+  deallocate(vec_row_indices)
+
+  call read_float_or_double_4d(tdomain_pio, pioIoSystem_i, ncid_i, 'MONTHLY_SAI', dim_idx, vec_row_indices, msai4d_i)
+  deallocate(vec_row_indices)
+
+  call read_float_or_double_4d(tdomain_pio, pioIoSystem_i, ncid_i, 'MONTHLY_HEIGHT_TOP', dim_idx, vec_row_indices, mhgtt4d_i)
+  deallocate(vec_row_indices)
+
+  call read_float_or_double_4d(tdomain_pio, pioIoSystem_i, ncid_i, 'MONTHLY_HEIGHT_BOT', dim_idx, vec_row_indices, mhgtb4d_i)
+
+  call PIO_closefile(ncid_i)
+  call PIO_finalize(pioIoSystem_i, ierr)
+
+  !
+  ! Read the map
+  !
+  call gridmap_mapread_pio(tgridmap_pio, mapfname)
+
+  ns_loc_i = (dim_idx(1,2) - dim_idx(1,1) + 1) * (dim_idx(2,2) - dim_idx(2,1) + 1)
+
+  allocate(mlai1d_i (ns_loc_i))
+  allocate(msai1d_i (ns_loc_i))
+  allocate(mhgtt1d_i(ns_loc_i))
+  allocate(mhgtb1d_i(ns_loc_i))
+
+  np = dim_idx(3,2) - dim_idx(3,1) + 1
+  nt = dim_idx(4,2) - dim_idx(4,1) + 1
+
+  allocate(mlai3d_o  (ns_loc_i, np, nt))
+  allocate(msai3d_o  (ns_loc_i, np, nt))
+  allocate(mhgtt3d_o (ns_loc_i, np, nt))
+  allocate(mhgtb3d_o (ns_loc_i, np, nt))
+
+  do t = 1, nt
+     do p = 1, np
+
+        ! Convert data into 1D array
+
+        count = 0
+        do j = dim_idx(2,1), dim_idx(2,2)
+           do i = dim_idx(1,1), dim_idx(1,2)
+              count = count + 1
+              mlai1d_i  (count) = mlai4d_i  (i,j,p,t)
+              msai1d_i  (count) = msai4d_i  (i,j,p,t)
+              mhgtt1d_i (count) = mhgtt4d_i (i,j,p,t)
+              mhgtb1d_i (count) = mhgtt4d_i (i,j,p,t)
+           end do
+        end do
+
+        !
+        ! Map the data onto output grid
+        !
+        call gridmap_areaave_pio(tgridmap_pio, vec_row_indices, mlai1d_i(:) , mlai3d_o(:,p,t) , nodata=0._r8)
+        call gridmap_areaave_pio(tgridmap_pio, vec_row_indices, msai1d_i(:) , msai3d_o(:,p,t) , nodata=0._r8)
+        call gridmap_areaave_pio(tgridmap_pio, vec_row_indices, mhgtt1d_i(:), mhgtt3d_o(:,p,t), nodata=0._r8)
+        call gridmap_areaave_pio(tgridmap_pio, vec_row_indices, mhgtb1d_i(:), mhgtb3d_o(:,p,t), nodata=0._r8)
+     end do
+  end do
+
+  allocate(compdof(ldomain_pio%ns_loc * np * nt))
+  count = 0
+  do t = 1, nt
+     do p = 1, np
+        do i = 1, ldomain_pio%ns_loc
+           count = count + 1
+           compdof(count) = i + (t-1)*np*ldomain_pio%ns_glb + (p-1)*ldomain_pio%ns_glb + (ldomain_pio%begs - 1)
+        end do
+     end do
+  end do
+
+  if (outnc_1d) then
+     dim3d(1) = ldomain_pio%ns_glb; dim3d(2) = np; dim3d(3) = nt;
+     call PIO_initdecomp(pioIoSystem_o, PIO_DOUBLE, dim3d, compdof, iodesc)
+  else
+     write(6,*)'Extend mklai_pio to support the case when output mesh is not 1D'
+     call abort()
+  end if
   
+  !call write_double_3d(ncid_o, iodesc, 'MONTHLY_LAI'        , mlai3d_o  )
+  !call write_double_3d(ncid_o, iodesc, 'MONTHLY_SAI'        , msai3d_o  )
+  !call write_double_3d(ncid_o, iodesc, 'MONTHLY_HEIGHT_TOP' , mhgtt3d_o )
+  !call write_double_3d(ncid_o, iodesc, 'MONTHLY_HEIGHT_BOT' , mhgtb3d_o )
+
+  call PIO_freedecomp(pioIoSystem_o, iodesc)
+  deallocate(compdof)
+
+end subroutine mklai_pio
+
 end module mklaiMod
