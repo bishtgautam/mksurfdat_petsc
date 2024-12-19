@@ -265,8 +265,10 @@ program mksurfdat_petsc
 
   ! Make soil texture [pctsand, pctclay]  [fsoitex]
 
-  call mksoiltex (ldomain, mapfname=map_fsoitex, datfname=mksrf_fsoitex, &
-       ndiag=ndiag, sand_o=pctsand, clay_o=pctclay)
+  if (npes == 1) then
+     call mksoiltex (ldomain, mapfname=map_fsoitex, datfname=mksrf_fsoitex, &
+          ndiag=ndiag, sand_o=pctsand, clay_o=pctclay)
+  endif
   !TODO: call mksoiltex_pio (ldomain_pio, mapfname=map_fsoitex, datfname=mksrf_fsoitex, &
   !     ndiag=ndiag, sand_o=pctsand, clay_o=pctclay)
 
@@ -362,7 +364,7 @@ program mksurfdat_petsc
 
   ! Do landuse changes such as for the poles, etc.
 
-  call change_landuse( ldomain, dynpft=.false. )
+  call change_landuse( ldomain_pio%ns_loc, dynpft=.false. )
 
   ! Perform few sanity checks and update the values, if needed
   call check_and_update_values()
@@ -371,7 +373,9 @@ program mksurfdat_petsc
   ! write out the netcdf file
   ! ----------------------------------------------------------------------
 
-  call write_surface_dataset()
+  if (npes == 1) then
+     call write_surface_dataset()
+  endif
   call write_surface_dataset_pio()
 
   ! ----------------------------------------------------------------------
@@ -772,7 +776,7 @@ contains
     real(r8) :: suma
     character(len=32) :: subname = 'perform_sanity_check'
 
-    ns_o = ldomain%ns
+    ns_o = ldomain_pio%ns_loc
 
     do n = 1,ns_o
 
@@ -837,7 +841,7 @@ contains
 
     end do
 
-    call normalizencheck_landuse(ldomain)
+    call normalizencheck_landuse(ldomain_pio%ns_loc)
 
     ! Write out sum of PFT's
 
@@ -886,7 +890,7 @@ contains
   ! !IROUTINE: change_landuse
   !
   ! !INTERFACE:
-  subroutine change_landuse( ldomain, dynpft )
+  subroutine change_landuse( ns_o, dynpft )
     !
     ! !DESCRIPTION:
     !
@@ -896,7 +900,7 @@ contains
     implicit none
     !
     ! !ARGUMENTS:
-    type(domain_type)   :: ldomain
+    integer, intent(in)  :: ns_o
     logical, intent(in)  :: dynpft   ! if part of the dynpft section of code
 
     !
@@ -911,11 +915,10 @@ contains
     integer ,parameter :: bdtemptree = 7    ! Index for broadleaf decidious temperate tree
     integer ,parameter :: bdtempshrub = 10  ! Index for broadleaf decidious temperate shrub
     real(r8),parameter :: troplat = 23.5_r8 ! Latitude to define as tropical
-    integer  :: n,ns_o                       ! indices
+    integer  :: n                           ! indices
     character(len=32) :: subname = 'change_landuse'  ! subroutine name
     !-----------------------------------------------------------------------
 
-    ns_o = ldomain%ns
     do n = 1,ns_o
 
        ! Set pfts 7 and 10 to 6 in the tropics to avoid lais > 1000
@@ -967,7 +970,7 @@ contains
   ! !IROUTINE: normalizencheck_landuse
   !
   ! !INTERFACE:
-  subroutine normalizencheck_landuse(ldomain)
+  subroutine normalizencheck_landuse(ns_o)
     !
     ! !DESCRIPTION:
     !
@@ -981,7 +984,7 @@ contains
     use mkpftMod  , only : mkpft_normalize
     implicit none
     ! !ARGUMENTS:
-    type(domain_type)   :: ldomain
+    integer :: ns_o
     !
     ! !REVISION HISTORY:
     ! 9/10/09: Erik Kluzek spin off subroutine from original embedded code
@@ -989,7 +992,7 @@ contains
     !EOP
     !
     ! !LOCAL VARIABLES:
-    integer  :: m,k,n,ns_o                  ! indices
+    integer  :: m,k,n                       ! indices
     integer  :: nsmall                      ! number of small PFT values for a single check
     integer  :: nsmall_tot                  ! total number of small PFT values in all grid cells
     real(r8) :: suma                        ! sum for error check
@@ -1004,7 +1007,6 @@ contains
     character(len=32) :: subname = 'normalizencheck_landuse'  ! subroutine name
     !-----------------------------------------------------------------------
 
-    ns_o = ldomain%ns
     do n = 1,ns_o
 
        ! The following corrects pctpft_full to account for urban area. Urban needs to be
