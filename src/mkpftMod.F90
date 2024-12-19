@@ -1016,10 +1016,10 @@ subroutine mkpftAttPIO( ncid, dynlanduse, xtype, dim_id_gridcell, dim_id_lsmlon,
   if (outnc_1d) then
 
      dim1d(1) = dim_id_gridcell
-     call DefineVarPIO_1d(ncid, 'LANDFRAC_PFT' , xtype, dim1d, longName='land fraction from pft dataset'                             , units='unitless')
-     call DefineVarPIO_1d(ncid, 'PFTDATA_MASK' , xtype, dim1d, longName='land mask from pft dataset, indicative of real/fake points' , units='unitless')
-     call DefineVarPIO_1d(ncid, 'PCT_NATVEG'   , xtype, dim1d, longName='total percent natural vegetation landunit'                  , units='unitless')
-     call DefineVarPIO_1d(ncid, 'PCT_CROP'     , xtype, dim1d, longName='total percent crop landunit'                                , units='unitless')
+     call DefineVarPIO_1d(ncid, 'LANDFRAC_PFT' , xtype  , dim1d, longName='land fraction from pft dataset'                             , units='unitless')
+     call DefineVarPIO_1d(ncid, 'PFTDATA_MASK' , PIO_INT, dim1d, longName='land mask from pft dataset, indicative of real/fake points' , units='unitless')
+     call DefineVarPIO_1d(ncid, 'PCT_NATVEG'   , xtype  , dim1d, longName='total percent natural vegetation landunit'                  , units='unitless')
+     call DefineVarPIO_1d(ncid, 'PCT_CROP'     , xtype  , dim1d, longName='total percent crop landunit'                                , units='unitless')
 
      if (.not. dynlanduse) then
         dim2d(1) = dim_id_gridcell; dim2d(2) = dim_id_natpft
@@ -1045,10 +1045,10 @@ subroutine mkpftAttPIO( ncid, dynlanduse, xtype, dim_id_gridcell, dim_id_lsmlon,
   else ! if (outnc_1d)
 
      dim2d(1) = dim_id_lsmlon;dim2d(2) = dim_id_lsmlat
-     call DefineVarPIO_2d(ncid, 'LANDFRAC_PFT' , xtype, dim2d, longName='land fraction from pft dataset'                             , units='unitless')
-     call DefineVarPIO_2d(ncid, 'PFTDATA_MASK' , xtype, dim2d, longName='land mask from pft dataset, indicative of real/fake points' , units='unitless')
-     call DefineVarPIO_2d(ncid, 'PCT_NATVEG'   , xtype, dim2d, longName='total percent natural vegetation landunit'                  , units='unitless')
-     call DefineVarPIO_2d(ncid, 'PCT_CROP'     , xtype, dim2d, longName='total percent crop landunit'                                , units='unitless')
+     call DefineVarPIO_2d(ncid, 'LANDFRAC_PFT' , xtype  , dim2d, longName='land fraction from pft dataset'                             , units='unitless')
+     call DefineVarPIO_2d(ncid, 'PFTDATA_MASK' , PIO_INT, dim2d, longName='land mask from pft dataset, indicative of real/fake points' , units='unitless')
+     call DefineVarPIO_2d(ncid, 'PCT_NATVEG'   , xtype  , dim2d, longName='total percent natural vegetation landunit'                  , units='unitless')
+     call DefineVarPIO_2d(ncid, 'PCT_CROP'     , xtype  , dim2d, longName='total percent crop landunit'                                , units='unitless')
 
      if (.not. dynlanduse) then
         dim3d(1) = dim_id_lsmlon; dim3d(2) = dim_id_lsmlat; dim3d(3) = dim_id_natpft

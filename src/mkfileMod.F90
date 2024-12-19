@@ -1407,9 +1407,9 @@ contains
        call DefineVarPIO_2d(ncid, 'NLEV_IMPROAD', PIO_INT, dim2d, longName='number of impervious road layers', units='unitless')
 
        dim1d(1) = dim_id%gridcell
-       call DefineVarPIO_1d(ncid, 'peatf' , xtype, dim1d, longName='peatland fraction'            , units='unitless')
-       call DefineVarPIO_1d(ncid, 'abm'   , xtype, dim1d, longName='agricultural fire peak month' , units='unitless')
-       call DefineVarPIO_1d(ncid, 'gdp'   , xtype, dim1d, longName='gdp'                          , units='unitless')
+       call DefineVarPIO_1d(ncid, 'peatf' , xtype  , dim1d, longName='peatland fraction'            , units='unitless')
+       call DefineVarPIO_1d(ncid, 'abm'   , PIO_INT, dim1d, longName='agricultural fire peak month' , units='unitless')
+       call DefineVarPIO_1d(ncid, 'gdp'   , xtype  , dim1d, longName='gdp'                          , units='unitless')
 
        call DefineVarPIO_1d(ncid, 'SLOPE'    , xtype, dim1d, longName='mean topographic slope'          , units='degrees')
        call DefineVarPIO_1d(ncid, 'STD_ELEV' , xtype, dim1d, longName='standard deviation of elevation' , units='m')
@@ -1549,9 +1549,9 @@ contains
        call DefineVarPIO_3d(ncid, 'NLEV_IMPROAD', PIO_INT, dim3d, longName='number of impervious road layers', units='unitless')
 
        dim2d(1) = dim_id%lsmlon; dim2d(2) = dim_id%lsmlat
-       call DefineVarPIO_2d(ncid, 'peatf' , xtype, dim2d, longName='peatland fraction'            , units='unitless')
-       call DefineVarPIO_2d(ncid, 'abm'   , xtype, dim2d, longName='agricultural fire peak month' , units='unitless')
-       call DefineVarPIO_2d(ncid, 'gdp'   , xtype, dim2d, longName='gdp'                          , units='unitless')
+       call DefineVarPIO_2d(ncid, 'peatf' , xtype  , dim2d, longName='peatland fraction'            , units='unitless')
+       call DefineVarPIO_2d(ncid, 'abm'   , PIO_INT, dim2d, longName='agricultural fire peak month' , units='unitless')
+       call DefineVarPIO_2d(ncid, 'gdp'   , xtype  , dim2d, longName='gdp'                          , units='unitless')
 
        call DefineVarPIO_2d(ncid, 'SLOPE'    , xtype, dim2d, longName='mean topographic slope'          , units='degrees')
        call DefineVarPIO_2d(ncid, 'STD_ELEV' , xtype, dim2d, longName='standard deviation of elevation' , units='m')
