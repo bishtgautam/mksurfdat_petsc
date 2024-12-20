@@ -780,8 +780,8 @@ subroutine mksedAttPIO(ncid, dynlanduse, xtype, dim_id_gridcell, dim_id_lsmlon, 
         call DefineVarPIO_1d(ncid, 'parEro_c1', xtype, dim1d, longName='a scalar parameter for rainfall-driven hillslope erosion', units='unitless')
         call DefineVarPIO_1d(ncid, 'parEro_c2', xtype, dim1d, longName='a scalar parameter for runoff-driven hillslope erosion', units='unitless')
         call DefineVarPIO_1d(ncid, 'parEro_c3', xtype, dim1d, longName='a scalar parameter for transport capacity of hillslope overland flow', units='unitless')
-        call DefineVarPIO_1d(ncid, 'Tilage', xtype, dim1d, longName='conserved tillage fraction', units='fraction')
-        call DefineVarPIO_1d(ncid, 'Litho', xtype, dim1d, longName='lithology erodibility index', units='unitless')
+        call DefineVarPIO_1d(ncid, 'Tillage'  , xtype, dim1d, longName='conserved tillage fraction', units='fraction')
+        call DefineVarPIO_1d(ncid, 'Litho'    , xtype, dim1d, longName='lithology erodibility index', units='unitless')
 
      else
 
@@ -795,8 +795,8 @@ subroutine mksedAttPIO(ncid, dynlanduse, xtype, dim_id_gridcell, dim_id_lsmlon, 
         call DefineVarPIO_2d(ncid, 'parEro_c1', xtype, dim2d, longName='a scalar parameter for rainfall-driven hillslope erosion', units='unitless')
         call DefineVarPIO_2d(ncid, 'parEro_c2', xtype, dim2d, longName='a scalar parameter for runoff-driven hillslope erosion', units='unitless')
         call DefineVarPIO_2d(ncid, 'parEro_c3', xtype, dim2d, longName='a scalar parameter for transport capacity of hillslope overland flow', units='unitless')
-        call DefineVarPIO_2d(ncid, 'Tilage', xtype, dim2d, longName='conserved tillage fraction', units='fraction')
-        call DefineVarPIO_2d(ncid, 'Litho', xtype, dim2d, longName='lithology erodibility index', units='unitless')
+        call DefineVarPIO_2d(ncid, 'Tillage'  , xtype, dim2d, longName='conserved tillage fraction', units='fraction')
+        call DefineVarPIO_2d(ncid, 'Litho'    , xtype, dim2d, longName='lithology erodibility index', units='unitless')
 
      end if
 

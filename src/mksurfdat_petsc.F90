@@ -1558,7 +1558,7 @@ contains
     call write_double_1d(ncid, iodesc, 'parEro_c1'   , ero_c1)
     call write_double_1d(ncid, iodesc, 'parEro_c2'   , ero_c2)
     call write_double_1d(ncid, iodesc, 'parEro_c3'   , ero_c3)
-    call write_double_1d(ncid, iodesc, 'Tilage'      , tillage)
+    call write_double_1d(ncid, iodesc, 'Tillage'     , tillage)
     call write_double_1d(ncid, iodesc, 'Litho'       , litho)
 
     if (num_cft > 0) then
