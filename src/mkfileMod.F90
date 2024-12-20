@@ -1370,6 +1370,7 @@ contains
        dim2d(1) = dim_id%gridcell; dim2d(2) = dim_id%numurbl;
        call DefineVarPIO_2d(ncid, 'CANYON_HWR' , xtype, dim2d, longName='canyon height to width ratio'  , units='unitless')
        call DefineVarPIO_2d(ncid, 'EM_IMPROAD' , xtype, dim2d, longName='emissivity of impervious road' , units='unitless')
+       call DefineVarPIO_2d(ncid, 'EM_PERROAD' , xtype, dim2d, longName='emissivity of pervious road'   , units='unitless')
        call DefineVarPIO_2d(ncid, 'EM_ROOF'    , xtype, dim2d, longName='emissivity of roof'            , units='unitless')
        call DefineVarPIO_2d(ncid, 'EM_WALL'    , xtype, dim2d, longName='emissivity of wall'            , units='unitless')
        call DefineVarPIO_2d(ncid, 'HT_ROOF'    , xtype, dim2d, longName='height of roof'                , units='meters')
@@ -1384,16 +1385,14 @@ contains
        call DefineVarPIO_2d(ncid, 'WTROAD_PERV'     , xtype, dim2d, longName='fraction of pervious road' , units='unitless')
 
        dim3d(1) = dim_id%gridcell; dim3d(2) = dim_id%numurbl; dim3d(3) = dim_id%numrad;
-       call DefineVarPIO_3d(ncid, 'ALB_IMPROADALB_IMPROAD_DIR' , xtype, dim3d, longName='direct albedo of impervious road'  , units='unitless')
-       call DefineVarPIO_3d(ncid, 'ALB_IMPROADALB_IMPROAD_DIF' , xtype, dim3d, longName='diffuse albedo of impervious road' , units='unitless')
-       call DefineVarPIO_3d(ncid, 'ALB_PERROAD_DIR'            , xtype, dim3d, longName='direct albedo of pervious road'    , units='unitless')
-       call DefineVarPIO_3d(ncid, 'ALB_PERROAD_DIF'            , xtype, dim3d, longName='diffuse albedo of pervious road'   , units='unitless')
-
-       dim2d(1) = dim_id%gridcell; dim2d(2) = dim_id%numurbl;
-       call DefineVarPIO_2d(ncid, 'ALB_ROOF_DIR', xtype, dim2d, longName='direct albedo of roof'  , units='unitless')
-       call DefineVarPIO_2d(ncid, 'ALB_ROOF_DIF', xtype, dim2d, longName='diffuse albedo of roof' , units='unitless')
-       call DefineVarPIO_2d(ncid, 'ALB_WALL_DIR', xtype, dim2d, longName='direct albedo of wall'  , units='unitless')
-       call DefineVarPIO_2d(ncid, 'ALB_WALL_DIF', xtype, dim2d, longName='diffuse albedo of wall' , units='unitless')
+       call DefineVarPIO_3d(ncid, 'ALB_IMPROAD_DIR' , xtype, dim3d, longName='direct albedo of impervious road'  , units='unitless')
+       call DefineVarPIO_3d(ncid, 'ALB_IMPROAD_DIF' , xtype, dim3d, longName='diffuse albedo of impervious road' , units='unitless')
+       call DefineVarPIO_3d(ncid, 'ALB_PERROAD_DIR' , xtype, dim3d, longName='direct albedo of pervious road'    , units='unitless')
+       call DefineVarPIO_3d(ncid, 'ALB_PERROAD_DIF' , xtype, dim3d, longName='diffuse albedo of pervious road'   , units='unitless')
+       call DefineVarPIO_3d(ncid, 'ALB_ROOF_DIR'    , xtype, dim3d, longName='direct albedo of roof'  , units='unitless')
+       call DefineVarPIO_3d(ncid, 'ALB_ROOF_DIF'    , xtype, dim3d, longName='diffuse albedo of roof' , units='unitless')
+       call DefineVarPIO_3d(ncid, 'ALB_WALL_DIR'    , xtype, dim3d, longName='direct albedo of wall'  , units='unitless')
+       call DefineVarPIO_3d(ncid, 'ALB_WALL_DIF'    , xtype, dim3d, longName='diffuse albedo of wall' , units='unitless')
 
        dim3d(1) = dim_id%gridcell; dim3d(2) = dim_id%numurbl; dim3d(3) = dim_id%nlevurb;
        call DefineVarPIO_3d(ncid, 'TK_ROOF'    , xtype, dim3d, longName='thermal conductivity of roof'                , units='W/m*K')
@@ -1512,6 +1511,7 @@ contains
        dim3d(1) = dim_id%lsmlon; dim3d(2) = dim_id%lsmlat; dim3d(3) = dim_id%numurbl;
        call DefineVarPIO_3d(ncid, 'CANYON_HWR' , xtype, dim3d, longName='canyon height to width ratio'  , units='unitless')
        call DefineVarPIO_3d(ncid, 'EM_IMPROAD' , xtype, dim3d, longName='emissivity of impervious road' , units='unitless')
+       call DefineVarPIO_3d(ncid, 'EM_PERROAD' , xtype, dim3d, longName='emissivity of pervious road'   , units='unitless')
        call DefineVarPIO_3d(ncid, 'EM_ROOF'    , xtype, dim3d, longName='emissivity of roof'            , units='unitless')
        call DefineVarPIO_3d(ncid, 'EM_WALL'    , xtype, dim3d, longName='emissivity of wall'            , units='unitless')
        call DefineVarPIO_3d(ncid, 'HT_ROOF'    , xtype, dim3d, longName='height of roof'                , units='meters')
@@ -1526,16 +1526,14 @@ contains
        call DefineVarPIO_3d(ncid, 'WTROAD_PERV'     , xtype, dim3d, longName='fraction of pervious road' , units='unitless')
 
        dim4d(1) = dim_id%lsmlon; dim4d(2) = dim_id%lsmlat; dim4d(3) = dim_id%numurbl; dim4d(4) = dim_id%numrad;
-       call DefineVarPIO_4d(ncid, 'ALB_IMPROADALB_IMPROAD_DIR' , xtype, dim4d, longName='direct albedo of impervious road'  , units='unitless')
-       call DefineVarPIO_4d(ncid, 'ALB_IMPROADALB_IMPROAD_DIF' , xtype, dim4d, longName='diffuse albedo of impervious road' , units='unitless')
-       call DefineVarPIO_4d(ncid, 'ALB_PERROAD_DIR'            , xtype, dim4d, longName='direct albedo of pervious road'    , units='unitless')
-       call DefineVarPIO_4d(ncid, 'ALB_PERROAD_DIF'            , xtype, dim4d, longName='diffuse albedo of pervious road'   , units='unitless')
-
-       dim3d(1) = dim_id%lsmlon; dim3d(2) = dim_id%lsmlat; dim3d(3) = dim_id%numurbl;
-       call DefineVarPIO_3d(ncid, 'ALB_ROOF_DIR', xtype, dim3d, longName='direct albedo of roof'  , units='unitless')
-       call DefineVarPIO_3d(ncid, 'ALB_ROOF_DIF', xtype, dim3d, longName='diffuse albedo of roof' , units='unitless')
-       call DefineVarPIO_3d(ncid, 'ALB_WALL_DIR', xtype, dim3d, longName='direct albedo of wall'  , units='unitless')
-       call DefineVarPIO_3d(ncid, 'ALB_WALL_DIF', xtype, dim3d, longName='diffuse albedo of wall' , units='unitless')
+       call DefineVarPIO_4d(ncid, 'ALB_IMPROAD_DIR' , xtype, dim4d, longName='direct albedo of impervious road'  , units='unitless')
+       call DefineVarPIO_4d(ncid, 'ALB_IMPROAD_DIF' , xtype, dim4d, longName='diffuse albedo of impervious road' , units='unitless')
+       call DefineVarPIO_4d(ncid, 'ALB_PERROAD_DIR' , xtype, dim4d, longName='direct albedo of pervious road'    , units='unitless')
+       call DefineVarPIO_4d(ncid, 'ALB_PERROAD_DIF' , xtype, dim4d, longName='diffuse albedo of pervious road'   , units='unitless')
+       call DefineVarPIO_4d(ncid, 'ALB_ROOF_DIR'    , xtype, dim4d, longName='direct albedo of roof'  , units='unitless')
+       call DefineVarPIO_4d(ncid, 'ALB_ROOF_DIF'    , xtype, dim4d, longName='diffuse albedo of roof' , units='unitless')
+       call DefineVarPIO_4d(ncid, 'ALB_WALL_DIR'    , xtype, dim4d, longName='direct albedo of wall'  , units='unitless')
+       call DefineVarPIO_4d(ncid, 'ALB_WALL_DIF'    , xtype, dim4d, longName='diffuse albedo of wall' , units='unitless')
 
        dim4d(1) = dim_id%lsmlon; dim4d(2) = dim_id%lsmlat; dim4d(3) = dim_id%numurbl; dim4d(4) = dim_id%nlevurb;
        call DefineVarPIO_4d(ncid, 'TK_ROOF'    , xtype, dim4d, longName='thermal conductivity of roof'                , units='W/m*K')
