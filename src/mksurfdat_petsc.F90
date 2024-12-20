@@ -1507,10 +1507,12 @@ contains
     type(iosystem_desc_t) :: pioIoSystem
     type(file_desc_t)     :: ncid
     type(io_desc_t)       :: iodesc
-    integer               :: i, j, count
+    type(io_desc_t)       :: iodesc_scalar, iodesc_rad, iodesc_urb
+    integer               :: i, j, k, count
     integer               :: ier
     integer, pointer      :: compdof(:)
-    integer               :: dim2d(2)
+    integer               :: dim2d(2), dim3d(3)
+    integer               :: ncid_dummy
 
     if (fsurdat == ' ') then
        write(6,*)' must specify fsurdat in namelist'
@@ -1530,7 +1532,6 @@ contains
     !   cft
     !   mxsoil_color
     !   mxsoil_order
-
 
     ! Write PIO_INT data with dim of (gridcell) or (lsmlat, lsmlon)
 
@@ -1650,6 +1651,54 @@ contains
 
     call PIO_freedecomp(pioIoSystem, iodesc)
     deallocate(compdof)
+
+    !
+    ! Write urban parameter
+    !
+
+    ! create IO-descripto of urban parameters with no extra dimensions
+    allocate(compdof(numurbl * ldomain_pio%ns_loc))
+    count = 0
+    do j = 1, numurbl
+       do i = 1, ldomain_pio%ns_loc
+          count = count + 1
+          compdof(count) = i + (j-1)*ldomain_pio%ns_glb + (ldomain_pio%begs - 1)
+       end do
+    end do
+    dim2d(1) = ldomain_pio%ns_glb; dim2d(2) = numurbl
+    call PIO_initdecomp(pioIoSystem, PIO_DOUBLE, dim2d, compdof, iodesc_scalar)
+
+    ! create IO-descripto of urban parameters dimensioned by numrad and numurbl
+    allocate(compdof(numrad * numurbl * ldomain_pio%ns_loc))
+    count = 0
+    do k = 1, numrad
+       do j = 1, numurbl
+          do i = 1, ldomain_pio%ns_loc
+             count = count + 1
+             compdof(count) = i + (j-1)*ldomain_pio%ns_glb + (k-1)*ldomain_pio%ns_glb * numurbl + (ldomain_pio%begs - 1)
+          end do
+       end do
+    end do
+    dim3d(1) = ldomain_pio%ns_glb; dim3d(2) = numurbl; dim3d(3) = numrad
+    call PIO_initdecomp(pioIoSystem, PIO_DOUBLE, dim3d, compdof, iodesc_rad)
+
+    ! create IO-descripto of urban parameters dimensioned by nlevurb
+    allocate(compdof(nlevurb * numurbl * ldomain_pio%ns_loc))
+    count = 0
+    do k = 1, nlevurb
+       do j = 1, numurbl
+          do i = 1, ldomain_pio%ns_loc
+             count = count + 1
+             compdof(count) = i + (j-1)*ldomain_pio%ns_glb + (k-1)*ldomain_pio%ns_glb * numurbl + (ldomain_pio%begs - 1)
+          end do
+       end do
+    end do
+    dim3d(1) = ldomain_pio%ns_glb; dim3d(2) = numurbl; dim3d(3) = nlevurb
+    call PIO_initdecomp(pioIoSystem, PIO_DOUBLE, dim3d, compdof, iodesc_urb)
+
+    call mkurbanpar(datfname=mksrf_furban, ncid_pio=ncid, region_o=urban_region, &
+         urbn_classes_gcell_o=urbn_classes_g, iodesc_scalar=iodesc_scalar, &
+         iodesc_rad=iodesc_rad, iodesc_urb=iodesc_urb)
 
     !
     ! Write LAI

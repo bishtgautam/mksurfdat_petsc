@@ -545,7 +545,8 @@ end subroutine normalize_urbn_by_tot
 ! !IROUTINE: mkurbanpar
 !
 ! !INTERFACE:
-subroutine mkurbanpar(datfname, ncido, region_o, urbn_classes_gcell_o)
+subroutine mkurbanpar(datfname, ncido, ncid_pio, region_o, urbn_classes_gcell_o, &
+     iodesc_scalar, iodesc_rad, iodesc_urb)
 !
 ! !DESCRIPTION:
 ! Make Urban Parameter data
@@ -561,16 +562,22 @@ subroutine mkurbanpar(datfname, ncido, region_o, urbn_classes_gcell_o)
 ! !USES:
    use mkdomainMod  , only : domain_type, domain_clean, domain_read
    use mkindexmapMod, only : dim_slice_type, lookup_2d_netcdf
+   use piofileutils, only : write_double_2d, write_double_3d
+   use pio
    use mkvarpar
    use mkncdio
 !
 ! !ARGUMENTS:
    implicit none
-   character(len=*)  , intent(in) :: datfname                  ! input data file name
-   integer           , intent(in) :: ncido                     ! output netcdf file id
-   integer           , intent(in) :: region_o(:)               ! output grid: region ID (length: ns_o)
-   real(r8)          , intent(in) :: urbn_classes_gcell_o(:,:) ! output grid: percent urban in each density class
-                                                               ! (% of total grid cell area) (dimensions: ns_o, numurbl)
+   character(len=*)  , intent(in)               :: datfname                  ! input data file name
+   integer           , intent(in)    , optional :: ncido                     ! output netcdf file id
+   type(file_desc_t) , intent(inout) , optional :: ncid_pio                  ! output netcdf PIO file id
+   type(io_desc_t)   , intent(in)    , optional :: iodesc_scalar             ! PIO descriptor for variables with no extra dimensions
+   type(io_desc_t)   , intent(in)    , optional :: iodesc_rad                ! PIO descriptor for variables dimensioned by numrad & numurbl
+   type(io_desc_t)   , intent(in)    , optional :: iodesc_urb                ! PIO descriptor for variables dimensioned by nlevurb
+   integer           , intent(in)               :: region_o(:)               ! output grid: region ID (length: ns_o)
+   real(r8)          , intent(in)               :: urbn_classes_gcell_o(:,:) ! output grid: percent urban in each density class
+                                                                             ! (% of total grid cell area) (dimensions: ns_o, numurbl)
 
 ! !CALLED FROM:
 ! subroutine mksrfdat in module mksrfdatMod
@@ -588,17 +595,17 @@ subroutine mkurbanpar(datfname, ncido, region_o, urbn_classes_gcell_o)
       logical           :: check_invalid ! should we check whether there are any invalid data in the output?
    end type param
 
-   real(r8), allocatable :: data_scalar_o(:,:)   ! output array for parameters with no extra dimensions
-   real(r8), allocatable :: data_rad_o(:,:,:,:)  ! output array for parameters dimensioned by numrad & numsolar
-   real(r8), allocatable :: data_levurb_o(:,:,:) ! output array for parameters dimensioned by nlevurb
-   integer , allocatable :: unity_dens_o(:,:)    ! artificial density indices
-   integer  :: nlevurb_i                         ! input  grid: number of urban vertical levels
-   integer  :: numsolar_i                        ! input  grid: number of solar type (DIR/DIF)
-   integer  :: numrad_i                          ! input  grid: number of solar bands (VIS/NIR)
-   integer  :: m,n,ns_o,p,k                      ! indices
-   integer  :: ncidi,dimid,varid                 ! netCDF id's
-   integer  :: ier                               ! error status
-   character(len=nf_max_name) :: varname         ! variable name
+   real(r8), pointer          :: data_scalar_o(:,:)   ! output array for parameters with no extra dimensions
+   real(r8), pointer          :: data_rad_o(:,:,:,:)  ! output array for parameters dimensioned by numrad & numurbl
+   real(r8), pointer          :: data_levurb_o(:,:,:) ! output array for parameters dimensioned by nlevurb
+   integer , allocatable      :: unity_dens_o(:,:)    ! artificial density indices
+   integer                    :: nlevurb_i            ! input  grid: number of urban vertical levels
+   integer                    :: numsolar_i           ! input  grid: number of solar type (DIR/DIF)
+   integer                    :: numrad_i             ! input  grid: number of solar bands (VIS/NIR)
+   integer                    :: m,n,ns_o,p,k         ! indices
+   integer                    :: ncidi,dimid,varid    ! netCDF id's
+   integer                    :: ier                  ! error status
+   character(len=nf_max_name) :: varname              ! variable name
    
    ! information on extra dimensions for lookup tables greater than 2-d:
    type(dim_slice_type), allocatable :: extra_dims(:)  
@@ -660,6 +667,26 @@ subroutine mkurbanpar(datfname, ncido, region_o, urbn_classes_gcell_o)
 
    write (6,*) 'Attempting to make Urban Parameters .....'
    call shr_sys_flush(6)
+
+   ! check optional arguments
+   if (.not.present(ncido)) then
+      if (.not.present(ncid_pio)) then
+         write(6,*) 'Either ncdio or ncid_pio needs to be sepecified'
+         call abort()
+      end if
+      if (.not.present(iodesc_scalar)) then
+         write(6,*) 'For PIO output, iodesc_scalar needs to specified'
+         call abort()
+      end if
+      if (.not.present(iodesc_rad)) then
+         write(6,*) 'For PIO output, iodesc_scalar needs to specified'
+         call abort()
+      end if
+      if (.not.present(iodesc_urb)) then
+         write(6,*) 'For PIO output, iodesc_scalar needs to specified'
+         call abort()
+      end if
+   end if
 
    ! Determine & error-check array sizes
    ns_o = size(region_o)
@@ -725,10 +752,14 @@ subroutine mkurbanpar(datfname, ncido, region_o, urbn_classes_gcell_o)
       call lookup_and_check_err(params_scalar(p)%name, params_scalar(p)%fill_val, &
                                 params_scalar(p)%check_invalid, data_scalar_o, 0)
 
-      call check_ret(nf_inq_varid(ncido, params_scalar(p)%name, varid), subname)
-      ! In the following, note that type conversion occurs if we're writing to a variable of type
-      ! other than double; e.g., for an integer, conversion occurs by truncation!
-      call check_ret(nf_put_var_double(ncido, varid, data_scalar_o), subname)
+      if (present(ncido)) then
+         call check_ret(nf_inq_varid(ncido, params_scalar(p)%name, varid), subname)
+         ! In the following, note that type conversion occurs if we're writing to a variable of type
+         ! other than double; e.g., for an integer, conversion occurs by truncation!
+         call check_ret(nf_put_var_double(ncido, varid, data_scalar_o), subname)
+      else
+         call write_double_2d(ncid_pio, iodesc_scalar, params_scalar(p)%name, data_scalar_o)
+      end if
    end do
 
    deallocate(data_scalar_o)
@@ -765,10 +796,14 @@ subroutine mkurbanpar(datfname, ncido, region_o, urbn_classes_gcell_o)
             call abort()
          end if
          varname = trim(params_rad(p)%name)//trim(solar_suffix(m))
-         call check_ret(nf_inq_varid(ncido, varname, varid), subname)
-         ! In the following, note that type conversion occurs if we're writing to a variable of type
-         ! other than double; e.g., for an integer, conversion occurs by truncation!
-         call check_ret(nf_put_var_double(ncido, varid, data_rad_o(:,:,:,m)), subname)
+         if (present(ncido)) then
+            call check_ret(nf_inq_varid(ncido, varname, varid), subname)
+            ! In the following, note that type conversion occurs if we're writing to a variable of type
+            ! other than double; e.g., for an integer, conversion occurs by truncation!
+            call check_ret(nf_put_var_double(ncido, varid, data_rad_o(:,:,:,m)), subname)
+         else
+            call write_double_3d(ncid_pio, iodesc_rad, varname, data_rad_o(:,:,:,m))
+         end if
       end do
    end do
 
@@ -794,10 +829,14 @@ subroutine mkurbanpar(datfname, ncido, region_o, urbn_classes_gcell_o)
                                    1, extra_dims)
       end do
 
-      call check_ret(nf_inq_varid(ncido, params_levurb(p)%name, varid), subname)
-      ! In the following, note that type conversion occurs if we're writing to a variable of type
-      ! other than double; e.g., for an integer, conversion occurs by truncation!
-      call check_ret(nf_put_var_double(ncido, varid, data_levurb_o), subname)      
+      if (present(ncido)) then
+         call check_ret(nf_inq_varid(ncido, params_levurb(p)%name, varid), subname)
+         ! In the following, note that type conversion occurs if we're writing to a variable of type
+         ! other than double; e.g., for an integer, conversion occurs by truncation!
+         call check_ret(nf_put_var_double(ncido, varid, data_levurb_o), subname)
+      else
+         call write_double_3d(ncid_pio, iodesc_rad, params_levurb(p)%name, data_levurb_o)
+      end if
    end do
 
    deallocate(data_levurb_o)
@@ -805,7 +844,9 @@ subroutine mkurbanpar(datfname, ncido, region_o, urbn_classes_gcell_o)
    
 
    call check_ret(nf_close(ncidi), subname)
-   call check_ret(nf_sync(ncido), subname)
+   if (present(ncido)) then
+      call check_ret(nf_sync(ncido), subname)
+   end if
 
    write (6,*) 'Successfully made Urban Parameters'
    write (6,*)
