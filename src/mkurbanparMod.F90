@@ -835,7 +835,7 @@ subroutine mkurbanpar(datfname, ncido, ncid_pio, region_o, urbn_classes_gcell_o,
          ! other than double; e.g., for an integer, conversion occurs by truncation!
          call check_ret(nf_put_var_double(ncido, varid, data_levurb_o), subname)
       else
-         call write_double_3d(ncid_pio, iodesc_rad, params_levurb(p)%name, data_levurb_o)
+         call write_double_3d(ncid_pio, iodesc_urb, params_levurb(p)%name, data_levurb_o)
       end if
    end do
 
