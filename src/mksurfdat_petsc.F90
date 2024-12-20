@@ -1651,6 +1651,12 @@ contains
     call PIO_freedecomp(pioIoSystem, iodesc)
     deallocate(compdof)
 
+    !
+    ! Write LAI
+    !
+
+    call mklai_pio(ldomain_pio, map_flai, mksrf_flai, ndiag, pioIoSystem, ncid)
+
     ! Clean up
 
     call PIO_closefile(ncid)

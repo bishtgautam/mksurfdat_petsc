@@ -447,7 +447,7 @@ subroutine mklai_pio(ldomain_pio, mapfname, datfname, ndiag, pioIoSystem_o, ncid
   real(r8)              , pointer       :: mhgtt4d_i(:,:,:,:) , mhgtt1d_i(:) , mhgtt3d_o(:,:,:) ! monthly vegetation height top
   real(r8)              , pointer       :: mhgtb4d_i(:,:,:,:) , mhgtb1d_i(:) , mhgtb3d_o(:,:,:) ! monthly vegetation height bottom
   integer               , pointer       :: vec_row_indices(:)
-  integer                               :: dim_idx(4,2), dim3d(3)
+  integer                               :: dim_idx(4,2), dim2d(2)
   integer                               :: i,j,p,t
   integer                               :: ns_loc_i,np,nt,count
   integer                               :: ierr
@@ -493,10 +493,10 @@ subroutine mklai_pio(ldomain_pio, mapfname, datfname, ndiag, pioIoSystem_o, ncid
   np = dim_idx(3,2) - dim_idx(3,1) + 1
   nt = dim_idx(4,2) - dim_idx(4,1) + 1
 
-  allocate(mlai3d_o  (ns_loc_i, np, nt))
-  allocate(msai3d_o  (ns_loc_i, np, nt))
-  allocate(mhgtt3d_o (ns_loc_i, np, nt))
-  allocate(mhgtb3d_o (ns_loc_i, np, nt))
+  allocate(mlai3d_o  (ldomain_pio%ns_loc, np, nt))
+  allocate(msai3d_o  (ldomain_pio%ns_loc, np, nt))
+  allocate(mhgtt3d_o (ldomain_pio%ns_loc, np, nt))
+  allocate(mhgtb3d_o (ldomain_pio%ns_loc, np, nt))
 
   do t = 1, nt
      do p = 1, np
@@ -524,29 +524,32 @@ subroutine mklai_pio(ldomain_pio, mapfname, datfname, ndiag, pioIoSystem_o, ncid
      end do
   end do
 
-  allocate(compdof(ldomain_pio%ns_loc * np * nt))
+  allocate(compdof(ldomain_pio%ns_loc * np ))
   count = 0
-  do t = 1, nt
-     do p = 1, np
-        do i = 1, ldomain_pio%ns_loc
-           count = count + 1
-           compdof(count) = i + (t-1)*np*ldomain_pio%ns_glb + (p-1)*ldomain_pio%ns_glb + (ldomain_pio%begs - 1)
-        end do
+  do p = 1, np
+     do i = 1, ldomain_pio%ns_loc
+        count = count + 1
+        compdof(count) = i + (p-1)*ldomain_pio%ns_glb + (ldomain_pio%begs - 1)
      end do
   end do
 
   if (outnc_1d) then
-     dim3d(1) = ldomain_pio%ns_glb; dim3d(2) = np; dim3d(3) = nt;
-     call PIO_initdecomp(pioIoSystem_o, PIO_DOUBLE, dim3d, compdof, iodesc)
+     dim2d(1) = ldomain_pio%ns_glb; dim2d(2) = np;
+     call PIO_initdecomp(pioIoSystem_o, PIO_DOUBLE, dim2d, compdof, iodesc)
   else
      write(6,*)'Extend mklai_pio to support the case when output mesh is not 1D'
      call abort()
   end if
   
-  !call write_double_3d(ncid_o, iodesc, 'MONTHLY_LAI'        , mlai3d_o  )
-  !call write_double_3d(ncid_o, iodesc, 'MONTHLY_SAI'        , msai3d_o  )
-  !call write_double_3d(ncid_o, iodesc, 'MONTHLY_HEIGHT_TOP' , mhgtt3d_o )
-  !call write_double_3d(ncid_o, iodesc, 'MONTHLY_HEIGHT_BOT' , mhgtb3d_o )
+  !
+  ! Write data with unlimited time dimension one frame at a time in the file
+  !
+  do t = 1, nt
+     call write_a_frame_of_double_3d(ncid_o, iodesc, 'MONTHLY_LAI'        , t, mlai3d_o  )
+     call write_a_frame_of_double_3d(ncid_o, iodesc, 'MONTHLY_SAI'        , t, msai3d_o  )
+     call write_a_frame_of_double_3d(ncid_o, iodesc, 'MONTHLY_HEIGHT_TOP' , t, mhgtt3d_o )
+     call write_a_frame_of_double_3d(ncid_o, iodesc, 'MONTHLY_HEIGHT_BOT' , t, mhgtb3d_o )
+  enddo
 
   call PIO_freedecomp(pioIoSystem_o, iodesc)
   deallocate(compdof)

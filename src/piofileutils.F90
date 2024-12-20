@@ -18,6 +18,7 @@ module piofileutils
   public write_double_2d
   public write_double_3d
   public write_double_4d
+  public write_a_frame_of_double_3d
   public check_ret
   public DefineVarPIO_1d
   public DefineVarPIO_2d
@@ -737,6 +738,30 @@ contains
   end subroutine write_double_3d
 
   !-----------------------------------------------------------------------
+  subroutine write_a_frame_of_double_3d(ncid, iodesc, varname, frame_id, data3d)
+   !
+   use pio
+
+   implicit none
+
+   type(file_desc_t)     , intent(inout)        :: ncid
+   type(io_desc_t)       , intent (in)          :: iodesc
+   character(len=*)      , intent(in)           :: varname
+   integer               , intent(in)           :: frame_id
+   real(r8)              , pointer, intent(in)  :: data3d(:,:,:)
+
+   type(var_desc_t)                             :: varid
+   integer                                      :: ier
+   character(len=32)                            :: subname = 'write_a_frame_of_double_3d'
+
+   call check_ret(PIO_inq_varid(ncid, varname, varid), subname)
+   call PIO_setframe(ncid, varid, int(frame_id,kind=PIO_OFFSET_KIND))
+   call PIO_write_darray(ncid, varid, iodesc, data3d(:,:,frame_id), ier)
+   call PIO_syncfile(ncid)
+
+ end subroutine write_a_frame_of_double_3d
+
+ !-----------------------------------------------------------------------
   subroutine write_double_4d(ncid, iodesc, varname, data4d)
     !
     use pio
