@@ -1619,7 +1619,7 @@ contains
     allocate(compdof((natpft_ub - natpft_lb + 1) * ldomain_pio%ns_loc))
 
     count = 0
-    do j = natpft_lb, natpft_ub
+    do j = natpft_lb + 1, natpft_ub + 1
       do i = 1, ldomain_pio%ns_loc
          count = count + 1
          compdof(count) = i + (j-1)*ldomain_pio%ns_glb + (ldomain_pio%begs - 1)
