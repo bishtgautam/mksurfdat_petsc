@@ -423,6 +423,7 @@ subroutine mklai_pio(ldomain_pio, mapfname, datfname, ndiag, pioIoSystem_o, ncid
   use mkdomainPIOMod, only : domain_pio_type, domain_read_pio, domain_clean_pio
   use mkvarpar      , only : numstdpft, numstdcft
   use mkvarctl      , only : outnc_1d
+  use mkpftMod      , only : c3cropindex, c3irrcropindex
   use mkgridmapPIOMod
   use piofileutils
   use pio
@@ -510,7 +511,7 @@ subroutine mklai_pio(ldomain_pio, mapfname, datfname, ndiag, pioIoSystem_o, ncid
               mlai1d_i  (count) = mlai4d_i  (i,j,p,t)
               msai1d_i  (count) = msai4d_i  (i,j,p,t)
               mhgtt1d_i (count) = mhgtt4d_i (i,j,p,t)
-              mhgtb1d_i (count) = mhgtt4d_i (i,j,p,t)
+              mhgtb1d_i (count) = mhgtb4d_i (i,j,p,t)
            end do
         end do
 
@@ -522,38 +523,46 @@ subroutine mklai_pio(ldomain_pio, mapfname, datfname, ndiag, pioIoSystem_o, ncid
         call gridmap_areaave_pio(tgridmap_pio, vec_row_indices, mhgtt1d_i(:), mhgtt3d_o(:,p,t), nodata=0._r8)
         call gridmap_areaave_pio(tgridmap_pio, vec_row_indices, mhgtb1d_i(:), mhgtb3d_o(:,p,t), nodata=0._r8)
      end do
-  end do
 
-  allocate(compdof(ldomain_pio%ns_loc * np ))
-  count = 0
-  do p = 1, np
-     do i = 1, ldomain_pio%ns_loc
-        count = count + 1
-        compdof(count) = i + (p-1)*ldomain_pio%ns_glb + (ldomain_pio%begs - 1)
-     end do
-  end do
+     ! copy LAI, SAI, & heights from the C3 crop (pft15)
+     ! to the irrigated (pft16) whether crop is on or off
+     mlai3d_o (:,c3irrcropindex + 1, t) = mlai3d_o (:,c3cropindex + 1, t)
+     msai3d_o (:,c3irrcropindex + 1, t) = msai3d_o (:,c3cropindex + 1, t)
+     mhgtt3d_o(:,c3irrcropindex + 1, t) = mhgtt3d_o(:,c3cropindex + 1, t)
+     mhgtb3d_o(:,c3irrcropindex + 1, t) = mhgtb3d_o(:,c3cropindex + 1, t)
 
-  if (outnc_1d) then
-     dim2d(1) = ldomain_pio%ns_glb; dim2d(2) = np;
-     call PIO_initdecomp(pioIoSystem_o, PIO_DOUBLE, dim2d, compdof, iodesc)
-  else
-     write(6,*)'Extend mklai_pio to support the case when output mesh is not 1D'
-     call abort()
-  end if
-  
-  !
-  ! Write data with unlimited time dimension one frame at a time in the file
-  !
-  do t = 1, nt
-     call write_a_frame_of_double_3d(ncid_o, iodesc, 'MONTHLY_LAI'        , t, mlai3d_o  )
-     call write_a_frame_of_double_3d(ncid_o, iodesc, 'MONTHLY_SAI'        , t, msai3d_o  )
-     call write_a_frame_of_double_3d(ncid_o, iodesc, 'MONTHLY_HEIGHT_TOP' , t, mhgtt3d_o )
-     call write_a_frame_of_double_3d(ncid_o, iodesc, 'MONTHLY_HEIGHT_BOT' , t, mhgtb3d_o )
-  enddo
+   end do
 
-  call PIO_freedecomp(pioIoSystem_o, iodesc)
-  deallocate(compdof)
+   allocate(compdof(ldomain_pio%ns_loc * np ))
+   count = 0
+   do p = 1, np
+      do i = 1, ldomain_pio%ns_loc
+         count = count + 1
+         compdof(count) = i + (p-1)*ldomain_pio%ns_glb + (ldomain_pio%begs - 1)
+      end do
+   end do
 
-end subroutine mklai_pio
+   if (outnc_1d) then
+      dim2d(1) = ldomain_pio%ns_glb; dim2d(2) = np;
+      call PIO_initdecomp(pioIoSystem_o, PIO_DOUBLE, dim2d, compdof, iodesc)
+   else
+      write(6,*)'Extend mklai_pio to support the case when output mesh is not 1D'
+      call abort()
+   end if
+
+   !
+   ! Write data with unlimited time dimension one frame at a time in the file
+   !
+   do t = 1, nt
+      call write_a_frame_of_double_3d(ncid_o, iodesc, 'MONTHLY_LAI'        , t, mlai3d_o  )
+      call write_a_frame_of_double_3d(ncid_o, iodesc, 'MONTHLY_SAI'        , t, msai3d_o  )
+      call write_a_frame_of_double_3d(ncid_o, iodesc, 'MONTHLY_HEIGHT_TOP' , t, mhgtt3d_o )
+      call write_a_frame_of_double_3d(ncid_o, iodesc, 'MONTHLY_HEIGHT_BOT' , t, mhgtb3d_o )
+   enddo
+
+   call PIO_freedecomp(pioIoSystem_o, iodesc)
+   deallocate(compdof)
+
+ end subroutine mklai_pio
 
 end module mklaiMod
