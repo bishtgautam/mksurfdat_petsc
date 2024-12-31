@@ -24,6 +24,7 @@ module piofileutils
   public DefineVarPIO_2d
   public DefineVarPIO_3d
   public DefineVarPIO_4d
+  public get_dimlen
 
 contains
 
@@ -782,5 +783,37 @@ contains
     call PIO_syncfile(ncid)
 
   end subroutine write_double_4d
+
+  !-----------------------------------------------------------------------
+  subroutine get_dimlen(fname, dimname, dimlen)
+    !
+    use pio
+    !
+    implicit none
+    !
+    character(len=*) , intent(in)  :: fname
+    character(len=*) , intent(in)  :: dimname
+    integer          , intent(out) :: dimlen
+    !
+    type(file_desc_t)              :: ncid
+    type(iosystem_desc_t)          :: pioIoSystem
+    integer                        :: dimid
+    integer                        :: ierr
+    character(len=32)              :: subname = 'get_dimlen'
+
+    ! open the netcdf file
+    call OpenFilePIO(fname, pioIoSystem, ncid, PIO_NOWRITE)
+
+    ! get dimid
+    call check_ret(PIO_inq_dimid(ncid, dimname, dimid), subname)
+
+    ! get dimlen
+    call check_ret(PIO_inq_dimlen(ncid, dimid, dimlen), subname)
+
+    ! clean up
+    call PIO_closefile(ncid)
+    call PIO_finalize(pioIoSystem, ierr)
+
+  end subroutine get_dimlen
 
 end module piofileutils

@@ -341,6 +341,7 @@ subroutine mkurban_pio(ldomain_pio, mapfname, datfname, ndiag, zero_out, &
    use mkvarpar
    use mkncdio
    use mkdataPIOMod
+   use piofileutils, only : get_dimlen
 !
 ! !ARGUMENTS:
    implicit none
@@ -422,7 +423,9 @@ subroutine mkurban_pio(ldomain_pio, mapfname, datfname, ndiag, zero_out, &
    write (6,*) 'Successfully made urban region'
    write (6,*)
 
-   max_region = 33
+   ! determine the max_region based on the dimension 'region'
+   call get_dimlen(datfname, 'region', max_region)
+
    call mkdata_dominant_int_2d_pio(ldomain_pio, mapfname=mapfname, datfname=datfname, varname='REGION_ID', &
         data_descrip='region_id', ndiag=ndiag, zero_out=.false., nodata_value=0, &
         max_value = max_region, data_o=region_o)
