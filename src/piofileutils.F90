@@ -25,6 +25,7 @@ module piofileutils
   public DefineVarPIO_3d
   public DefineVarPIO_4d
   public get_dimlen
+  public get_float_or_double_2d
 
 contains
 
@@ -452,6 +453,74 @@ contains
    call PIO_freedecomp(pioIoSystem, iodescNCells)
 
  end subroutine read_float_or_double_2d
+
+  !-----------------------------------------------------------------------
+ subroutine get_float_or_double_2d(ncid, varname, dim_idx, data2d)
+
+   use mkdomainPIOMod
+   use pio
+   use spmdMod
+
+   implicit none
+
+   type(file_desc_t)     , intent(in)           :: ncid
+   character(len=*)      , intent(in)           :: varname
+   integer               , intent(out)          :: dim_idx(2,2)
+   real(r8)              , pointer, intent(out) :: data2d(:,:)
+   !
+   type(var_desc_t)                             :: varid
+   type(io_desc_t)                              :: iodescNCells
+   integer                                      :: ndims, idim
+   integer                                      :: begi, endi, begj, endj
+   integer                                      :: numi, numj
+   integer                                      :: i, j, count
+   integer                                      :: vartype
+   integer                                      :: ierr
+   integer               , pointer              :: var_dim_ids(:), dim_glb(:), compdof(:)
+   real                  , pointer              :: dataReal2d(:,:)
+   character(len=32)                            :: subname = 'get_float_or_double_2d'
+
+   call check_ret(PIO_inq_varid(ncid, varname, varid), subname)
+
+   call check_ret(PIO_inq_varndims(ncid, varid, ndims), subname)
+   if (ndims /= 2) then
+      write(6,*)trim(varname),' is not a 2D variable.'
+      call abort()
+   end if
+
+   allocate(var_dim_ids(ndims))
+   allocate(dim_glb(ndims))
+
+   call check_ret(PIO_inq_vardimid(ncid, varid, var_dim_ids), subname)
+
+   do idim = 1, ndims
+      call check_ret(PIO_inq_dimlen(ncid, var_dim_ids(idim), dim_glb(idim)), subname)
+   end do
+
+   call check_ret(PIO_inq_vartype(ncid, varid, vartype), subname)
+
+   begi = 1; endi = dim_glb(1)
+   begj = 1; endj = dim_glb(2)
+
+   dim_idx(1,1) = begi; dim_idx(1,2) = endi
+   dim_idx(2,1) = begj; dim_idx(2,2) = endj
+
+   numi = dim_glb(1)
+   numj = dim_glb(2)
+
+   allocate(data2d(begi:endi, begj:endj))
+
+   if (vartype == PIO_REAL) then
+      allocate(dataReal2d(begi:endi, begj:endj))
+      ierr = PIO_get_var(ncid, varid, dataReal2d)
+      data2d = dble(dataReal2d)
+      deallocate(dataReal2d)
+   else
+      ierr = PIO_get_var(ncid, varid, data2d)
+   end if
+
+
+ end subroutine get_float_or_double_2d
 
  !-----------------------------------------------------------------------
   subroutine read_float_or_double_3d(domain, pioIoSystem, ncid, varname, start_id_for_dim3, dim_idx, vec_row_indices, data3d)
