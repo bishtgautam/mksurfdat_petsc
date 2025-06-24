@@ -363,24 +363,24 @@ contains
     PetscCall(MatSetFromOptions(gridmap_pio%map_frac_mat, ierr))
 
     ! Put 1.0 on src_vec
-    PetscCallA(VecGetArrayF90(gridmap_pio%src_vec, src_p, ierr))
+    PetscCallA(VecGetArray(gridmap_pio%src_vec, src_p, ierr))
     do ii = 1, gridmap_pio%dim_na%nloc
        src_p(ii) = 1._r8
     end do
-    PetscCallA(VecRestoreArrayF90(gridmap_pio%src_vec, src_p, ierr))
+    PetscCallA(VecRestoreArray(gridmap_pio%src_vec, src_p, ierr))
 
     ! dst_vec = map_mat * src_vec
     PetscCallA(MatMult(gridmap_pio%map_mat, gridmap_pio%src_vec, gridmap_pio%dst_vec, ierr))
 
     ! Now, create a temporary matrix that has 1/dst_vec(:) as the diagonal
-    PetscCallA(VecGetArrayF90(gridmap_pio%dst_vec, dst_p, ierr))
+    PetscCallA(VecGetArray(gridmap_pio%dst_vec, dst_p, ierr))
     do no = gridmap_pio%dim_nb%begd, gridmap_pio%dim_nb%endd
        ii = no - gridmap_pio%dim_nb%begd + 1
        if (dst_p(ii) > 0._r8) then
           PetscCallA(MatSetValues(temp_mat, 1, [no - 1], 1, [no - 1], [1._r8/dst_p(ii)], INSERT_VALUES, ierr))
        end if
     end do
-    PetscCallA(VecRestoreArrayF90(gridmap_pio%dst_vec, dst_p, ierr))
+    PetscCallA(VecRestoreArray(gridmap_pio%dst_vec, dst_p, ierr))
 
     PetscCallA(MatAssemblyBegin(temp_mat, MAT_FINAL_ASSEMBLY, ierr))
     PetscCallA(MatAssemblyEnd(temp_mat, MAT_FINAL_ASSEMBLY, ierr))
@@ -422,7 +422,7 @@ contains
     PetscCallA(MatMult(gridmap_pio%map_frac_mat, gridmap_pio%src_vec, gridmap_pio%dst_vec, ierr))
 
     ! fill the destination array
-    PetscCallA(VecGetArrayF90(gridmap_pio%dst_vec, dst_p, ierr))
+    PetscCallA(VecGetArray(gridmap_pio%dst_vec, dst_p, ierr))
     do no = 1, gridmap_pio%dim_nb%nloc
        idx = gridmap_pio%dim_nb%begd + no - 1
        if (gridmap_pio%dst%frac(idx) <= 0._r8) then
@@ -431,7 +431,7 @@ contains
           dst_array(no) = dst_p(no)
        end if
     end do
-    PetscCallA(VecRestoreArrayF90(gridmap_pio%dst_vec, dst_p, ierr))
+    PetscCallA(VecRestoreArray(gridmap_pio%dst_vec, dst_p, ierr))
 
   end subroutine gridmap_areaave_default_pio
 
@@ -473,8 +473,8 @@ contains
     PetscCallA(MatMult(gridmap_pio%map_frac_mat, tmp_src_vec        , tmp_dst_vec        , ierr))
 
     ! fill the destination array
-    PetscCallA(VecGetArrayF90(gridmap_pio%dst_vec, dst_p, ierr))
-    PetscCallA(VecGetArrayF90(tmp_dst_vec        , tmp_p, ierr))
+    PetscCallA(VecGetArray(gridmap_pio%dst_vec, dst_p, ierr))
+    PetscCallA(VecGetArray(tmp_dst_vec        , tmp_p, ierr))
     do no = 1, gridmap_pio%dim_nb%nloc
        idx = gridmap_pio%dim_nb%begd + no - 1
        if (tmp_p(no) <= 0._r8) then
@@ -483,8 +483,8 @@ contains
           dst_array(no) = dst_p(no)/tmp_p(no)
        end if
     end do
-    PetscCallA(VecRestoreArrayF90(tmp_dst_vec        , tmp_p, ierr))
-    PetscCallA(VecRestoreArrayF90(gridmap_pio%dst_vec, dst_p, ierr))
+    PetscCallA(VecRestoreArray(tmp_dst_vec        , tmp_p, ierr))
+    PetscCallA(VecRestoreArray(gridmap_pio%dst_vec, dst_p, ierr))
 
   end subroutine gridmap_areaave_srcmask_pio
 
@@ -536,14 +536,14 @@ contains
        PetscCallA(MatMult(gridmap_pio%map_frac_mat, gridmap_pio%src_vec, gridmap_pio%dst_vec, ierr))
 
        ! fill the destination array if the weight corresponding to the 'ival' is max
-       PetscCallA(VecGetArrayF90(gridmap_pio%dst_vec, dst_p, ierr))
+       PetscCallA(VecGetArray(gridmap_pio%dst_vec, dst_p, ierr))
        do no = 1, gridmap_pio%dim_nb%nloc
           if (dst_p(no) > max_wts(no)) then
              dst_array(no) = ival
              max_wts(no)   = dst_p(no)
           end if
        end do
-       PetscCallA(VecRestoreArrayF90(gridmap_pio%dst_vec, dst_p, ierr))
+       PetscCallA(VecRestoreArray(gridmap_pio%dst_vec, dst_p, ierr))
 
     end do
 

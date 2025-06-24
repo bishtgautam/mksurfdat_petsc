@@ -2,6 +2,9 @@
 include ${PETSC_DIR}/lib/petsc/conf/variables
 include ${PETSC_DIR}/lib/petsc/conf/rules
 
+PETSC_DIR=/Users/bish218/projects/petsc/petsc_main
+PETSC_ARCH=clang20-95934b0d393
+
 PETSC_MAKE_STOP_ON_ERROR=
 
 MYFLAGS = -I.
@@ -12,10 +15,10 @@ MYFLAGS = -I.
 
 # These flags are supplemental to the PETSc flags
 
-MYFLAGS=-DCPRAPPLECLANG -DCPRGNU -DHAVE_MPI -DINCLUDE_CMAKE_FCI -DMPICH_SKIP_MPICXX -DMPI_NO_CPPBIND -DOMPI_SKIP_MPICXX -DTIMING -DUSE_PNETCDF_VARN -DUSE_PNETCDF_VARN_ON_READ -D_NONETCDF -D_PNETCDF -I/Users/bish218/projects/e3sm/scorpio/src/flib -I/Users/bish218/projects/e3sm/scorpio/build-gcc14-openmpi-9281ddf3762/src/flib -I/opt/homebrew/include -I/Users/bish218/projects/petsc/petsc_main/gcc14-openmpi-9281ddf3762/include -I/Users/bish218/projects/e3sm/scorpio/src/gptl -I/Users/bish218/projects/e3sm/scorpio/build-gcc14-openmpi-9281ddf3762/src/gptl -I/Users/bish218/projects/e3sm/scorpio/src/clib -I/Users/bish218/projects/e3sm/scorpio/build-gcc14-openmpi-9281ddf3762/src/clib -g -O0 -isysroot /Applications/Xcode.app/Contents/Developer/Platforms/MacOSX.platform/Developer/SDKs/MacOSX13.3.sdk
+MYFLAGS=-DCPRAPPLECLANG -DCPRGNU -DHAVE_MPI -DINCLUDE_CMAKE_FCI -DMPICH_SKIP_MPICXX -DMPI_NO_CPPBIND -DOMPI_SKIP_MPICXX -DTIMING -DUSE_PNETCDF_VARN -DUSE_PNETCDF_VARN_ON_READ -D_NONETCDF -D_PNETCDF -I/Users/bish218/projects/e3sm/scorpio/src/flib -I/Users/bish218/projects/e3sm/scorpio/build-${PETSC_ARCH}/src/flib -I/opt/homebrew/include -I/Users/bish218/projects/petsc/petsc_main/gcc14-openmpi-9281ddf3762/include -I/Users/bish218/projects/e3sm/scorpio/src/gptl -I/Users/bish218/projects/e3sm/scorpio/build-${PETSC_ARCH}/src/gptl -I/Users/bish218/projects/e3sm/scorpio/src/clib -I/Users/bish218/projects/e3sm/scorpio/build-${PETSC_ARCH}/src/clib -g -O0 -isysroot /Applications/Xcode.app/Contents/Developer/Platforms/MacOSX.platform/Developer/SDKs/MacOSX13.3.sdk
 
-SCORPIO_LIB=/Users/bish218/projects/e3sm/scorpio/build-gcc14-openmpi-9281ddf3762/src/flib/libpiof.a /Users/bish218/projects/e3sm/scorpio/build-gcc14-openmpi-9281ddf3762/src/gptl/libgptl.a /Users/bish218/projects/e3sm/scorpio/build-gcc14-openmpi-9281ddf3762/src/clib/libpioc.a
-#/Users/bish218/projects/e3sm/scorpio/build-gcc14-openmpi-9281ddf3762/pnetcdf-1.12.3/lib/libpnetcdf.a -lmpi_cxx -lc++
+SCORPIO_LIB=/Users/bish218/projects/e3sm/scorpio/build-${PETSC_ARCH}/src/flib/libpiof.a /Users/bish218/projects/e3sm/scorpio/build-${PETSC_ARCH}/src/gptl/libgptl.a /Users/bish218/projects/e3sm/scorpio/build-${PETSC_ARCH}/src/clib/libpioc.a
+#/Users/bish218/projects/e3sm/scorpio/build-${PETSC_ARCH}/pnetcdf-1.12.3/lib/libpnetcdf.a -lmpi_cxx -lc++
 
 CFLAGS   =
 FFLAGS   = ${USER_FFLAGS} ${INC_NETCDF} -fallow-argument-mismatch

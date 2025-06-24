@@ -344,23 +344,23 @@ contains
     PetscCall(MatSetFromOptions(gridmap%map_frac_mat, ierr))
 
     ! Put 1.0 on src_vec
-    PetscCallA(VecGetArrayF90(gridmap%src_vec, src_p, ierr))
+    PetscCallA(VecGetArray(gridmap%src_vec, src_p, ierr))
     do ni = 1, gridmap%na
        src_p(ni) = 1._r8
     end do
-    PetscCallA(VecRestoreArrayF90(gridmap%src_vec, src_p, ierr))
+    PetscCallA(VecRestoreArray(gridmap%src_vec, src_p, ierr))
 
     ! dst_vec = map_mat * src_vec
     PetscCallA(MatMult(gridmap%map_mat, gridmap%src_vec, gridmap%dst_vec, ierr))
 
     ! Now, create a temporary matrix that has 1/dst_vec(:) as the diagonal
-    PetscCallA(VecGetArrayF90(gridmap%dst_vec, dst_p, ierr))
+    PetscCallA(VecGetArray(gridmap%dst_vec, dst_p, ierr))
     do no = 1, gridmap%nb
        if (dst_p(no) > 0._r8) then
           PetscCallA(MatSetValues(temp_mat, 1, [no - 1], 1, [no - 1], [1._r8/dst_p(no)], INSERT_VALUES, ierr))
        end if
     end do
-    PetscCallA(VecRestoreArrayF90(gridmap%dst_vec, dst_p, ierr))
+    PetscCallA(VecRestoreArray(gridmap%dst_vec, dst_p, ierr))
 
     PetscCallA(MatAssemblyBegin(temp_mat, MAT_FINAL_ASSEMBLY, ierr))
     PetscCallA(MatAssemblyEnd(temp_mat, MAT_FINAL_ASSEMBLY, ierr))
@@ -478,14 +478,14 @@ contains
     call gridmap_checkifset( gridmap, subname )
 
 
-    PetscCallA(VecGetArrayF90(gridmap%src_vec, src_p, ierr))
+    PetscCallA(VecGetArray(gridmap%src_vec, src_p, ierr))
     do ni = 1, gridmap%na
        src_p(ni) = src_array(ni)
     end do
-    PetscCallA(VecRestoreArrayF90(gridmap%src_vec, src_p, ierr))
+    PetscCallA(VecRestoreArray(gridmap%src_vec, src_p, ierr))
 
     PetscCallA(MatMult(gridmap%map_frac_mat, gridmap%src_vec, gridmap%dst_vec, ierr))
-    PetscCallA(VecGetArrayF90(gridmap%dst_vec, dst_p, ierr))
+    PetscCallA(VecGetArray(gridmap%dst_vec, dst_p, ierr))
     do no = 1, gridmap%nb
        frac = gridmap%frac_dst(no)
        if (frac <= 0._r8) then
@@ -493,7 +493,7 @@ contains
        end if
        dst_array(no) = dst_p(no)
     end do
-    PetscCallA(VecRestoreArrayF90(gridmap%dst_vec, dst_p, ierr))
+    PetscCallA(VecRestoreArray(gridmap%dst_vec, dst_p, ierr))
 
   end subroutine gridmap_areaave_default
 
@@ -555,14 +555,14 @@ contains
     end do
 
     ! Fill in the source vector and a temporary vector
-    PetscCallA(VecGetArrayF90(gridmap%src_vec, src_p, ierr))
-    PetscCallA(VecGetArrayF90(ones_vec, vec_p, ierr))
+    PetscCallA(VecGetArray(gridmap%src_vec, src_p, ierr))
+    PetscCallA(VecGetArray(ones_vec, vec_p, ierr))
     do ni = 1, gridmap%na
        src_p(ni) = src_array(ni)
        vec_p(ni) = 1._r8
     end do
-    PetscCallA(VecRestoreArrayF90(gridmap%src_vec, src_p, ierr))
-    PetscCallA(VecRestoreArrayF90(ones_vec, vec_p, ierr))
+    PetscCallA(VecRestoreArray(gridmap%src_vec, src_p, ierr))
+    PetscCallA(VecRestoreArray(ones_vec, vec_p, ierr))
 
     PetscCallA(MatAssemblyBegin(new_wt_mat, MAT_FINAL_ASSEMBLY, ierr))
     PetscCallA(MatAssemblyEnd(new_wt_mat, MAT_FINAL_ASSEMBLY, ierr))
@@ -574,8 +574,8 @@ contains
     PetscCallA(MatMult(new_wt_mat, gridmap%src_vec, gridmap%dst_vec, ierr))
 
     ! Now, normalize each value in the destination vector by the value in wtnorm vector
-    PetscCallA(VecGetArrayF90(gridmap%dst_vec, dst_p, ierr))
-    PetscCallA(VecGetArrayF90(wtnorm_vec, wtnorm_p, ierr))
+    PetscCallA(VecGetArray(gridmap%dst_vec, dst_p, ierr))
+    PetscCallA(VecGetArray(wtnorm_vec, wtnorm_p, ierr))
     do no = 1, gridmap%nb
        if (wtnorm_p(no) > 0._r8) then
           dst_array(no) = dst_p(no)/wtnorm_p(no)
@@ -583,8 +583,8 @@ contains
           dst_array(no) = nodata
        end if
     end do
-    PetscCallA(VecRestoreArrayF90(gridmap%dst_vec, dst_p, ierr))
-    PetscCallA(VecRestoreArrayF90(wtnorm_vec, wtnorm_p, ierr))
+    PetscCallA(VecRestoreArray(gridmap%dst_vec, dst_p, ierr))
+    PetscCallA(VecRestoreArray(wtnorm_vec, wtnorm_p, ierr))
 
     ! Delete the temporary matrix and vectors
     PetscCallA(MatDestroy(new_wt_mat, ierr))

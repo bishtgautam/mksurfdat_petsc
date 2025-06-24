@@ -664,7 +664,7 @@ subroutine mksoiltex_pio(ldomain_pio, mapfname, datfname, ndiag, sand_o, clay_o)
 
   call gridmap_mapread_pio(tgridmap_pio, mapfname )
 
-  PetscCallA(MatGetRowIJF90(tgridmap_pio%map_mat, 0, PETSC_FALSE, PETSC_FALSE, num_rows, ia_ptr, ja_ptr, success, ierr))
+  PetscCallA(MatGetRowIJ(tgridmap_pio%map_mat, 0, PETSC_FALSE, PETSC_FALSE, num_rows, ia_ptr, ja_ptr, success, ierr))
   num_nonzero_wts = ia_ptr(num_rows + 1)
 
   !
@@ -687,13 +687,13 @@ subroutine mksoiltex_pio(ldomain_pio, mapfname, datfname, ndiag, sand_o, clay_o)
   PetscCallA(ISDestroy(is_from, ierr))
   PetscCallA(ISDestroy(is_to, ierr))
 
-  PetscCallA(VecGetArrayF90(tgridmap_pio%src_vec, vec_p, ierr))
+  PetscCallA(VecGetArray(tgridmap_pio%src_vec, vec_p, ierr))
   istart = tgridmap_pio%dim_na%begd
   iend = tgridmap_pio%dim_na%endd
   do i = istart, iend
     vec_p(i - istart + 1) = tgridmap_pio%src%frac(i)
   enddo
-  PetscCallA(VecRestoreArrayF90(tgridmap_pio%src_vec, vec_p, ierr))
+  PetscCallA(VecRestoreArray(tgridmap_pio%src_vec, vec_p, ierr))
 
   PetscCallA(VecScatterBegin(vec_scatter, tgridmap_pio%src_vec, frac_src_dst_vec, INSERT_VALUES, SCATTER_FORWARD, ierr))
   PetscCallA(VecScatterEnd(vec_scatter, tgridmap_pio%src_vec, frac_src_dst_vec, INSERT_VALUES, SCATTER_FORWARD, ierr))
@@ -739,11 +739,11 @@ subroutine mksoiltex_pio(ldomain_pio, mapfname, datfname, ndiag, sand_o, clay_o)
   PetscCallA(VecSetFromOptions(wts_glb_vec, ierr))
   PetscCallA(VecDuplicate(frac_src_dst_vec, wts_dst_vec, ierr))
 
-  PetscCallA(VecGetArrayF90(wts_glb_vec, vec_p, ierr))
+  PetscCallA(VecGetArray(wts_glb_vec, vec_p, ierr))
   do i = 1, ns_len
    vec_p(i) = tgridmap_pio%wovr(i - 1 + tgridmap_pio%dim_ns%begd)
   enddo
-  PetscCallA(VecRestoreArrayF90(wts_glb_vec, vec_p, ierr))
+  PetscCallA(VecRestoreArray(wts_glb_vec, vec_p, ierr))
 
   offset = 0
   call MPI_Exscan(num_nonzero_wts, offset, 1, MPIU_INTEGER, MPI_SUM, PETSC_COMM_WORLD, ierr)
@@ -779,9 +779,9 @@ subroutine mksoiltex_pio(ldomain_pio, mapfname, datfname, ndiag, sand_o, clay_o)
   PetscCallA(VecScatterDestroy(vec_scatter, ierr))
 
   ! Get access to data
-  PetscCallA(VecGetArrayF90(wts_dst_vec, wt_p, ierr))
-  PetscCallA(VecGetArrayF90(frac_src_dst_vec, frac_src_p, ierr))
-  PetscCallA(VecGetArrayF90(mapunit_dst_vec, mapunit_p, ierr))
+  PetscCallA(VecGetArray(wts_dst_vec, wt_p, ierr))
+  PetscCallA(VecGetArray(frac_src_dst_vec, frac_src_p, ierr))
+  PetscCallA(VecGetArray(mapunit_dst_vec, mapunit_p, ierr))
 
   ns_o = num_rows
 
@@ -911,10 +911,10 @@ subroutine mksoiltex_pio(ldomain_pio, mapfname, datfname, ndiag, sand_o, clay_o)
   end do
 
   ! restore access back
-  PetscCallA(MatRestoreRowIJF90(tgridmap_pio%map_mat, 0, PETSC_FALSE, PETSC_FALSE, num_rows, ia_ptr,ja_ptr, success, ierr))
-  PetscCallA(VecRestoreArrayF90(wts_dst_vec, wt_p, ierr))
-  PetscCallA(VecRestoreArrayF90(frac_src_dst_vec, frac_src_p, ierr))
-  PetscCallA(VecRestoreArrayF90(mapunit_dst_vec, mapunit_p, ierr))
+  PetscCallA(MatRestoreRowIJ(tgridmap_pio%map_mat, 0, PETSC_FALSE, PETSC_FALSE, num_rows, ia_ptr,ja_ptr, success, ierr))
+  PetscCallA(VecRestoreArray(wts_dst_vec, wt_p, ierr))
+  PetscCallA(VecRestoreArray(frac_src_dst_vec, frac_src_p, ierr))
+  PetscCallA(VecRestoreArray(mapunit_dst_vec, mapunit_p, ierr))
 
   ! clean up
   call domain_clean_pio(tdomain_pio)
