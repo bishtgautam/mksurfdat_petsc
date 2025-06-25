@@ -87,16 +87,22 @@ subroutine mklai(ldomain, mapfname, datfname, ndiag, ncido)
   real(r8), allocatable :: mhgtb_i(:,:)     ! monthly height (bottom) in
   real(r8), allocatable :: mask_src(:)      ! input grid: mask (0, 1)
   integer,  pointer     :: laimask(:,:)     ! lai+sai output mask for each plant function type
+  integer,  allocatable :: pft_index(:)     ! PFT index for each grid cell
+  real(r8), allocatable :: mlai_i_tmp(:)      ! monthly lai in
+  real(r8), allocatable :: msai_i_tmp(:)      ! monthly sai in
+  real(r8), allocatable :: mhgtt_i_tmp(:)     ! monthly height (top) in
+  real(r8), allocatable :: mhgtb_i_tmp(:)     ! monthly height (bottom) in
   real(r8) :: garea_i                       ! input  grid: global area
   real(r8) :: garea_o                       ! output grid: global area
   integer  :: ni,no,ns_i,ns_o               ! indices
-  integer  :: k,l,m                         ! indices
+  integer  :: i,k,l,m                         ! indices
   integer  :: ncidi,dimid,varid             ! input netCDF id's
   integer  :: ndimsi,ndimso                 ! netCDF dimension sizes 
   integer  :: dimids(4)                     ! netCDF dimension ids
   integer  :: bego(4),leno(4)               ! netCDF bounds
   integer  :: begi(4),leni(4)               ! netCDF bounds 
   integer  :: ntim                          ! number of input time samples
+  logical  :: use_pft_index                 ! whether to use PFT index
   integer  :: ier                           ! error status
   character(len= 32) :: subname = 'mklai'
 !-----------------------------------------------------------------------
@@ -124,11 +130,17 @@ subroutine mklai(ldomain, mapfname, datfname, ndiag, ncido)
   call check_ret(nf_inq_dimid(ncidi, 'time', dimid), subname)
   call check_ret(nf_inq_dimlen(ncidi, dimid, ntim), subname)
 
-  if (numpft_i /= numpft+1) then
-     write(6,*)'MKLAI: parameter numpft+1= ',numpft+1, &
-          'does not equal input dataset numpft= ',numpft_i
-     stop
+  if (numpft_i == 1) then
+     use_pft_index = .true.
+  else
+     use_pft_index = .false.
+     if (numpft_i /= numpft+1) then
+        write(6,*)'MKLAI: parameter numpft+1= ',numpft+1, &
+             'does not equal input dataset numpft= ',numpft_i
+        stop
+     endif
   endif
+
   if (ntim /= 12) then
      write(6,*)'MKLAI: must have 12 time samples on input data'
      call abort()
@@ -202,6 +214,17 @@ subroutine mklai(ldomain, mapfname, datfname, ndiag, ncido)
      call check_ret(nf_inq_dimlen(ncido, dimids(2), leno(2)), subname)
   end if
 
+  if (use_pft_index) then
+     allocate(pft_index(ns_i) , &
+          mlai_i_tmp(ns_i)    , &
+          msai_i_tmp(ns_i)    , &
+          mhgtt_i_tmp(ns_i)   , &
+          mhgtb_i_tmp(ns_i)   , stat=ier)
+     call check_ret(nf_inq_varid (ncidi, 'NAT_PFT_INDEX', varid), subname)
+     call check_ret(nf_get_vara_int (ncidi, varid, begi(1:ndimsi-2), leni(1:ndimsi-2), &
+          pft_index), subname)
+  endif
+
   ! Loop over months 
 
   do m = 1, ntim
@@ -231,14 +254,37 @@ subroutine mklai(ldomain, mapfname, datfname, ndiag, ncido)
      mhgtb_o(:,:) = 0.
   
      ! Loop over pft types to do mapping
-
-     do l = 0,numpft
+    
+     if (.not.use_pft_index) then
+        do l = 0,numpft
+           mask_src(:) = 1._r8 
+           call gridmap_areaave(tgridmap, mlai_i(:,l) , mlai_o(:,l) , nodata=0._r8, mask_src=mask_src)
+           call gridmap_areaave(tgridmap, msai_i(:,l) , msai_o(:,l) , nodata=0._r8, mask_src=mask_src)
+           call gridmap_areaave(tgridmap, mhgtt_i(:,l), mhgtt_o(:,l), nodata=0._r8, mask_src=mask_src)
+           call gridmap_areaave(tgridmap, mhgtb_i(:,l), mhgtb_o(:,l), nodata=0._r8, mask_src=mask_src)
+        enddo
+     else
         mask_src(:) = 1._r8 
-        call gridmap_areaave(tgridmap, mlai_i(:,l) , mlai_o(:,l) , nodata=0._r8, mask_src=mask_src)
-        call gridmap_areaave(tgridmap, msai_i(:,l) , msai_o(:,l) , nodata=0._r8, mask_src=mask_src)
-        call gridmap_areaave(tgridmap, mhgtt_i(:,l), mhgtt_o(:,l), nodata=0._r8, mask_src=mask_src)
-        call gridmap_areaave(tgridmap, mhgtb_i(:,l), mhgtb_o(:,l), nodata=0._r8, mask_src=mask_src)
-     enddo
+        do l = 0, numpft
+           do i = 1, ns_i
+              if (l == pft_index(ns_i)) then
+                 mlai_i_tmp(i)  = mlai_i(i,0)
+                 msai_i_tmp(i)  = msai_i(i,0)
+                 mhgtt_i_tmp(i) = mhgtt_i(i,0)
+                 mhgtb_i_tmp(i) = mhgtb_i(i,0)
+              else
+                 mlai_i_tmp(i)  = 0._r8
+                 msai_i_tmp(i)  = 0._r8
+                 mhgtt_i_tmp(i) = 0._r8
+                 mhgtb_i_tmp(i) = 0._r8
+              end if
+           enddo
+           call gridmap_areaave(tgridmap, mlai_i_tmp(:) , mlai_o(:,l) , nodata=0._r8, mask_src=mask_src)
+           call gridmap_areaave(tgridmap, msai_i_tmp(:) , msai_o(:,l) , nodata=0._r8, mask_src=mask_src)
+           call gridmap_areaave(tgridmap, mhgtt_i_tmp(:), mhgtt_o(:,l), nodata=0._r8, mask_src=mask_src)
+           call gridmap_areaave(tgridmap, mhgtb_i_tmp(:), mhgtb_o(:,l), nodata=0._r8, mask_src=mask_src)
+        enddo
+     endif
 
      ! Determine laimask
      
@@ -366,6 +412,10 @@ subroutine mklai(ldomain, mapfname, datfname, ndiag, ncido)
 
   deallocate(mlai_i,msai_i,mhgtt_i,mhgtb_i,&
              mask_src,mlai_o,msai_o,mhgtt_o,mhgtb_o,laimask)
+  if (use_pft_index) then
+     deallocate(pft_index, mlai_i_tmp, msai_i_tmp, mhgtt_i_tmp, mhgtb_i_tmp)
+  end if
+
   call gridmap_clean(tgridmap)
   call domain_clean(tdomain) 
 
@@ -443,14 +493,16 @@ subroutine mklai_pio(ldomain_pio, mapfname, datfname, ndiag, pioIoSystem_o, ncid
   type(iosystem_desc_t)                 :: pioIoSystem_i
   type(io_desc_t)                       :: iodesc
   integer               , pointer       :: compdof(:)
+  integer               , pointer       :: pft_index(:,:)      ! PFT index for each grid cell
   real(r8)              , pointer       :: mlai4d_i(:,:,:,:)  , mlai1d_i(:)  , mlai3d_o(:,:,:)  ! monthly lai
   real(r8)              , pointer       :: msai4d_i(:,:,:,:)  , msai1d_i(:)  , msai3d_o(:,:,:)  ! monthly sai
   real(r8)              , pointer       :: mhgtt4d_i(:,:,:,:) , mhgtt1d_i(:) , mhgtt3d_o(:,:,:) ! monthly vegetation height top
   real(r8)              , pointer       :: mhgtb4d_i(:,:,:,:) , mhgtb1d_i(:) , mhgtb3d_o(:,:,:) ! monthly vegetation height bottom
-  integer               , pointer       :: vec_row_indices(:)
-  integer                               :: dim_idx(4,2), dim2d(2)
+  integer               , pointer       :: vec_row_indices(:), pft_vec_row_indices(:)
+  integer                               :: dim_idx(4,2), dim2d(2), pft_dim_idx(2,2)
   integer                               :: i,j,p,t
   integer                               :: ns_loc_i,np,nt,count
+  logical                               :: use_pft_index
   integer                               :: ierr
 
   !
@@ -464,6 +516,7 @@ subroutine mklai_pio(ldomain_pio, mapfname, datfname, ndiag, pioIoSystem_o, ncid
   !
 
   call OpenFilePIO(datfname, pioIoSystem_i, ncid_i, PIO_NOWRITE)
+  write(6,*) 'Open LAI file: ', trim(datfname)
 
   call read_float_or_double_4d(tdomain_pio, pioIoSystem_i, ncid_i, 'MONTHLY_LAI', dim_idx, vec_row_indices, mlai4d_i)
   deallocate(vec_row_indices)
@@ -475,6 +528,15 @@ subroutine mklai_pio(ldomain_pio, mapfname, datfname, ndiag, pioIoSystem_o, ncid
   deallocate(vec_row_indices)
 
   call read_float_or_double_4d(tdomain_pio, pioIoSystem_i, ncid_i, 'MONTHLY_HEIGHT_BOT', dim_idx, vec_row_indices, mhgtb4d_i)
+
+  np = dim_idx(3,2) - dim_idx(3,1) + 1
+  nt = dim_idx(4,2) - dim_idx(4,1) + 1
+  if (np == 1) then
+     use_pft_index = .true.
+     call read_integer_2d(tdomain_pio, pioIoSystem_i, ncid_i, 'NAT_PFT_INDEX', pft_dim_idx, pft_vec_row_indices, pft_index)
+  else
+     use_pft_index = .false.
+  end if
 
   call PIO_closefile(ncid_i)
   call PIO_finalize(pioIoSystem_i, ierr)
@@ -491,29 +553,56 @@ subroutine mklai_pio(ldomain_pio, mapfname, datfname, ndiag, pioIoSystem_o, ncid
   allocate(mhgtt1d_i(ns_loc_i))
   allocate(mhgtb1d_i(ns_loc_i))
 
-  np = dim_idx(3,2) - dim_idx(3,1) + 1
-  nt = dim_idx(4,2) - dim_idx(4,1) + 1
 
-  allocate(mlai3d_o  (ldomain_pio%ns_loc, np, nt))
-  allocate(msai3d_o  (ldomain_pio%ns_loc, np, nt))
-  allocate(mhgtt3d_o (ldomain_pio%ns_loc, np, nt))
-  allocate(mhgtb3d_o (ldomain_pio%ns_loc, np, nt))
+  allocate(mlai3d_o  (ldomain_pio%ns_loc, numpft + 1, nt))
+  allocate(msai3d_o  (ldomain_pio%ns_loc, numpft + 1, nt))
+  allocate(mhgtt3d_o (ldomain_pio%ns_loc, numpft + 1, nt))
+  allocate(mhgtb3d_o (ldomain_pio%ns_loc, numpft + 1, nt))
 
   do t = 1, nt
-     do p = 1, np
+     do p = 1, numpft + 1
 
         ! Convert data into 1D array
 
-        count = 0
-        do j = dim_idx(2,1), dim_idx(2,2)
-           do i = dim_idx(1,1), dim_idx(1,2)
-              count = count + 1
-              mlai1d_i  (count) = mlai4d_i  (i,j,p,t)
-              msai1d_i  (count) = msai4d_i  (i,j,p,t)
-              mhgtt1d_i (count) = mhgtt4d_i (i,j,p,t)
-              mhgtb1d_i (count) = mhgtb4d_i (i,j,p,t)
+        if (.not.use_pft_index) then
+
+           ! The input data contains information for ALL PFTs, so copy the values for the
+           ! p-th PFT in the 1D array
+           count = 0
+           do j = dim_idx(2,1), dim_idx(2,2)
+              do i = dim_idx(1,1), dim_idx(1,2)
+                 count = count + 1
+                 mlai1d_i  (count) = mlai4d_i  (i,j,p,t)
+                 msai1d_i  (count) = msai4d_i  (i,j,p,t)
+                 mhgtt1d_i (count) = mhgtt4d_i (i,j,p,t)
+                 mhgtb1d_i (count) = mhgtb4d_i (i,j,p,t)
+              end do
            end do
-        end do
+
+        else
+
+           ! The input data contains information for only the dominant PFTs, so copy the values
+           ! in the 1D array when the 'p' corresponds to the dominant PFT
+
+           count = 0
+           do j = dim_idx(2,1), dim_idx(2,2)
+              do i = dim_idx(1,1), dim_idx(1,2)
+                 count = count + 1
+                 if (p == pft_index(i,j) + 1) then
+                    mlai1d_i  (count) = mlai4d_i  (i,j,1,t)
+                    msai1d_i  (count) = msai4d_i  (i,j,1,t)
+                    mhgtt1d_i (count) = mhgtt4d_i (i,j,1,t)
+                    mhgtb1d_i (count) = mhgtb4d_i (i,j,1,t)
+                 else
+                    mlai1d_i  (count) = 0._r8
+                    msai1d_i  (count) = 0._r8
+                    mhgtt1d_i (count) = 0._r8
+                    mhgtb1d_i (count) = 0._r8
+                 endif
+              end do
+           end do
+
+        endif
 
         !
         ! Map the data onto output grid
@@ -533,9 +622,9 @@ subroutine mklai_pio(ldomain_pio, mapfname, datfname, ndiag, pioIoSystem_o, ncid
 
    end do
 
-   allocate(compdof(ldomain_pio%ns_loc * np ))
+   allocate(compdof(ldomain_pio%ns_loc * (numpft + 1) ))
    count = 0
-   do p = 1, np
+   do p = 1, numpft + 1
       do i = 1, ldomain_pio%ns_loc
          count = count + 1
          compdof(count) = i + (p-1)*ldomain_pio%ns_glb + (ldomain_pio%begs - 1)
@@ -543,7 +632,7 @@ subroutine mklai_pio(ldomain_pio, mapfname, datfname, ndiag, pioIoSystem_o, ncid
    end do
 
    if (outnc_1d) then
-      dim2d(1) = ldomain_pio%ns_glb; dim2d(2) = np;
+      dim2d(1) = ldomain_pio%ns_glb; dim2d(2) = numpft + 1;
       call PIO_initdecomp(pioIoSystem_o, PIO_DOUBLE, dim2d, compdof, iodesc)
    else
       write(6,*)'Extend mklai_pio to support the case when output mesh is not 1D'
