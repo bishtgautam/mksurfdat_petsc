@@ -4,6 +4,7 @@ module mkpftPIOMod
   use shr_sys_mod , only : shr_sys_flush
   use mkvarctl    , only : numpft
   use mkdomainMod , only : domain_checksame
+  use spmdMod     , only : masterproc
   use piofileutils
   use petsc
 
@@ -76,8 +77,10 @@ contains
     character(len=32) :: subname = 'mkpft'
     !-----------------------------------------------------------------------
 
-    write (6,*)
-    write (6,*) 'Attempting to make PFTs .....'
+    if (masterproc) then
+       write (6,*)
+       write (6,*) 'Attempting to make PFTs .....'
+    end if
     call shr_sys_flush(6)
 
     ! -----------------------------------------------------------------
@@ -113,9 +116,9 @@ contains
     end if
 
     if (      numpft == numstdpft )then
-       write(6,*)'Creating surface datasets with the standard # of PFTs =', numpft
+       if (masterproc) write(6,*)'Creating surface datasets with the standard # of PFTs =', numpft
     else if ( numpft > numstdpft )then
-       write(6,*)'Creating surface datasets with extra types for crops; total pfts =', numpft
+       if (masterproc) write(6,*)'Creating surface datasets with extra types for crops; total pfts =', numpft
     else
        write(6,*) subname//': parameter numpft is NOT set to a known value (should be 16 or more) =',numpft
        call abort()
@@ -181,7 +184,7 @@ contains
              end do
           end do
 
-          call gridmap_areaave_pio(tgridmap_pio, vec_row_indices, pctpft1d_i(:), pctpft_o(:,m), nodata=0._r8)
+          call gridmap_areaave_pio(tgridmap_pio, ns_loc_i, vec_row_indices, pctpft1d_i(:), pctpft_o(:,m), nodata=0._r8)
 
           do no = 1, ns_loc_o
              if (pctlnd_o(no) < 1.0e-6) then
@@ -224,8 +227,10 @@ contains
        call gridmap_clean_pio(tgridmap_pio)
     end if
 
-    write (6,*) 'Successfully made PFTs'
-    write (6,*)
+    if (masterproc) then
+      write (6,*)
+      write (6,*) 'Successfully made PFTs'
+    end if
 
   end subroutine mkpft_pio
 

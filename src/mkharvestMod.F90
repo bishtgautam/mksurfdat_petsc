@@ -15,6 +15,7 @@ module mkharvestMod
   use shr_kind_mod , only : r8 => shr_kind_r8, CL => shr_kind_CL
   use shr_sys_mod  , only : shr_sys_flush
   use mkdomainMod  , only : domain_checksame
+  use spmdMod     , only : masterproc
 
   implicit none
 
@@ -272,10 +273,9 @@ subroutine mkharvest(ldomain, mapfname, datfname, ndiag, harv_o)
   character(len=*), parameter :: subname = 'mkharvest'
 !-----------------------------------------------------------------------
 
-  write (6,*) 'Attempting to make harvest fields .....'
+  if (masterproc) write (6,*) 'Attempting to make harvest fields .....'
+
   call shr_sys_flush(6)
-  write(*,*)'mapfname:' ,trim(mapfname)
-  write(*,*)'datfname:' ,trim(datfname)
 
   ! -----------------------------------------------------------------
   ! Normally read in the harvesting file, and then regrid to output grid
@@ -295,7 +295,7 @@ subroutine mkharvest(ldomain, mapfname, datfname, ndiag, harv_o)
      if (ier/=0) call abort()
      ns_o = ldomain%ns
 
-     write (6,*) 'Open harvest file: ', trim(datfname)
+     if (masterproc) write (6,*) 'Open harvest file: ', trim(datfname)
      call check_ret(nf_open(datfname, 0, ncid), subname)
      do ifld = 1, numharv
         call check_ret(nf_inq_varid(ncid, mkharvest_fieldname(ifld), varid), subname)
@@ -396,8 +396,10 @@ subroutine mkharvest(ldomain, mapfname, datfname, ndiag, harv_o)
 
   end if
 
-  write (6,*) 'Successfully made harvest and grazing'
-  write (6,*)
+  if (masterproc) then
+     write (6,*) 'Successfully made harvest and grazing'
+     write (6,*)
+  end if
 
 end subroutine mkharvest
 

@@ -249,7 +249,7 @@ subroutine mkvocef_pio(ldomain_pio, mapfname, datfname, ndiag, &
   real(r8), parameter :: nodata_value = 0._r8
   real(r8), parameter :: min_valid    = 0._r8
 
-  write (6,*) 'Attempting to make VOC emission factors .....'
+  if (masterproc) write (6,*) 'Attempting to make VOC emission factors .....'
   call shr_sys_flush(6)
 
   call mkdata_double_2d_pio(ldomain_pio, mapfname=mapfname, datfname=datfname, varname='ef_btr', &
@@ -276,9 +276,10 @@ subroutine mkvocef_pio(ldomain_pio, mapfname, datfname, ndiag, &
        data_descrip='ef_crp', ndiag=ndiag, zero_out=.false., nodata_value=nodata_value, data_o=ef_crp_o, &
        min_valid_value=min_valid)
 
-  write (6,*) 'Successfully made VOC Emission Factors'
-  write (6,*)
-  call shr_sys_flush(6)
+  if (masterproc) then
+     write (6,*) 'Successfully made VOC Emission Factors'
+     write (6,*)
+  end if
 
 end subroutine mkvocef_pio
 !-----------------------------------------------------------------------

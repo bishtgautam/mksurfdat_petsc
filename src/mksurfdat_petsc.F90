@@ -217,25 +217,25 @@ program mksurfdat_petsc
   if ( .not. domain_read_map(ldomain, mksrf_fgrid) )then
      call domain_read(ldomain, mksrf_fgrid)
   end if
-  write(6,*)'finished domain_read'  
+  if (masterproc) write(6,*)'finished domain_read'
 
   ! Determine if will have 1d output
 
   if (ldomain%ni /= -9999 .and. ldomain%nj /= -9999) then
-     write(6,*)'fsurdat is 2d lat/lon grid'
-     write(6,*)'nlon= ',ldomain%ni,' nlat= ',ldomain%nj
+     if (masterproc) write(6,*)'fsurdat is 2d lat/lon grid'
+     if (masterproc) write(6,*)'nlon= ',ldomain%ni,' nlat= ',ldomain%nj
      if (outnc_dims == 1) then
-        write(6,*)' writing output file in 1d gridcell format'
+        if (masterproc) write(6,*)' writing output file in 1d gridcell format'
      end if
   else
-     write(6,*)'fsurdat is 1d gridcell grid'
+     if (masterproc) write(6,*)'fsurdat is 1d gridcell grid'
      outnc_dims = 1
   end if
 
   outnc_1d = .false.
   if ((ldomain%ni == -9999 .and. ldomain%nj == -9999) .or. outnc_dims==1) then
      outnc_1d = .true.
-     write(6,*)'output file will be 1d'
+     if (masterproc) write(6,*)'output file will be 1d'
   end if
 
   ! allocate memory for all variables
@@ -269,8 +269,6 @@ program mksurfdat_petsc
      call mksoiltex (ldomain, mapfname=map_fsoitex, datfname=mksrf_fsoitex, &
           ndiag=ndiag, sand_o=pctsand, clay_o=pctclay)
   endif
-  !TODO: call mksoiltex_pio (ldomain_pio, mapfname=map_fsoitex, datfname=mksrf_fsoitex, &
-  !     ndiag=ndiag, sand_o=pctsand, clay_o=pctclay)
 
   ! Make soil color classes [soicol] [fsoicol]
 
@@ -521,7 +519,7 @@ contains
 
        if (trim(mksrf_gridtype) == 'global' .or. &
             trim(mksrf_gridtype) == 'regional') then
-          write(6,*)'mksrf_gridtype = ',trim(mksrf_gridtype)
+          if (masterproc) write(6,*)'mksrf_gridtype = ',trim(mksrf_gridtype)
        else
           write(6,*)'mksrf_gridtype = ',trim(mksrf_gridtype)
           write (6,*)'illegal mksrf_gridtype, must be global or regional '
@@ -529,16 +527,16 @@ contains
        endif
 
        if ( outnc_large_files )then
-          write(6,*)'Output file in NetCDF 64-bit large_files format'
+          if (masterproc) write(6,*)'Output file in NetCDF 64-bit large_files format'
        end if
        if ( outnc_double )then
-          write(6,*)'Output ALL data in file as 64-bit'
+          if (masterproc) write(6,*)'Output ALL data in file as 64-bit'
        end if
        if ( all_urban )then
-          write(6,*) 'Output ALL data in file as 100% urban'
+          if (masterproc) write(6,*) 'Output ALL data in file as 100% urban'
        end if
        if ( no_inlandwet )then
-          write(6,*) 'Set wetland to 0% over land'
+          if (masterproc) write(6,*) 'Set wetland to 0% over land'
        end if
 
     end if
@@ -850,18 +848,18 @@ contains
        do n = 1,ns_o
           suma = suma + pctnatpft(n,k)*pctnatveg(n)/100._r8
        enddo
-       write(6,*) 'sum over domain of pft ',k,suma
+       if (masterproc) write(6,*) 'sum over domain of pft ',k,suma
     enddo
-    write(6,*)
+    if (masterproc) write(6,*)
 
     do k = cft_lb,cft_ub
        suma = 0._r8
        do n = 1,ns_o
           suma = suma + pctcft(n,k)*pctcrop(n)/100._r8
        enddo
-       write(6,*) 'sum over domain of cft ',k,suma
+       if (masterproc) write(6,*) 'sum over domain of cft ',k,suma
     enddo
-    write(6,*)
+    if (masterproc) write(6,*)
 
     ! Make final values of percent urban by class
     ! This call needs to occur after all corrections are made to pcturb
@@ -1471,7 +1469,7 @@ contains
     ! Write to netcdf file is done inside mkurbanpar routine
     ! ----------------------------------------------------------------------
 
-    write(6,*)'calling mkurbanpar'
+    if (masterproc) write(6,*)'calling mkurbanpar'
     call mkurbanpar(datfname=mksrf_furban, ncido=ncid, region_o=urban_region, &
          urbn_classes_gcell_o=urbn_classes_g)
 
@@ -1480,7 +1478,7 @@ contains
     ! Write to netcdf file is done inside mklai routine
     ! ----------------------------------------------------------------------
 
-    write(6,*)'calling mklai'
+    if (masterproc) write(6,*)'calling mklai'
     call mklai(ldomain, mapfname=map_flai, datfname=mksrf_flai, &
          ndiag=ndiag, ncido=ncid )
 
@@ -1488,9 +1486,11 @@ contains
 
     call check_ret(nf_close(ncid), subname)
 
-    write (6,'(72a1)') ("-",n=1,60)
-    write (6,*)' land model surface data set successfully created for ', &
-         'grid of size ',ns_o
+    if (masterproc) then
+       write (6,'(72a1)') ("-",n=1,60)
+       write (6,*)' land model surface data set successfully created for ', &
+            'grid of size ',ns_o
+    end if
 
   end subroutine write_surface_dataset
 

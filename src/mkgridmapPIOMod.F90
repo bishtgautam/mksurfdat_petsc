@@ -284,10 +284,10 @@ contains
     character(*),parameter :: F00 = '("(gridmap_mapread_pio) ",4a)'
     character(*),parameter :: F01 = '("(gridmap_mapread_pio) ",2(a,i7))'
 
-    write(6,F00) "reading mapping matrix data using PIO..."
+    if (masterproc) write(6,F00) "reading mapping matrix data using PIO..."
 
     ! open & read the file
-    write(6,F00) "* file name                  : ",trim(fileName)
+    if (masterproc) write(6,F00) "* file name                  : ",trim(fileName)
 
     stride        = 1
     numAggregator = 0
@@ -339,7 +339,6 @@ contains
     !
     ! map_mat: Create sparse matrix based on 'row', 'col', and 'S' values
     !
-    write(6,*) "* creating map_mat"
     PetscCallA(MatCreate(PETSC_COMM_WORLD, gridmap_pio%map_mat, ierr))
     PetscCall(MatSetsizes(gridmap_pio%map_mat, PETSC_DECIDE, PETSC_DECIDE, gridmap_pio%dim_nb%nglb, gridmap_pio%dim_na%nglb, ierr))
     PetscCall(MatSetFromOptions(gridmap_pio%map_mat, ierr))
@@ -353,7 +352,6 @@ contains
     !
     ! map_frac_mat: Matrix in which each row of map_mat is normalized with frac_b(row)
     !
-    write(6,*) "* creating map_frac_mat"
     PetscCallA(MatCreate(PETSC_COMM_WORLD, temp_mat, ierr))
     PetscCall(MatSetsizes(temp_mat, PETSC_DECIDE, PETSC_DECIDE, gridmap_pio%dim_nb%nglb, gridmap_pio%dim_nb%nglb, ierr))
     PetscCall(MatSetFromOptions(temp_mat, ierr))
@@ -396,11 +394,12 @@ contains
   end subroutine gridmap_mapread_pio
 
   !------------------------------------------------------------------------------
-  subroutine gridmap_areaave_default_pio(gridmap_pio, row_indices, src_array, dst_array, nodata)
+  subroutine gridmap_areaave_default_pio(gridmap_pio, nrow, row_indices, src_array, dst_array, nodata)
 
     implicit none
 
     type(gridmap_pio_type)           , intent(in)  :: gridmap_pio
+    integer                          , intent(in)  :: nrow
     integer                , pointer , intent (in) :: row_indices(:)
     real(r8)                         , intent(in)  :: src_array(:)
     real(r8)                         , intent(out) :: dst_array(:)
@@ -414,7 +413,7 @@ contains
     call gridmap_checkifset_pio(gridmap_pio, subname)
 
     ! fill the source Vec
-    PetscCallA(VecSetValues(gridmap_pio%src_vec, gridmap_pio%dim_na%nloc, row_indices, src_array, INSERT_VALUES, ierr))
+    PetscCallA(VecSetValues(gridmap_pio%src_vec, nrow, row_indices, src_array, INSERT_VALUES, ierr))
     PetscCallA(VecAssemblyBegin(gridmap_pio%src_vec, ierr))
     PetscCallA(VecAssemblyEnd(gridmap_pio%src_vec, ierr))
 
@@ -436,11 +435,12 @@ contains
   end subroutine gridmap_areaave_default_pio
 
   !------------------------------------------------------------------------------
-  subroutine gridmap_areaave_srcmask_pio(gridmap_pio, row_indices, src_array, dst_array, nodata, mask_src)
+  subroutine gridmap_areaave_srcmask_pio(gridmap_pio, nrow, row_indices, src_array, dst_array, nodata, mask_src)
 
     implicit none
 
     type(gridmap_pio_type)           , intent(in)  :: gridmap_pio
+    integer                          , intent(in)  :: nrow
     integer                , pointer , intent(in)  :: row_indices(:)
     real(r8)                         , intent(in)  :: src_array(:)
     real(r8)                         , intent(out) :: dst_array(:)
@@ -460,11 +460,11 @@ contains
     PetscCallA(VecDuplicate(gridmap_pio%dst_vec, tmp_dst_vec, ierr))
 
     ! fill the source and temporary Vec
-    PetscCallA(VecSetValues(gridmap_pio%src_vec, gridmap_pio%dim_na%nloc, row_indices, src_array, INSERT_VALUES, ierr))
+    PetscCallA(VecSetValues(gridmap_pio%src_vec, nrow, row_indices, src_array, INSERT_VALUES, ierr))
     PetscCallA(VecAssemblyBegin(gridmap_pio%src_vec, ierr))
     PetscCallA(VecAssemblyEnd(gridmap_pio%src_vec, ierr))
 
-    PetscCallA(VecSetValues(tmp_src_vec, gridmap_pio%dim_na%nloc, row_indices, mask_src, INSERT_VALUES, ierr))
+    PetscCallA(VecSetValues(tmp_src_vec, nrow, row_indices, mask_src, INSERT_VALUES, ierr))
     PetscCallA(VecAssemblyBegin(tmp_src_vec, ierr))
     PetscCallA(VecAssemblyEnd(tmp_src_vec, ierr))
 

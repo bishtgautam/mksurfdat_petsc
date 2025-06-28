@@ -15,6 +15,7 @@ module mksoilphosphorusMod
   use shr_kind_mod, only : r8 => shr_kind_r8, r4=>shr_kind_r4
   use shr_sys_mod , only : shr_sys_flush
   use mkdomainMod , only : domain_checksame
+  use spmdMod     , only : masterproc
   implicit none
 
   SAVE
@@ -178,29 +179,29 @@ contains
     real(r8), parameter   :: min_valid    = 0._r8
     !-----------------------------------------------------------------------
 
-    write (6,*) 'Attempting to make soil phosphorus .....'
+    if (masterproc) write (6,*) 'Attempting to make soil phosphorus .....'
     call shr_sys_flush(6)
-    write(*,*)'mapfname:' ,trim(mapfname)
-    write(*,*)'datfname:' ,trim(datfname)
   
-  call mkdata_double_2d_pio(ldomain_pio, mapfname=mapfname, datfname=datfname, varname='APATITE_P', &
+    call mkdata_double_2d_pio(ldomain_pio, mapfname=mapfname, datfname=datfname, varname='APATITE_P', &
        data_descrip='APATITE_P', ndiag=ndiag, zero_out=.false., nodata_value=nodata_value, data_o=apatiteP_o, &
        min_valid_value=min_valid)
 
-  call mkdata_double_2d_pio(ldomain_pio, mapfname=mapfname, datfname=datfname, varname='LABILE_P', &
+    call mkdata_double_2d_pio(ldomain_pio, mapfname=mapfname, datfname=datfname, varname='LABILE_P', &
        data_descrip='LABILE_P', ndiag=ndiag, zero_out=.false., nodata_value=nodata_value, data_o=labileP_o, &
        min_valid_value=min_valid)
 
-  call mkdata_double_2d_pio(ldomain_pio, mapfname=mapfname, datfname=datfname, varname='OCCLUDED_P', &
+    call mkdata_double_2d_pio(ldomain_pio, mapfname=mapfname, datfname=datfname, varname='OCCLUDED_P', &
        data_descrip='OCCLUDED_P', ndiag=ndiag, zero_out=.false., nodata_value=nodata_value, data_o=occludedP_o, &
        min_valid_value=min_valid)
 
-  call mkdata_double_2d_pio(ldomain_pio, mapfname=mapfname, datfname=datfname, varname='SECONDARY_P', &
+    call mkdata_double_2d_pio(ldomain_pio, mapfname=mapfname, datfname=datfname, varname='SECONDARY_P', &
        data_descrip='SECONDARY_P', ndiag=ndiag, zero_out=.false., nodata_value=nodata_value, data_o=secondaryP_o, &
        min_valid_value=min_valid)
 
-    write (6,*) 'Successfully made phosphorus'
-    write (6,*)
+    if (masterproc) then
+       write (6,*) 'Successfully made phosphorus'
+       write (6,*)
+    end if
     call shr_sys_flush(6)
 
   end subroutine mksoilphosphorus_pio

@@ -15,6 +15,7 @@ module mkSedMod
   use shr_kind_mod, only : r8 => shr_kind_r8, r4=>shr_kind_r4
   use shr_sys_mod , only : shr_sys_flush
   use mkdomainMod , only : domain_checksame
+  use spmdMod     , only : masterproc
   implicit none
 
   SAVE
@@ -91,10 +92,8 @@ subroutine mkgrvl(ldomain, mapfname, datfname, ndiag, grvl_o)
   character(len=32) :: subname = 'mkgrvl'
 !-----------------------------------------------------------------------
 
-  write (6,*) 'Attempting to make gravel dataset .....'
+  if (masterproc) write (6,*) 'Attempting to make gravel dataset .....'
   call shr_sys_flush(6)
-  write(*,*)'mapfname:' ,trim(mapfname)
-  write(*,*)'datfname:' ,trim(datfname)
 
   ! -----------------------------------------------------------------
   ! Read input file
@@ -105,7 +104,7 @@ subroutine mkgrvl(ldomain, mapfname, datfname, ndiag, grvl_o)
   call domain_read(tdomain,datfname)
   ns_i = tdomain%ns
 
-  write (6,*) 'Open gravel file: ', trim(datfname)
+  if (masterproc) write (6,*) 'Open gravel file: ', trim(datfname)
   call check_ret(nf_open(datfname, 0, ncid), subname)
 
   call check_ret(nf_inq_dimid  (ncid, 'number_of_layers', dimid), subname)
@@ -161,9 +160,8 @@ subroutine mkgrvl(ldomain, mapfname, datfname, ndiag, grvl_o)
   call gridmap_clean(tgridmap)
   deallocate (grvl_i)
 
-  write (6,*) 'Successfully made gravel'
+  if (masterproc) write (6,*) 'Successfully made gravel'
   call shr_sys_flush(6)
-  write(6,*)
 
 end subroutine mkgrvl
 
@@ -188,16 +186,15 @@ subroutine mkgrvl_pio(ldomain_pio, mapfname, datfname, ndiag, grvl_o)
   real(r8), parameter :: nodata_value = 0._r8
   real(r8), parameter :: max_valid    = 100.000001_r8
   
-  write (6,*) 'Attempting to make gravel dataset .....'
+  if (masterproc) write (6,*) 'Attempting to make gravel dataset .....'
   call shr_sys_flush(6)
 
   call mkdata_double_3d_pio(ldomain_pio, mapfname=mapfname, datfname=datfname, varname='PCT_GRVL', &
        data_descrip='PCT_GRVL', ndiag=ndiag, zero_out=.false., nodata_value=nodata_value, start_id_for_dim3=1, &
        data_o=grvl_o, max_valid_value=max_valid)
 
-  write (6,*) 'Successfully made gravel'
+  if (masterproc) write (6,*) 'Successfully made gravel'
   call shr_sys_flush(6)
-  write(6,*)
 
 end subroutine mkgrvl_pio
 
@@ -248,10 +245,8 @@ subroutine mkslp10(ldomain, mapfname, datfname, ndiag, slp10_o)
   character(len=32) :: subname = 'mkslp10'
 !-----------------------------------------------------------------------
 
-  write (6,*) 'Attempting to make slope percentile dataset .....'
+  if (masterproc) write (6,*) 'Attempting to make slope percentile dataset .....'
   call shr_sys_flush(6)
-  write(*,*)'mapfname:' ,trim(mapfname)
-  write(*,*)'datfname:' ,trim(datfname)
 
   ! -----------------------------------------------------------------
   ! Read input file
@@ -262,7 +257,7 @@ subroutine mkslp10(ldomain, mapfname, datfname, ndiag, slp10_o)
   call domain_read(tdomain,datfname)
   ns_i = tdomain%ns
 
-  write (6,*) 'Open slope percentile file: ', trim(datfname)
+  if (masterproc) write (6,*) 'Open slope percentile file: ', trim(datfname)
   call check_ret(nf_open(datfname, 0, ncid), subname)
 
   call check_ret(nf_inq_dimid  (ncid, 'level', dimid), subname)
@@ -307,7 +302,7 @@ subroutine mkslp10(ldomain, mapfname, datfname, ndiag, slp10_o)
 
      call shr_sys_flush(ndiag)
 
-     write (6,*) 'Successfully made slope percentile, level = ', lev
+     if (masterproc) write (6,*) 'Successfully made slope percentile, level = ', lev
      call shr_sys_flush(6)
 
   end do   ! lev
@@ -318,9 +313,8 @@ subroutine mkslp10(ldomain, mapfname, datfname, ndiag, slp10_o)
   call gridmap_clean(tgridmap)
   deallocate (slp10_i)
 
-  write (6,*) 'Successfully made slope percentile'
+  if (masterproc) write (6,*) 'Successfully made slope percentile'
   call shr_sys_flush(6)
-  write(6,*)
 
 end subroutine mkslp10 
 
@@ -344,16 +338,15 @@ subroutine mkslp10_pio(ldomain_pio, mapfname, datfname, ndiag, slp10_o)
   real(r8), parameter :: nodata_value = 0._r8
   real(r8), parameter :: max_valid    = 100.000001_r8
 
-  write (6,*) 'Attempting to make slope percentile dataset .....'
+  if (masterproc) write (6,*) 'Attempting to make slope percentile dataset .....'
   call shr_sys_flush(6)
 
   call mkdata_double_3d_pio(ldomain_pio, mapfname=mapfname, datfname=datfname, varname='SLP_P10', &
        data_descrip='Slope quantiles', ndiag=ndiag, zero_out=.false., nodata_value=nodata_value, start_id_for_dim3=1, &
        data_o=slp10_o, max_valid_value=max_valid)
 
-  write (6,*) 'Successfully made slope percentile'
+  if (masterproc) write (6,*) 'Successfully made slope percentile'
   call shr_sys_flush(6)
-  write(6,*)
 
 end subroutine mkslp10_pio
 
@@ -408,10 +401,8 @@ subroutine mkEROparams(ldomain, mapfname, datfname, ndiag, &
   character(len=32) :: subname = 'mkEROparams'
 !-----------------------------------------------------------------------
 
-  write (6,*) 'Attempting to make ELM-Erosion parameters.....'
+  if (masterproc) write (6,*) 'Attempting to make ELM-Erosion parameters.....'
   call shr_sys_flush(6)
-  write(*,*)'mapfname:' ,trim(mapfname)
-  write(*,*)'datfname:' ,trim(datfname)
 
   ! -----------------------------------------------------------------
   ! Read domain and mapping information, check for consistency
@@ -428,7 +419,7 @@ subroutine mkEROparams(ldomain, mapfname, datfname, ndiag, &
   ! Open input file, allocate memory for input data
   ! -----------------------------------------------------------------
 
-  write(6,*)'Open ELM-Erosion parameter file: ', trim(datfname)
+  if (masterproc) write(6,*)'Open ELM-Erosion parameter file: ', trim(datfname)
   call check_ret(nf_open(datfname, 0, ncid), subname)
 
   allocate(data_i(tdomain%ns), stat=ier)
@@ -518,8 +509,7 @@ subroutine mkEROparams(ldomain, mapfname, datfname, ndiag, &
   call gridmap_clean(tgridmap)
   deallocate (data_i)
 
-  write (6,*) 'Successfully made ELM-Erosion parameters'
-  write (6,*)
+  if (masterproc) write (6,*) 'Successfully made ELM-Erosion parameters'
   call shr_sys_flush(6)
 
 end subroutine mkEROparams
@@ -552,7 +542,7 @@ subroutine mkEROparams_pio(ldomain_pio, mapfname, datfname, ndiag, &
   real(r8), parameter :: min_valid    = 0._r8
 
 
-  write (6,*) 'Attempting to make ELM-Erosion parameters.....'
+  if (masterproc) write (6,*) 'Attempting to make ELM-Erosion parameters.....'
   call shr_sys_flush(6)
 
   call mkdata_double_2d_pio(ldomain_pio, mapfname=mapfname, datfname=datfname, varname='parEro_c1', &
@@ -575,8 +565,7 @@ subroutine mkEROparams_pio(ldomain_pio, mapfname, datfname, ndiag, &
        data_descrip='Litho', ndiag=ndiag, zero_out=.false., nodata_value=nodata_value, data_o=litho_o, &
        min_valid_value=min_valid)
 
-  write (6,*) 'Successfully made ELM-Erosion parameters'
-  write (6,*)
+  if (masterproc) write (6,*) 'Successfully made ELM-Erosion parameters'
   call shr_sys_flush(6)
 
 end subroutine mkEROparams_pio

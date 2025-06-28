@@ -345,7 +345,7 @@ SUBROUTINE shr_sys_flush(unit)
 
 #else
 
-   if (s_loglev > 0) write(s_logunit,F00) 'WARNING: no implementation of flush for this architecture'
+   !if (s_loglev > 0) write(s_logunit,F00) 'WARNING: no implementation of flush for this architecture'
 
 #endif
 

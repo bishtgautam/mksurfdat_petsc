@@ -11,6 +11,7 @@ module mkdomainMod
   use shr_kind_mod, only : r8 => shr_kind_r8
   use mkvarpar    , only : re
   use nanMod      , only : nan, bigint
+  use spmdMod     , only : masterproc
 !
 ! !PUBLIC TYPES:
   implicit none
@@ -390,7 +391,7 @@ end subroutine domain_check
 
     call domain_read_dims(domain, ncid)
     call domain_init(domain, domain%ns)
-    write(6,*) trim(subname),' initialized domain'
+    if (masterproc) write(6,*) trim(subname),' initialized domain'
 
     ! ----- Set lat/lon variable ------
 
@@ -445,7 +446,7 @@ end subroutine domain_check
     if (ier == NF_NOERR) then
        if (landfracset) write(6,*) trim(subname),' WARNING, overwriting frac'
        landfracset = .true.
-       write(6,*) trim(subname),' read frac'
+       if (masterproc) write(6,*) trim(subname),' read frac'
        call check_ret(nf_inq_varid (ncid, 'frac', varid), subname)
        call check_ret(nf_get_var_double (ncid, varid, domain%frac), subname)
     endif
@@ -454,7 +455,7 @@ end subroutine domain_check
     if (ier == NF_NOERR) then
        if (landfracset) write(6,*) trim(subname),' WARNING, overwriting frac'
        landfracset = .true.
-       write(6,*) trim(subname),' read LANDFRAC'
+       if (masterproc) write(6,*) trim(subname),' read LANDFRAC'
        call check_ret(nf_inq_varid (ncid, 'LANDFRAC', varid), subname)
        call check_ret(nf_get_var_double (ncid, varid, domain%frac), subname)
     endif
@@ -464,7 +465,7 @@ end subroutine domain_check
        if (ier == NF_NOERR) then
           if (maskset) write(6,*) trim(subname),' WARNING, overwriting mask'
           maskset = .true.
-          write(6,*) trim(subname),' read mask with lreadmask set'
+         if (masterproc)  write(6,*) trim(subname),' read mask with lreadmask set'
           call check_ret(nf_inq_varid (ncid, 'mask', varid), subname)
           call check_ret(nf_get_var_int (ncid, varid, domain%mask), subname)
        endif
@@ -473,7 +474,7 @@ end subroutine domain_check
        if (ier == NF_NOERR) then
           if (maskset) write(6,*) trim(subname),' WARNING, overwriting mask'
           maskset = .true.
-          write(6,*) trim(subname),' read mask'
+          if (masterproc) write(6,*) trim(subname),' read mask'
           call check_ret(nf_inq_varid (ncid, 'mask', varid), subname)
           call check_ret(nf_get_var_int (ncid, varid, domain%mask), subname)
        endif
@@ -481,7 +482,7 @@ end subroutine domain_check
        if (ier == NF_NOERR) then
           if (maskset) write(6,*) trim(subname),' WARNING, overwriting mask'
           maskset = .true.
-          write(6,*) trim(subname),' read LANDMASK'
+          if (masterproc) write(6,*) trim(subname),' read LANDMASK'
           call check_ret(nf_inq_varid (ncid, 'LANDMASK', varid), subname)
           call check_ret(nf_get_var_int (ncid, varid, domain%mask), subname)
        endif
@@ -618,10 +619,10 @@ end subroutine domain_check
       ier = nf_inq_dimid (ncid, lon_name, dimid)
       if (ier == NF_NOERR) then
          if (dimset) then
-            write(6,*) trim(subname),' WARNING: dimension sizes already set; skipping ', &
+            if (masterproc) write(6,*) trim(subname),' WARNING: dimension sizes already set; skipping ', &
                  lon_name, '/', lat_name
          else
-            write(6,*) trim(subname),' read lon and lat dims from ', lon_name, '/', lat_name
+            if (masterproc)  write(6,*) trim(subname),' read lon and lat dims from ', lon_name, '/', lat_name
             call check_ret(nf_inq_dimid  (ncid, lon_name, dimid), subname)
             call check_ret(nf_inq_dimlen (ncid, dimid, nlon), subname)
             call check_ret(nf_inq_dimid  (ncid, lat_name, dimid), subname)
@@ -682,9 +683,9 @@ end subroutine domain_check
       ier = nf_inq_dimid (ncid, dim_name, dimid)
       if (ier == NF_NOERR) then
          if (dimset) then
-            write(6,*) trim(subname),' WARNING: dimension sizes already set; skipping ', dim_name
+            if (masterproc) write(6,*) trim(subname),' WARNING: dimension sizes already set; skipping ', dim_name
          else
-            write(6,*) trim(subname),' read 1-d length from ', dim_name
+            if (masterproc) write(6,*) trim(subname),' read 1-d length from ', dim_name
             call check_ret(nf_inq_dimid  (ncid, dim_name, dimid), subname)
             call check_ret(nf_inq_dimlen (ncid, dimid, npts), subname)
             domain%ns = npts

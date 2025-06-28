@@ -3,6 +3,7 @@ module piofileutils
   use shr_kind_mod, only : r8 => shr_kind_r8
   use mkdomainPIOMod
   use pio
+  use spmdMod      , only : iam, npes, masterproc, mpicom
 
   implicit none
 

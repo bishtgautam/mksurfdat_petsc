@@ -1,5 +1,7 @@
 module mkfileMod
 
+  use spmdMod     , only : masterproc
+
   public mkfile
   public mkfile_pio
 
@@ -62,7 +64,7 @@ contains
     character(len=32)  :: subname = 'mkfile'  ! subroutine name
 !-----------------------------------------------------------------------
 
-    write(6,*)'call nf_create'
+    if (masterproc) write(6,*)'call nf_create'
     call check_ret(nf_create(trim(fname), ior(nf_clobber,nf_64bit_offset), &
                                 ncid), subname)
 
@@ -71,10 +73,10 @@ contains
     ! Define dimensions.
 
     if (outnc_1d) then
-       write(6,*)' dim: gridcell'
+       if (masterproc) write(6,*)' dim: gridcell'
        call check_ret(nf_def_dim (ncid, 'gridcell', domain%ns, dimid), subname)
     else
-       write(6,*)' dim: lsmlon/lat'
+       if (masterproc) write(6,*)' dim: lsmlon/lat'
        call check_ret(nf_def_dim (ncid, 'lsmlon'  , domain%ni, dimid), subname)
        call check_ret(nf_def_dim (ncid, 'lsmlat'  , domain%nj, dimid), subname)
     end if
@@ -85,17 +87,12 @@ contains
           call check_ret(nf_def_dim (ncid, 'nglcecp1', nglcec+1    , dimid), subname)
        end if
     end if
-    write(6,*)' dim: numurbl'
     call check_ret(nf_def_dim (ncid, 'numurbl' , numurbl     , dimid), subname)
-    write(6,*)' dim: numurbb'
     call check_ret(nf_def_dim (ncid, 'nlevurb' , nlevurb     , dimid), subname)
-    write(6,*)' dim: numrad'
     call check_ret(nf_def_dim (ncid, 'numrad'  , numrad      , dimid), subname)
-    write(6,*)' dim: nchar'
     call check_ret(nf_def_dim (ncid, 'nchar'   , 256         , dimid), subname)
 
     ! Create global attributes.
-    write(6,*)'1. writing global attributes'
 
     str = 'NCAR-CSM'
     call check_ret(nf_put_att_text (ncid, NF_GLOBAL, &

@@ -18,6 +18,7 @@ module mklanwatMod
   use shr_kind_mod, only : r8 => shr_kind_r8
   use shr_sys_mod , only : shr_sys_flush
   use mkdomainMod , only : domain_checksame
+  use spmdMod     , only : masterproc
 
   implicit none
 
@@ -89,7 +90,7 @@ subroutine mklakwat(ldomain, mapfname, datfname, ndiag, zero_out, lake_o)
   character(len=32) :: subname = 'mklakwat'
 !-----------------------------------------------------------------------
 
-  write (6,*) 'Attempting to make %lake and %wetland .....'
+  if (masterproc) write (6,*) 'Attempting to make %lake and %wetland .....'
   call shr_sys_flush(6)
 
   ! -----------------------------------------------------------------
@@ -99,8 +100,6 @@ subroutine mklakwat(ldomain, mapfname, datfname, ndiag, zero_out, lake_o)
   ! Obtain input grid info, read local fields
 
   ns_o = ldomain%ns
-  write(*,*)'mapfname:' ,trim(mapfname)
-  write(*,*)'datfname:' ,trim(datfname)
 
   call domain_read(tdomain,datfname)
   ns_i = tdomain%ns
@@ -109,7 +108,7 @@ subroutine mklakwat(ldomain, mapfname, datfname, ndiag, zero_out, lake_o)
      allocate(lake_i(ns_i), stat=ier)
      if (ier/=0) call abort()
 
-     write(6,*)'Open lake file: ', trim(datfname)
+     if (masterproc) write(6,*)'Open lake file: ', trim(datfname)
      call check_ret(nf_open(datfname, 0, ncid), subname)
      call check_ret(nf_inq_varid (ncid, 'PCT_LAKE', varid), subname)
      call check_ret(nf_get_var_double (ncid, varid, lake_i), subname)
@@ -218,8 +217,10 @@ subroutine mklakwat(ldomain, mapfname, datfname, ndiag, zero_out, lake_o)
      deallocate (lake_i)
   end if
 
-  write (6,*) 'Successfully made %lake'
-  write (6,*)
+  if (masterproc) then
+     write (6,*) 'Successfully made %lake'
+     write (6,*)
+  end if
   call shr_sys_flush(6)
 
 end subroutine mklakwat
@@ -265,7 +266,7 @@ subroutine mklakwat_pio(ldomain_pio, mapfname, datfname, ndiag, zero_out, lake_o
   integer  , pointer    :: vec_row_indices(:)
   !-----------------------------------------------------------------------
 
-  write (6,*) 'Attempting to make %lake and %wetland .....'
+  if (masterproc) write (6,*) 'Attempting to make %lake and %wetland .....'
   call shr_sys_flush(6)
 
   ! -----------------------------------------------------------------
@@ -278,7 +279,7 @@ subroutine mklakwat_pio(ldomain_pio, mapfname, datfname, ndiag, zero_out, lake_o
 
   if ( .not. zero_out )then
 
-     write(6,*)'Open lake file: ', trim(datfname)
+     if (masterproc) write(6,*)'Open lake file: ', trim(datfname)
 
      ! Open the netcdf file
      call OpenFilePIO(datfname, pioIoSystem, ncid, PIO_NOWRITE)
@@ -310,7 +311,7 @@ subroutine mklakwat_pio(ldomain_pio, mapfname, datfname, ndiag, zero_out, lake_o
 
      ! Determine lake_o on output grid
 
-     call gridmap_areaave_pio(tgridmap_pio, vec_row_indices, lake1d_i(:), lake_o, nodata=0._r8)
+     call gridmap_areaave_pio(tgridmap_pio, ns_loc_i, vec_row_indices, lake1d_i(:), lake_o, nodata=0._r8)
 
      ns_loc_o = ldomain_pio%ns_loc
      do no = 1, ns_loc_o
@@ -329,8 +330,10 @@ subroutine mklakwat_pio(ldomain_pio, mapfname, datfname, ndiag, zero_out, lake_o
      deallocate (vec_row_indices)
   end if
 
-  write (6,*) 'Successfully made %lake'
-  write (6,*)
+  if (masterproc) then
+     write (6,*) 'Successfully made %lake'
+     write (6,*)
+  end if
   call shr_sys_flush(6)
 
 end subroutine mklakwat_pio
@@ -388,10 +391,8 @@ subroutine mkwetlnd(ldomain, mapfname, datfname, ndiag, zero_out, swmp_o)
   character(len=32) :: subname = 'mkwetlnd'
 !-----------------------------------------------------------------------
 
-  write (6,*) 'Attempting to make %wetland .....'
+  if (masterproc) write (6,*) 'Attempting to make %wetland .....'
   call shr_sys_flush(6)
-  write(*,*)'mapfname:' ,trim(mapfname)
-  write(*,*)'datfname:' ,trim(datfname)
 
   ! -----------------------------------------------------------------
   ! Read input file
@@ -408,7 +409,7 @@ subroutine mkwetlnd(ldomain, mapfname, datfname, ndiag, zero_out, swmp_o)
      allocate(swmp_i(ns_i), stat=ier)
      if (ier/=0) call abort()
 
-     write(6,*)'Open wetland file: ', trim(datfname)
+     if (masterproc) write(6,*)'Open wetland file: ', trim(datfname)
      call check_ret(nf_open(datfname, 0, ncid), subname)
      call check_ret(nf_inq_varid (ncid, 'PCT_WETLAND', varid), subname)
      call check_ret(nf_get_var_double (ncid, varid, swmp_i), subname)
@@ -516,8 +517,7 @@ subroutine mkwetlnd(ldomain, mapfname, datfname, ndiag, zero_out, swmp_o)
      deallocate (swmp_i)
   end if
 
-  write (6,*) 'Successfully made %wetland'
-  write (6,*)
+  if (masterproc) write (6,*) 'Successfully made %wetland'
   call shr_sys_flush(6)
 
 end subroutine mkwetlnd
@@ -572,10 +572,8 @@ subroutine mkwetlnd_pio(ldomain_pio, mapfname, datfname, ndiag, zero_out, swmp_o
   integer  , pointer    :: vec_row_indices(:)
   !-----------------------------------------------------------------------
 
-  write (6,*) 'Attempting to make %wetland .....'
+  if (masterproc) write (6,*) 'Attempting to make %wetland .....'
   call shr_sys_flush(6)
-  write(*,*)'mapfname:' ,trim(mapfname)
-  write(*,*)'datfname:' ,trim(datfname)
 
   ! -----------------------------------------------------------------
   ! Read input file
@@ -585,7 +583,7 @@ subroutine mkwetlnd_pio(ldomain_pio, mapfname, datfname, ndiag, zero_out, swmp_o
 
   if ( .not. zero_out )then
 
-     write(6,*)'Open wetland file: ', trim(datfname)
+     if (masterproc) write(6,*)'Open wetland file: ', trim(datfname)
 
      ! Read the input domain
      call domain_read_pio(tdomain_pio, datfname)
@@ -620,7 +618,7 @@ subroutine mkwetlnd_pio(ldomain_pio, mapfname, datfname, ndiag, zero_out, swmp_o
 
      ! Determine swmp_o on output grid
 
-     call gridmap_areaave_pio(tgridmap_pio, vec_row_indices, swmp1d_i(:), swmp_o, nodata=0._r8)
+     call gridmap_areaave_pio(tgridmap_pio, ns_loc_i, vec_row_indices, swmp1d_i(:), swmp_o, nodata=0._r8)
 
      ns_loc_o = ldomain_pio%ns_loc
      do no = 1,ns_loc_o
@@ -647,8 +645,7 @@ subroutine mkwetlnd_pio(ldomain_pio, mapfname, datfname, ndiag, zero_out, swmp_o
      deallocate (vec_row_indices)
   end if
 
-  write (6,*) 'Successfully made %wetland'
-  write (6,*)
+  if (masterproc) write (6,*) 'Successfully made %wetland'
   call shr_sys_flush(6)
 
 end subroutine mkwetlnd_pio
@@ -776,15 +773,14 @@ subroutine mklakparams_pio(ldomain_pio, mapfname, datfname, ndiag, lakedepth_o)
   real(r8), parameter :: min_valid    = 0._r8
   !-----------------------------------------------------------------------
 
-  write (6,*) 'Attempting to make lake parameters.....'
+  if (masterproc) write (6,*) 'Attempting to make lake parameters.....'
   call shr_sys_flush(6)
 
   call mkdata_double_2d_pio(ldomain_pio, mapfname=mapfname, datfname=datfname, varname='LAKEDEPTH', &
        data_descrip='LAKEDEPTH', ndiag=ndiag, zero_out=.false., nodata_value=nodata_value, data_o=lakedepth_o, &
        min_valid_value=min_valid)
 
-  write (6,*) 'Successfully made lake parameters'
-  write (6,*)
+  if (masterproc) write (6,*) 'Successfully made lake parameters'
   call shr_sys_flush(6)
 
 end subroutine mklakparams_pio

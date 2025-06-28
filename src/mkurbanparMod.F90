@@ -14,6 +14,7 @@ module mkurbanparMod
 ! !USES:
    use shr_kind_mod, only : r8 => shr_kind_r8
    use shr_sys_mod , only : shr_sys_flush
+   use spmdMod     , only : masterproc
    implicit none
 
    private
@@ -78,7 +79,6 @@ subroutine mkurbanInit(datfname)
 !-----------------------------------------------------------------------
 
    ! Set numurbl
-   write(*,*)'datfname:',trim(datfname)
    call check_ret(nf_open(datfname, 0, ncid), subname)
    call check_ret(nf_inq_dimid (ncid, 'density_class', dimid), subname)
    call check_ret(nf_inq_dimlen (ncid, dimid, numurbl), subname)
@@ -157,10 +157,8 @@ subroutine mkurban(ldomain, mapfname, datfname, ndiag, zero_out, &
 
    character(len=*), parameter :: subname = 'mkurban'
 !-----------------------------------------------------------------------
-   
-   write (6,*) 'Attempting to make %urban .....'
-   write(*,*)'mapfname:' ,trim(mapfname)
-   write(*,*)'datfname:' ,trim(datfname)
+
+   if (masterproc) write (6,*) 'Attempting to make %urban .....'
  
    ! Obtain input grid info, read local fields
 
@@ -174,7 +172,7 @@ subroutine mkurban(ldomain, mapfname, datfname, ndiag, zero_out, &
             stat=ier)
    if (ier/=0) call abort()
 
-   write (6,*) 'Open urban file: ', trim(datfname)
+   if (masterproc) write (6,*) 'Open urban file: ', trim(datfname)
    call check_ret(nf_open(datfname, 0, ncid), subname)
    call check_ret(nf_inq_varid (ncid, 'PCT_URBAN', varid), subname)
    call check_ret(nf_get_var_double (ncid, varid, urbn_classes_gcell_i), subname)
@@ -220,10 +218,11 @@ subroutine mkurban(ldomain, mapfname, datfname, ndiag, zero_out, &
            ndiag, dens_class=k)
    end do
 
-   write (6,*) 'Successfully made %urban'
+   if (masterproc) then
+      write (6,*) 'Successfully made %urban'
 
-
-   write(6,*) 'Attempting to make urban region .....'
+      write(6,*) 'Attempting to make urban region .....'
+   end if
 
    ! Read in region field
    ! Note: we do this here, rather than with the rest of the reads above, because we
@@ -258,8 +257,10 @@ subroutine mkurban(ldomain, mapfname, datfname, ndiag, zero_out, &
 
    call get_dominant_indices(tgridmap, region_i, region_o, 1, max_region, index_nodata)
 
-   write (6,*) 'Successfully made urban region'
-   write (6,*)
+   if (masterproc) then
+      write (6,*) 'Successfully made urban region'
+      write (6,*)
+   end if
 
    ! -----------------------------------------------------------------
    ! Error check
@@ -371,10 +372,8 @@ subroutine mkurban_pio(ldomain_pio, mapfname, datfname, ndiag, zero_out, &
 
    character(len=*), parameter :: subname = 'mkurban'
 !-----------------------------------------------------------------------
-   
-   write (6,*) 'Attempting to make %urban .....'
-   write(*,*)'mapfname:' ,trim(mapfname)
-   write(*,*)'datfname:' ,trim(datfname)
+
+   if (masterproc) write (6,*) 'Attempting to make %urban .....'
  
    ! Obtain input grid info, read local fields
 
@@ -416,12 +415,10 @@ subroutine mkurban_pio(ldomain_pio, mapfname, datfname, ndiag, zero_out, &
    ! while handling special cases
    call normalize_classes_by_gcell(urbn_classes_o, urbn_o, urbn_classes_gcell_o)
 
-   write (6,*) 'Successfully made %urban'
+   if (masterproc) write (6,*) 'Successfully made %urban'
 
-   ! TODO: Determine dominant region for each output cell
-   write(6,*) 'Attempting to make urban region .....'
-   write (6,*) 'Successfully made urban region'
-   write (6,*)
+   ! Determine dominant region for each output cell
+   if (masterproc) write(6,*) 'Attempting to make urban region .....'
 
    ! determine the max_region based on the dimension 'region'
    call get_dimlen(datfname, 'region', max_region)
@@ -429,6 +426,11 @@ subroutine mkurban_pio(ldomain_pio, mapfname, datfname, ndiag, zero_out, &
    call mkdata_dominant_int_2d_pio(ldomain_pio, mapfname=mapfname, datfname=datfname, varname='REGION_ID', &
         data_descrip='region_id', ndiag=ndiag, zero_out=.false., nodata_value=0, &
         max_value = max_region, data_o=region_o)
+
+   if (masterproc) then
+      write (6,*) 'Successfully made urban region'
+      write (6,*)
+   end if
 
    ! Deallocate dynamic memory & other clean up
    deallocate (urbn_classes_gcell_o)
@@ -668,7 +670,7 @@ subroutine mkurbanpar(datfname, ncido, ncid_pio, region_o, urbn_classes_gcell_o,
    character(len=*), parameter :: subname = 'mkurbanpar'
 !-----------------------------------------------------------------------
 
-   write (6,*) 'Attempting to make Urban Parameters .....'
+   if (masterproc) write (6,*) 'Attempting to make Urban Parameters .....'
    call shr_sys_flush(6)
 
    ! check optional arguments
@@ -708,7 +710,7 @@ subroutine mkurbanpar(datfname, ncido, ncid_pio, region_o, urbn_classes_gcell_o,
 
    ! Read dimensions from input file
 
-   write (6,*) 'Open urban parameter file: ', trim(datfname)
+   if (masterproc) write (6,*) 'Open urban parameter file: ', trim(datfname)
    call check_ret(nf_open(datfname, 0, ncidi), subname)
    call check_ret(nf_inq_dimid(ncidi, 'nlevurb', dimid), subname)
    call check_ret(nf_inq_dimlen(ncidi, dimid, nlevurb_i), subname)
@@ -851,8 +853,10 @@ subroutine mkurbanpar(datfname, ncido, ncid_pio, region_o, urbn_classes_gcell_o,
       call check_ret(nf_sync(ncido), subname)
    end if
 
-   write (6,*) 'Successfully made Urban Parameters'
-   write (6,*)
+   if (masterproc) then
+      write (6,*) 'Successfully made Urban Parameters'
+      write (6,*)
+   end if
    call shr_sys_flush(6)
 
    deallocate(unity_dens_o)

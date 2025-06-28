@@ -15,6 +15,7 @@ module mklaiMod
   use shr_kind_mod, only : r8 => shr_kind_r8
   use shr_sys_mod , only : shr_sys_flush
   use mkdomainMod , only : domain_checksame
+  use spmdMod     , only : masterproc
   use mkvarctl    
 
   implicit none
@@ -107,10 +108,8 @@ subroutine mklai(ldomain, mapfname, datfname, ndiag, ncido)
   character(len= 32) :: subname = 'mklai'
 !-----------------------------------------------------------------------
 
-  write (6,*) 'Attempting to make LAIs/SAIs/heights .....'
+  if (masterproc) write (6,*) 'Attempting to make LAIs/SAIs/heights .....'
   call shr_sys_flush(6)
-  write(*,*)'mapfname:' ,trim(mapfname)
-  write(*,*)'datfname:' ,trim(datfname)
 
   ! -----------------------------------------------------------------
   ! Read input file
@@ -123,7 +122,7 @@ subroutine mklai(ldomain, mapfname, datfname, ndiag, ncido)
   call domain_read(tdomain,datfname)
   ns_i = tdomain%ns
 
-  write (6,*) 'Open LAI file: ', trim(datfname)
+  if (masterproc) write (6,*) 'Open LAI file: ', trim(datfname)
   call check_ret(nf_open(datfname, 0, ncidi), subname)
   call check_ret(nf_inq_dimid(ncidi, 'pft', dimid), subname)
   call check_ret(nf_inq_dimlen(ncidi, dimid, numpft_i), subname)
@@ -396,11 +395,13 @@ subroutine mklai(ldomain, mapfname, datfname, ndiag, ncido)
 1002    format (1x,i3,f16.3,f17.3)
      end do
 
-     write (6,*) 'Successfully made LAIs/SAIs/heights for month ', m
+     if (masterproc) then
+        write (6,*) 'Successfully made LAIs/SAIs/heights for month ', m
+        write (6,*) ' '
+     end if
      call shr_sys_flush(6)
 
   enddo
-  write (6,*)
 
   ! Close input file
   call check_ret(nf_close(ncidi), subname)
@@ -516,7 +517,7 @@ subroutine mklai_pio(ldomain_pio, mapfname, datfname, ndiag, pioIoSystem_o, ncid
   !
 
   call OpenFilePIO(datfname, pioIoSystem_i, ncid_i, PIO_NOWRITE)
-  write(6,*) 'Open LAI file: ', trim(datfname)
+  if (masterproc) write(6,*) 'Open LAI file: ', trim(datfname)
 
   call read_float_or_double_4d(tdomain_pio, pioIoSystem_i, ncid_i, 'MONTHLY_LAI', dim_idx, vec_row_indices, mlai4d_i)
   deallocate(vec_row_indices)
@@ -607,10 +608,10 @@ subroutine mklai_pio(ldomain_pio, mapfname, datfname, ndiag, pioIoSystem_o, ncid
         !
         ! Map the data onto output grid
         !
-        call gridmap_areaave_pio(tgridmap_pio, vec_row_indices, mlai1d_i(:) , mlai3d_o(:,p,t) , nodata=0._r8)
-        call gridmap_areaave_pio(tgridmap_pio, vec_row_indices, msai1d_i(:) , msai3d_o(:,p,t) , nodata=0._r8)
-        call gridmap_areaave_pio(tgridmap_pio, vec_row_indices, mhgtt1d_i(:), mhgtt3d_o(:,p,t), nodata=0._r8)
-        call gridmap_areaave_pio(tgridmap_pio, vec_row_indices, mhgtb1d_i(:), mhgtb3d_o(:,p,t), nodata=0._r8)
+        call gridmap_areaave_pio(tgridmap_pio, ns_loc_i, vec_row_indices, mlai1d_i(:) , mlai3d_o(:,p,t) , nodata=0._r8)
+        call gridmap_areaave_pio(tgridmap_pio, ns_loc_i, vec_row_indices, msai1d_i(:) , msai3d_o(:,p,t) , nodata=0._r8)
+        call gridmap_areaave_pio(tgridmap_pio, ns_loc_i, vec_row_indices, mhgtt1d_i(:), mhgtt3d_o(:,p,t), nodata=0._r8)
+        call gridmap_areaave_pio(tgridmap_pio, ns_loc_i ,vec_row_indices, mhgtb1d_i(:), mhgtb3d_o(:,p,t), nodata=0._r8)
      end do
 
      ! copy LAI, SAI, & heights from the C3 crop (pft15)

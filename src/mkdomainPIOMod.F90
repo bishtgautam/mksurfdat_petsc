@@ -722,7 +722,7 @@ contains
     !
 
     if (domain%set == set) then
-       write(6,*) 'domain_clean: cleaning '
+       if (masterproc) write(6,*) 'domain_clean: cleaning '
 
        if (domain%is_2d) then
 
@@ -756,7 +756,7 @@ contains
        endif
 
     else
-       write(6,*) 'domain_clean WARN: clean domain unecessary '
+       if (masterproc) write(6,*) 'domain_clean WARN: clean domain unecessary '
     endif
 
     domain%set = unset

@@ -19,6 +19,7 @@ module mksoilMod
   use shr_kind_mod, only : r8 => shr_kind_r8, r4=>shr_kind_r4
   use shr_sys_mod , only : shr_sys_flush
   use mkdomainMod , only : domain_checksame
+  use spmdMod     , only : masterproc
   implicit none
 
   SAVE
@@ -626,10 +627,8 @@ subroutine mksoiltex_pio(ldomain_pio, mapfname, datfname, ndiag, sand_o, clay_o)
   PetscInt               :: ns_o
   !-----------------------------------------------------------------------
 
-  write (6,*) 'Attempting to make %sand and %clay .....'
+  if (masterproc) write (6,*) 'Attempting to make %sand and %clay .....'
   call shr_sys_flush(6)
-  write(*,*)'mapfname:' ,trim(mapfname)
-  write(*,*)'datfname:' ,trim(datfname)
 
   ! -----------------------------------------------------------------
   ! Define the model surface types: 0 to nlsm
@@ -647,7 +646,7 @@ subroutine mksoiltex_pio(ldomain_pio, mapfname, datfname, ndiag, sand_o, clay_o)
 
   ! Obtain input grid info, read local fields
 
-  write (6,*) 'Open soil texture file: ', trim(datfname)
+  if (masterproc) write (6,*) 'Open soil texture file: ', trim(datfname)
 
   call domain_read_pio(tdomain_pio, datfname)
 
@@ -927,9 +926,7 @@ subroutine mksoiltex_pio(ldomain_pio, mapfname, datfname, ndiag, sand_o, clay_o)
      deallocate(wst)
   end if
 
-
-  write (6,*) 'Successfully made %sand and %clay'
-  write (6,*)
+  if (masterproc) write (6,*) 'Successfully made %sand and %clay'
   call shr_sys_flush(6)
 
 end subroutine mksoiltex_pio
@@ -1289,7 +1286,7 @@ subroutine mksoilcol_pio(ldomain_pio, mapfname, datfname, ndiag, &
   integer :: nodata_value
   !-----------------------------------------------------------------------
 
-  write (6,*) 'Attempting to make soil color classes .....'
+  if (masterproc) write (6,*) 'Attempting to make soil color classes .....'
   call shr_sys_flush(6)
 
   ! -----------------------------------------------------------------
@@ -1631,7 +1628,7 @@ subroutine mksoilord_pio(ldomain_pio, mapfname, datfname, ndiag, &
   ! !LOCAL VARIABLES:
   integer, parameter :: nodata_value = 0
 
-  write (6,*) 'Attempting to make soil order classes .....'
+  if (masterproc) write (6,*) 'Attempting to make soil order classes .....'
   call shr_sys_flush(6)
 
   nsoiord = 16
@@ -1639,7 +1636,7 @@ subroutine mksoilord_pio(ldomain_pio, mapfname, datfname, ndiag, &
        data_descrip='soil_color', ndiag=ndiag, zero_out=.false., nodata_value=nodata_value, &
        max_value = nsoiord, data_o=soil_order_o)
 
-  write (6,*) 'Successfully made soil order classes'
+  if (masterproc) write (6,*) 'Successfully made soil order classes'
 
   write (6,*)
   call shr_sys_flush(6)
@@ -1804,14 +1801,17 @@ subroutine mkorganic_pio(ldomain_pio, mapfname, datfname, ndiag, organic_o)
   real(r8), parameter :: nodata_value = 0._r8
   real(r8), parameter :: max_valid    = 130.000001_r8
 
-  write (6,*) 'Attempting to make organic matter dataset .....'
+  if (masterproc) write (6,*) 'Attempting to make organic matter dataset .....'
   call shr_sys_flush(6)
 
   call mkdata_double_3d_pio(ldomain_pio, mapfname=mapfname, datfname=datfname, varname='ORGANIC', &
        data_descrip='%organic', ndiag=ndiag, zero_out=.false., nodata_value=nodata_value, start_id_for_dim3=1, &
        data_o=organic_o, max_valid_value=max_valid)
 
-  write (6,*) 'Successfully made organic matter'
+  if (masterproc) then
+     write (6,*) 'Successfully made organic matter'
+     write (6,*) ''
+  end if
   call shr_sys_flush(6)
   write(6,*)
 
@@ -1993,7 +1993,7 @@ subroutine mkfmax(ldomain, mapfname, datfname, ndiag, fmax_o)
   character(len=32) :: subname = 'mkfmax'
 !-----------------------------------------------------------------------
 
-  write (6,*) 'Attempting to make %fmax .....'
+  write (6,*) 'Attempting to make %fmax SERIAL .....'
   call shr_sys_flush(6)
   write(*,*)'mapfname:' ,trim(mapfname)
   write(*,*)'datfname:' ,trim(datfname)
@@ -2151,15 +2151,17 @@ subroutine mkfmax_pio(ldomain_pio, mapfname, datfname, ndiag, fmax_o)
   real(r8), parameter :: min_valid    = 0._r8
   real(r8), parameter :: max_valid    = 1.000001_r8
   
-  write (6,*) 'Attempting to make %fmax .....'
+  if (masterproc) write (6,*) 'Attempting to make %fmax .....'
   call shr_sys_flush(6)
 
   call mkdata_double_2d_pio(ldomain_pio, mapfname=mapfname, datfname=datfname, varname='FMAX', &
        data_descrip='%fmax', ndiag=ndiag, zero_out=.false., nodata_value=nodata_value, data_o=fmax_o, &
        threshold_o=0._r8)
 
-  write (6,*) 'Successfully made %fmax'
-  write (6,*)
+  if (masterproc) then
+     write (6,*) 'Successfully made %fmax'
+     write (6,*) ''
+  endif
   call shr_sys_flush(6)
 
 end subroutine mkfmax_pio

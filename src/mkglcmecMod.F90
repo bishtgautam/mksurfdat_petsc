@@ -15,6 +15,7 @@ module mkglcmecMod
   use shr_kind_mod, only : r8 => shr_kind_r8
   use shr_sys_mod , only : shr_sys_flush
   use mkdomainMod , only : domain_checksame
+  use spmdMod     , only : masterproc
   implicit none
 
   private           ! By default make data private
@@ -233,7 +234,7 @@ subroutine mkglcmec(ldomain, mapfname, &
      return
   end if
 
-  write (6,*) 'Attempting to make percent elevation class ',&
+  if (masterproc) write (6,*) 'Attempting to make percent elevation class ',&
        'and mean elevation for glaciers .....'
   call shr_sys_flush(6)
 
@@ -245,7 +246,7 @@ subroutine mkglcmec(ldomain, mapfname, &
   nst = tdomain%ns
 
   ! Read z dimension size
-  write (6,*) 'Open glacier file: ', trim(datfname_fglacier)
+  if (masterproc) write (6,*) 'Open glacier file: ', trim(datfname_fglacier)
   call check_ret(nf_open(datfname_fglacier, 0, ncid), subname)
   ier = nf_inq_dimid (ncid, 'z', dimid)
   if (ier /= NF_NOERR) then
@@ -344,7 +345,7 @@ subroutine mkglcmec(ldomain, mapfname, &
   ! renormalize these to be given as % of landunit.
 
   ! advance to next line (needed because of 'advance=no' writes above)
-  write(6,*) ' ' 
+  if (masterproc) write(6,*) ' ' 
 
   ! Close glacier input file
   call check_ret(nf_close(ncid), subname)
@@ -464,8 +465,10 @@ subroutine mkglcmec(ldomain, mapfname, &
   deallocate(pctglc_tot_o)
   deallocate(starts, counts)
 
-  write (6,*) 'Successfully made percent elevation class and mean elevation for glaciers'
-  write (6,*)
+  if (masterproc) then
+     write (6,*) 'Successfully made percent elevation class and mean elevation for glaciers'
+     write (6,*)
+  end if
   call shr_sys_flush(6)
 
 end subroutine mkglcmec
@@ -720,10 +723,8 @@ subroutine mkglacier_pio(ldomain_pio, mapfname, datfname, ndiag, zero_out, glac_
   integer  , pointer    :: vec_row_indices(:)
   !-----------------------------------------------------------------------
 
-  write (6,*) 'Attempting to make %glacier .....'
+  if (masterproc) write (6,*) 'Attempting to make %glacier .....'
   call shr_sys_flush(6)
-  write(*,*)'mapfname:' ,trim(mapfname)
-  write(*,*)'datfname:' ,trim(datfname)
 
   ! -----------------------------------------------------------------
   ! Read input file
@@ -733,7 +734,7 @@ subroutine mkglacier_pio(ldomain_pio, mapfname, datfname, ndiag, zero_out, glac_
 
   call domain_read_pio(tdomain_pio, datfname)
 
-  write (6,*) 'Open glacier file: ', trim(datfname)
+  if (masterproc) write (6,*) 'Open glacier file: ', trim(datfname)
 
 
   if ( zero_out )then
@@ -767,7 +768,7 @@ subroutine mkglacier_pio(ldomain_pio, mapfname, datfname, ndiag, zero_out, glac_
 
      ! Determine glac_o on output grid
 
-     call gridmap_areaave_pio(tgridmap_pio, vec_row_indices, glac1d_i, glac_o, nodata=0._r8)
+     call gridmap_areaave_pio(tgridmap_pio, ns_loc_i, vec_row_indices, glac1d_i, glac_o, nodata=0._r8)
 
      ns_loc_o = ldomain_pio%ns_loc
      do no = 1, ns_loc_o
@@ -785,8 +786,10 @@ subroutine mkglacier_pio(ldomain_pio, mapfname, datfname, ndiag, zero_out, glac_
      deallocate (vec_row_indices)
   end if
 
-  write (6,*) 'Successfully made %glacier'
-  write (6,*)
+  if (masterproc) then
+     write (6,*) 'Successfully made %glacier'
+     write (6,*)
+  end if
   call shr_sys_flush(6)
 
 end subroutine mkglacier_pio

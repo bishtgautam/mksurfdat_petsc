@@ -17,6 +17,7 @@ module mkpeatMod
   use shr_kind_mod, only : r8 => shr_kind_r8
   use shr_sys_mod , only : shr_sys_flush
   use mkdomainMod , only : domain_checksame
+  use spmdMod     , only : masterproc
 
   implicit none
 
@@ -78,10 +79,8 @@ subroutine mkpeat(ldomain, mapfname, datfname, ndiag, peat_o)
   character(len=32) :: subname = 'mkpeat'
 !-----------------------------------------------------------------------
 
-  write (6,*) 'Attempting to make peat .....'
+  if (masterproc) write (6,*) 'Attempting to make peat .....'
   call shr_sys_flush(6)
-  write(*,*)'mapfname:' ,trim(mapfname)
-  write(*,*)'datfname:' ,trim(datfname)
 
   ! -----------------------------------------------------------------
   ! Read domain and mapping information, check for consistency
@@ -98,7 +97,7 @@ subroutine mkpeat(ldomain, mapfname, datfname, ndiag, peat_o)
   ! Open input file, allocate memory for input data
   ! -----------------------------------------------------------------
 
-  write(6,*)'Open peat file: ', trim(datfname)
+  if (masterproc) write(6,*)'Open peat file: ', trim(datfname)
   call check_ret(nf_open(datfname, 0, ncid), subname)
 
   allocate(data_i(tdomain%ns), stat=ier)
@@ -129,8 +128,7 @@ subroutine mkpeat(ldomain, mapfname, datfname, ndiag, peat_o)
   call gridmap_clean(tgridmap)
   deallocate (data_i)
 
-  write (6,*) 'Successfully made peat'
-  write (6,*)
+  if (masterproc) write (6,*) 'Successfully made peat'
   call shr_sys_flush(6)
 
 end subroutine mkpeat
@@ -160,15 +158,14 @@ subroutine mkpeat_pio(ldomain_pio, mapfname, datfname, ndiag, peat_o)
 
   !-----------------------------------------------------------------------
 
-  write (6,*) 'Attempting to make peat .....'
+  if (masterproc) write (6,*) 'Attempting to make peat .....'
   call shr_sys_flush(6)
 
   call mkdata_double_2d_pio(ldomain_pio, mapfname=mapfname, datfname=datfname, varname='peatf', &
        data_descrip='peatf', ndiag=ndiag, zero_out=.false., nodata_value=nodata_value, data_o=peat_o, &
        min_valid_value=min_valid, max_valid_value=max_valid)
 
-  write (6,*) 'Successfully made peat'
-  write (6,*)
+  if (masterproc) write (6,*) 'Successfully made peat'
   call shr_sys_flush(6)
 
 end subroutine mkpeat_pio

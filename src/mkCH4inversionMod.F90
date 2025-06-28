@@ -17,6 +17,7 @@ module mkCH4inversionMod
   use shr_kind_mod, only : r8 => shr_kind_r8
   use shr_sys_mod , only : shr_sys_flush
   use mkdomainMod , only : domain_checksame
+  use spmdMod     , only : masterproc
 
   implicit none
 
@@ -84,10 +85,12 @@ subroutine mkCH4inversion(ldomain, mapfname, datfname, ndiag, &
   character(len=32) :: subname = 'mkCH4inversion'
 !-----------------------------------------------------------------------
 
-  write (6,*) 'Attempting to make inversion-derived CH4 parameters.....'
+  if (masterproc) then
+     write (6,*) 'Attempting to make inversion-derived CH4 parameters.....'
+     write(*,*)'mapfname:' ,trim(mapfname)
+     write(*,*)'datfname:' ,trim(datfname)
+  end if
   call shr_sys_flush(6)
-  write(*,*)'mapfname:' ,trim(mapfname)
-  write(*,*)'datfname:' ,trim(datfname)
 
   ! -----------------------------------------------------------------
   ! Read domain and mapping information, check for consistency
@@ -104,7 +107,7 @@ subroutine mkCH4inversion(ldomain, mapfname, datfname, ndiag, &
   ! Open input file, allocate memory for input data
   ! -----------------------------------------------------------------
 
-  write(6,*)'Open CH4 parameter file: ', trim(datfname)
+  if (masterproc) write(6,*)'Open CH4 parameter file: ', trim(datfname)
   call check_ret(nf_open(datfname, 0, ncid), subname)
 
   allocate(data_i(tdomain%ns), stat=ier)
@@ -165,8 +168,10 @@ subroutine mkCH4inversion(ldomain, mapfname, datfname, ndiag, &
   call gridmap_clean(tgridmap)
   deallocate (data_i)
 
-  write (6,*) 'Successfully made inversion-derived CH4 parameters'
-  write (6,*)
+  if (masterproc) then
+     write (6,*) 'Successfully made inversion-derived CH4 parameters'
+     write (6,*)
+  end if
   call shr_sys_flush(6)
 
 end subroutine mkCH4inversion
@@ -201,10 +206,12 @@ subroutine mkCH4inversion_pio(ldomain_pio, mapfname, datfname, ndiag, &
 
 !-----------------------------------------------------------------------
 
-  write (6,*) 'Attempting to make inversion-derived CH4 parameters.....'
+  if (masterproc) then
+     write (6,*) 'Attempting to make inversion-derived CH4 parameters.....'
+     write(*,*)'mapfname:' ,trim(mapfname)
+     write(*,*)'datfname:' ,trim(datfname)
+  end if
   call shr_sys_flush(6)
-  write(*,*)'mapfname:' ,trim(mapfname)
-  write(*,*)'datfname:' ,trim(datfname)
 
   call mkdata_double_2d_pio(ldomain_pio, mapfname=mapfname, datfname=datfname, varname='F0', &
        data_descrip='F0', ndiag=ndiag, zero_out=.false., nodata_value=nodata_value, data_o=f0_o, &
@@ -218,8 +225,10 @@ subroutine mkCH4inversion_pio(ldomain_pio, mapfname, datfname, ndiag, &
        data_descrip='ZWT0', ndiag=ndiag, zero_out=.false., nodata_value=nodata_value, data_o=zwt0_o, &
        min_valid_value=min_valid_zwt0)
 
-  write (6,*) 'Successfully made inversion-derived CH4 parameters'
-  write (6,*)
+  if (masterproc) then
+     write (6,*) 'Successfully made inversion-derived CH4 parameters'
+     write (6,*)
+  end if
   call shr_sys_flush(6)
 
 end subroutine mkCH4inversion_pio

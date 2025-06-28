@@ -17,6 +17,7 @@ module mkgdpMod
   use shr_kind_mod, only : r8 => shr_kind_r8
   use shr_sys_mod , only : shr_sys_flush
   use mkdomainMod , only : domain_checksame
+  use spmdMod     , only : masterproc
 
   implicit none
 
@@ -78,10 +79,8 @@ subroutine mkgdp(ldomain, mapfname, datfname, ndiag, gdp_o)
   character(len=32) :: subname = 'mkgdp'
 !-----------------------------------------------------------------------
 
-  write (6,*) 'Attempting to make GDP.....'
+  if (masterproc) write (6,*) 'Attempting to make GDP.....'
   call shr_sys_flush(6)
-  write(*,*)'mapfname:' ,trim(mapfname)
-  write(*,*)'datfname:' ,trim(datfname)
 
   ! -----------------------------------------------------------------
   ! Read domain and mapping information, check for consistency
@@ -98,7 +97,7 @@ subroutine mkgdp(ldomain, mapfname, datfname, ndiag, gdp_o)
   ! Open input file, allocate memory for input data
   ! -----------------------------------------------------------------
 
-  write(6,*)'Open GDP file: ', trim(datfname)
+  if (masterproc) write(6,*)'Open GDP file: ', trim(datfname)
   call check_ret(nf_open(datfname, 0, ncid), subname)
 
   allocate(data_i(tdomain%ns), stat=ier)
@@ -128,8 +127,7 @@ subroutine mkgdp(ldomain, mapfname, datfname, ndiag, gdp_o)
   call gridmap_clean(tgridmap)
   deallocate (data_i)
 
-  write (6,*) 'Successfully made GDP'
-  write (6,*)
+  if (masterproc) write (6,*) 'Successfully made GDP'
   call shr_sys_flush(6)
 
 end subroutine mkgdp
@@ -157,15 +155,17 @@ subroutine mkgdp_pio(ldomain_pio, mapfname, datfname, ndiag, gdp_o)
   real(r8), parameter :: min_valid = 0._r8    ! minimum valid value
   !-----------------------------------------------------------------------
 
-  write (6,*) 'Attempting to make GDP.....'
+  if (masterproc) write (6,*) 'Attempting to make GDP.....'
   call shr_sys_flush(6)
 
   call mkdata_double_2d_pio(ldomain_pio, mapfname=mapfname, datfname=datfname, varname='gdp', &
        data_descrip='GDP', ndiag=ndiag, zero_out=.false., nodata_value=nodata_value, data_o=gdp_o, &
        min_valid_value=min_valid)
 
-  write (6,*) 'Successfully made GDP'
-  write (6,*)
+  if (masterproc) then
+     write (6,*) 'Successfully made GDP'
+     write (6,*)
+  end if
   call shr_sys_flush(6)
 
 end subroutine mkgdp_pio

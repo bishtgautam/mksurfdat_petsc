@@ -17,6 +17,7 @@ module mkVICparamsMod
   use shr_kind_mod, only : r8 => shr_kind_r8
   use shr_sys_mod , only : shr_sys_flush
   use mkdomainMod , only : domain_checksame
+  use spmdMod     , only : masterproc
 
   implicit none
 
@@ -85,10 +86,12 @@ subroutine mkVICparams(ldomain, mapfname, datfname, ndiag, &
   character(len=32) :: subname = 'mkVICparams'
 !-----------------------------------------------------------------------
 
-  write (6,*) 'Attempting to make VIC parameters.....'
+  if (masterproc) then
+     write (6,*) 'Attempting to make VIC parameters.....'
+     write(*,*)'mapfname:' ,trim(mapfname)
+     write(*,*)'datfname:' ,trim(datfname)
+  end if
   call shr_sys_flush(6)
-  write(*,*)'mapfname:' ,trim(mapfname)
-  write(*,*)'datfname:' ,trim(datfname)
 
   ! -----------------------------------------------------------------
   ! Read domain and mapping information, check for consistency
@@ -105,7 +108,7 @@ subroutine mkVICparams(ldomain, mapfname, datfname, ndiag, &
   ! Open input file, allocate memory for input data
   ! -----------------------------------------------------------------
 
-  write(6,*)'Open VIC parameter file: ', trim(datfname)
+  if (masterproc) write(6,*)'Open VIC parameter file: ', trim(datfname)
   call check_ret(nf_open(datfname, 0, ncid), subname)
 
   allocate(data_i(tdomain%ns), stat=ier)
@@ -216,7 +219,7 @@ subroutine mkVICparams_pio(ldomain_pio, mapfname, datfname, ndiag, &
   real(r8), parameter :: min_valid_dsmax = 0._r8
   real(r8), parameter :: min_valid_ds    = 0._r8
 
-  write (6,*) 'Attempting to make VIC parameters.....'
+  if (masterproc) write (6,*) 'Attempting to make VIC parameters.....'
   call shr_sys_flush(6)
 
   call mkdata_double_2d_pio(ldomain_pio, mapfname=mapfname, datfname=datfname, varname='binfl', &
@@ -235,8 +238,10 @@ subroutine mkVICparams_pio(ldomain_pio, mapfname, datfname, ndiag, &
        data_descrip='Ds', ndiag=ndiag, zero_out=.false., nodata_value=nodata_value, data_o=ds_o, &
        min_valid_value=min_valid_ds)
 
-  write (6,*) 'Successfully made VIC parameters'
-  write (6,*)
+  if (masterproc) then
+     write (6,*) 'Successfully made VIC parameters'
+     write (6,*)
+  end if
   call shr_sys_flush(6)
 
 end subroutine mkVICparams_pio

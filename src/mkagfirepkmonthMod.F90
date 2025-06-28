@@ -15,6 +15,7 @@ module mkagfirepkmonthMod
   use shr_kind_mod, only : r8 => shr_kind_r8
   use shr_sys_mod , only : shr_sys_flush
   use mkdomainMod , only : domain_checksame
+  use spmdMod     , only : masterproc
   implicit none
 
   SAVE
@@ -95,10 +96,8 @@ subroutine mkagfirepkmon(ldomain, mapfname, datfname, ndiag, &
   character(len=32) :: subname = 'mkagfirepkmon'
 !-----------------------------------------------------------------------
 
-  write (6,*) 'Attempting to make agricultural fire peak month data .....'
+  if (masterproc) write (6,*) 'Attempting to make agricultural fire peak month data .....'
   call shr_sys_flush(6)
-  write(*,*)'mapfname:' ,trim(mapfname)
-  write(*,*)'datfname:' ,trim(datfname)
 
   ! -----------------------------------------------------------------
   ! Read domain and mapping information, check for consistency
@@ -118,7 +117,7 @@ subroutine mkagfirepkmon(ldomain, mapfname, datfname, ndiag, &
   ! Open input file, allocate memory for input data
   ! -----------------------------------------------------------------
 
-  write (6,*) 'Open agricultural fire peak month file: ', trim(datfname)
+  if (masterproc) write (6,*) 'Open agricultural fire peak month file: ', trim(datfname)
   call check_ret(nf_open(datfname, 0, ncid), subname)
 
   allocate(agfirepkmon_i(ns_i), stat=ier)
@@ -194,8 +193,10 @@ subroutine mkagfirepkmon(ldomain, mapfname, datfname, ndiag, &
   call gridmap_clean(tgridmap)
   deallocate (agfirepkmon_i,gast_i,gast_o,month)
 
-  write (6,*) 'Successfully made Agricultural fire peak month'
-  write (6,*)
+  if (masterproc) then
+     write (6,*) 'Successfully made Agricultural fire peak month'
+     write (6,*)
+  end if
   call shr_sys_flush(6)
 
 end subroutine mkagfirepkmon
@@ -294,10 +295,8 @@ subroutine mkagfirepkmon_pio(ldomain_pio, mapfname, datfname, ndiag, &
   integer, parameter :: max_valid = 13      ! maximum valid value
   !-----------------------------------------------------------------------
 
-  write (6,*) 'Attempting to make agricultural fire peak month data .....'
+  if (masterproc) write (6,*) 'Attempting to make agricultural fire peak month data .....'
   call shr_sys_flush(6)
-  write(*,*)'mapfname:' ,trim(mapfname)
-  write(*,*)'datfname:' ,trim(datfname)
 
   call mkdata_dominant_int_2d_pio(ldomain_pio, mapfname=mapfname, datfname=datfname, varname='abm', &
        data_descrip='agfirepkmon', ndiag=ndiag, zero_out=.false., nodata_value=unsetmon, &
@@ -309,8 +308,10 @@ subroutine mkagfirepkmon_pio(ldomain_pio, mapfname, datfname, ndiag, &
      stop
   end if
 
-  write (6,*) 'Successfully made Agricultural fire peak month'
-  write (6,*)
+  if (masterproc) then
+     write (6,*) 'Successfully made Agricultural fire peak month'
+     write (6,*)
+  end if
   call shr_sys_flush(6)
 
 end subroutine mkagfirepkmon_pio

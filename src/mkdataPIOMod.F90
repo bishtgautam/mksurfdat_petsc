@@ -2,8 +2,10 @@ module mkdataPIOMod
 
   use shr_kind_mod, only : r8 => shr_kind_r8, r4=>shr_kind_r4
   use shr_sys_mod , only : shr_sys_flush
-  use mkchecksMod, only : min_bad, max_bad
-
+  use mkchecksMod , only : min_bad, max_bad
+  use spmdMod     , only : masterproc
+  use spmdMod      , only : iam, npes, masterproc, mpicom
+  
   implicit none
 
   public mkdata_double_2d_pio
@@ -62,7 +64,7 @@ contains
 
     !-----------------------------------------------------------------------
 
-    write (6,*) 'Attempting to make ' // trim(data_descrip) // ' .....'
+    if (masterproc) write (6,*) 'Attempting to make ' // trim(data_descrip) // ' .....'
     call shr_sys_flush(6)
 
     threshold_specified = .false.
@@ -79,7 +81,7 @@ contains
 
     if ( .not. zero_out )then
 
-       write(6,*)'Open file: ', trim(datfname)
+       if (masterproc) write(6,*)'Open file: ', trim(datfname)
 
        ! Obtain input grid info, read local fields
        
@@ -110,7 +112,7 @@ contains
        end do
 
        ! Determine data_o on output grid
-       call gridmap_areaave_pio(tgridmap_pio, vec_row_indices, data1d_i(:), data_o, nodata=nodata_value)
+       call gridmap_areaave_pio(tgridmap_pio, ns_loc_i, vec_row_indices, data1d_i(:), data_o, nodata=nodata_value)
 
        if (min_valid_specified) then
           if (min_bad(data_o, min_valid_value, data_descrip)) then
@@ -148,8 +150,10 @@ contains
        deallocate (vec_row_indices)
     end if
 
-    write (6,*) 'Successfully made ' // trim(data_descrip)
-    write (6,*)
+    if (masterproc) then
+       write (6,*) 'Successfully made ' // trim(data_descrip)
+       write (6,*)
+    end if
     call shr_sys_flush(6)
 
   end subroutine mkdata_double_2d_pio
@@ -206,7 +210,7 @@ contains
 
     !-----------------------------------------------------------------------
 
-    write (6,*) 'Attempting to make ' // trim(data_descrip) // ' .....'
+    if (masterproc) write (6,*) 'Attempting to make ' // trim(data_descrip) // ' .....'
     call shr_sys_flush(6)
 
     threshold_specified = .false.
@@ -223,19 +227,16 @@ contains
 
     if ( .not. zero_out )then
 
-       write(6,*)'Open file: ', trim(datfname)
+       if (masterproc) write(6,*)'Open file: ', trim(datfname)
 
        ! Obtain input grid info, read local fields
        
-       write(*,*)'  datfname: ',trim(datfname)
        call domain_read_pio(tdomain_pio, datfname)
 
        ! Open the netcdf file
-       write(*,*)'  call OpenFilePIO: '
        call OpenFilePIO(datfname, pioIoSystem, ncid, PIO_NOWRITE)
 
        ! Read the variable
-       write(*,*)'  call read_float_or_double_3d(): ',trim(varname)
        call read_float_or_double_3d(tdomain_pio, pioIoSystem, ncid, varname, start_id_for_dim3, dim_idx, vec_row_indices, data3d_i)
 
        call PIO_closefile(ncid)
@@ -260,7 +261,7 @@ contains
           end do
 
           ! Determine data_o on output grid
-          call gridmap_areaave_pio(tgridmap_pio, vec_row_indices, data1d_i(:), data_o(:,m), nodata=nodata_value)
+          call gridmap_areaave_pio(tgridmap_pio, ns_loc_i, vec_row_indices, data1d_i(:), data_o(:,m), nodata=nodata_value)
 
           if (min_valid_specified) then
              if (min_bad(data_o(:,m), min_valid_value, data_descrip)) then
@@ -299,8 +300,7 @@ contains
        deallocate (vec_row_indices)
     end if
 
-    write (6,*) 'Successfully made ' // trim(data_descrip)
-    write (6,*)
+    if (masterproc) write (6,*) 'Successfully made ' // trim(data_descrip)
     call shr_sys_flush(6)
 
   end subroutine mkdata_double_3d_pio
@@ -348,7 +348,7 @@ contains
     integer  , pointer                           :: vec_row_indices(:)
     !-----------------------------------------------------------------------
 
-    write (6,*) 'Attempting to make ' // trim(data_descrip) // ' .....'
+    if (masterproc) write (6,*) 'Attempting to make ' // trim(data_descrip) // ' .....'
     call shr_sys_flush(6)
 
     ! -----------------------------------------------------------------
@@ -357,7 +357,7 @@ contains
 
     if ( .not. zero_out )then
 
-       write(6,*)'Open file: ', trim(datfname)
+       if (masterproc) write(6,*)'Open file: ', trim(datfname)
 
        ! Obtain input grid info, read local fields
 
@@ -404,8 +404,7 @@ contains
        deallocate (vec_row_indices)
     end if
 
-    write (6,*) 'Successfully made ' // trim(data_descrip)
-    write (6,*)
+    if (masterproc) write (6,*) 'Successfully made ' // trim(data_descrip)
     call shr_sys_flush(6)
 
   end subroutine mkdata_dominant_int_2d_pio

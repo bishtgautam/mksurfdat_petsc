@@ -21,6 +21,7 @@ module mkurbanparCommonMod
 ! !USES:
    use shr_kind_mod, only : r8 => shr_kind_r8
    use shr_sys_mod , only : shr_sys_flush
+   use spmdMod     , only : masterproc
    implicit none
    
    private
@@ -386,12 +387,13 @@ subroutine mkelev_pio(ldomain_pio, mapfname, datfname, varname, ndiag, elev_o)
   integer  , pointer :: vec_row_indices(:)
   !-----------------------------------------------------------------------
 
-  write (6,*) 'Attempting to make elevation .....'
+  if (masterproc) then
+     write (6,*) 'Attempting to make elevation .....'
+     write (6,*) 'mapfname: ', trim(mapfname)
+     write (6,*) 'datfname: ', trim(datfname)
+  end if
   call shr_sys_flush(6)
-  write(*,*)'mapfname:' ,trim(mapfname)
-  write(*,*)'datfname:' ,trim(datfname)
 
-  write (6,*) 'Open elevation file: ', trim(datfname)
 
   ! Read the input domain
   call domain_read_pio(tdomain_pio, datfname)
@@ -426,7 +428,7 @@ subroutine mkelev_pio(ldomain_pio, mapfname, datfname, varname, ndiag, elev_o)
 
   elev_o(:) = 0._r8
 
-  call gridmap_areaave_pio(tgridmap_pio, vec_row_indices, elev1d_i, elev_o, nodata=0._r8)
+  call gridmap_areaave_pio(tgridmap_pio, ns_loc_i, vec_row_indices, elev1d_i, elev_o, nodata=0._r8)
 
   call domain_clean_pio(tdomain_pio)
 
@@ -435,8 +437,10 @@ subroutine mkelev_pio(ldomain_pio, mapfname, datfname, varname, ndiag, elev_o)
   deallocate (elev1d_i)
   deallocate (vec_row_indices)
 
-  write (6,*) 'Successfully made elevation'
-  write (6,*)
+  if (masterproc) then
+     write (6,*) 'Successfully made elevation'
+     write (6,*)
+   end if
   call shr_sys_flush(6)
 
 end subroutine mkelev_pio

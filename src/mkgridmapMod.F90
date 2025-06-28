@@ -13,6 +13,7 @@ module mkgridmapMod
 #include <petsc/finclude/petscvec.h>
 
   use shr_kind_mod, only : r8 => shr_kind_r8
+  use spmdMod     , only : masterproc
   use petscmat
   use petscvec
   use petscsys
@@ -206,10 +207,12 @@ contains
     rcode = nf_inq_dimid (fid, 'n_b', did)  ! size of output vector
     rcode = nf_inq_dimlen(fid, did  , gridmap%nb)
 
-    write(6,*) "* matrix dimensions rows x cols :",gridmap%na,' x',gridmap%nb
-    write(6,*) "* number of non-zero elements: ",gridmap%ns
+   if (masterproc) then
+       write(6,*) "* matrix dimensions rows x cols :",gridmap%na,' x',gridmap%nb
+       write(6,*) "* number of non-zero elements: ",gridmap%ns
+   end if
 
-    ns = gridmap%ns
+   ns = gridmap%ns
     na = gridmap%na
     nb = gridmap%nb
     allocate(gridmap%wovr(ns)    , &
@@ -320,7 +323,6 @@ contains
     !
     ! map_mat: Create sparse matrix based on 'row', 'col', and 'S' values
     !
-    write(6,*) "* creating map_mat"
     PetscCallA(MatCreate(PETSC_COMM_WORLD, gridmap%map_mat, ierr))
     PetscCall(MatSetsizes(gridmap%map_mat, PETSC_DECIDE, PETSC_DECIDE, gridmap%nb, gridmap%na, ierr))
     PetscCall(MatSetFromOptions(gridmap%map_mat, ierr))
@@ -334,7 +336,6 @@ contains
     !
     ! map_frac_mat: Matrix in which each row of map_mat is normalized with frac_b(row)
     !
-    write(6,*) "* creating map_frac_mat"
     PetscCallA(MatCreate(PETSC_COMM_WORLD, temp_mat, ierr))
     PetscCall(MatSetsizes(temp_mat, PETSC_DECIDE, PETSC_DECIDE, gridmap%nb, gridmap%nb, ierr))
     PetscCall(MatSetFromOptions(temp_mat, ierr))
