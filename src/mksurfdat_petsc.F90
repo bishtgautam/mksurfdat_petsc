@@ -920,13 +920,13 @@ contains
        ! Set pfts 7 and 10 to 6 in the tropics to avoid lais > 1000
        ! Using P. Thornton's method found in surfrdMod.F90 in clm3.5
 
-       if (abs(ldomain%latc(n))<troplat .and. pctpft_full(n,bdtemptree)>0._r8) then
+       if (abs(ldomain_pio%latc1d(n + ldomain_pio%begs - 1))<troplat .and. pctpft_full(n,bdtemptree)>0._r8) then
           pctpft_full(n,bdtroptree) = pctpft_full(n,bdtroptree) + pctpft_full(n,bdtemptree)
           pctpft_full(n,bdtemptree) = 0._r8
           if ( first_time ) write (6,*) subname, ' Warning: all wgt of pft ', &
                bdtemptree, ' now added to pft ', bdtroptree
        end if
-       if (abs(ldomain%latc(n))<troplat .and. pctpft_full(n,bdtempshrub)>0._r8) then
+       if (abs(ldomain_pio%latc1d(n + ldomain_pio%begs - 1))<troplat .and. pctpft_full(n,bdtempshrub)>0._r8) then
           pctpft_full(n,bdtroptree) = pctpft_full(n,bdtroptree) + pctpft_full(n,bdtempshrub)
           pctpft_full(n,bdtempshrub) = 0._r8
           if ( first_time ) write (6,*) subname, ' Warning: all wgt of pft ', &
@@ -940,7 +940,7 @@ contains
        ! about the landunit breakdown into PFTs (pctnatveg and pctcrop will later become 0
        ! due to glacier adding to 100%).
 
-       if (abs((ldomain%latc(n) - 90._r8)) < 1.e-6_r8) then
+       if (abs((ldomain_pio%latc1d(n + ldomain_pio%begs - 1) - 90._r8)) < 1.e-6_r8) then
           pctlak(n)   = 0._r8
           pctwet(n)   = 0._r8
           pcturb(n)   = 0._r8
