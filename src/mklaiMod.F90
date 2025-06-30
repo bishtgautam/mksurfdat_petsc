@@ -266,7 +266,7 @@ subroutine mklai(ldomain, mapfname, datfname, ndiag, ncido)
         mask_src(:) = 1._r8 
         do l = 0, numpft
            do i = 1, ns_i
-              if (l == pft_index(ns_i)) then
+              if (l == pft_index(i)) then
                  mlai_i_tmp(i)  = mlai_i(i,0)
                  msai_i_tmp(i)  = msai_i(i,0)
                  mhgtt_i_tmp(i) = mhgtt_i(i,0)
