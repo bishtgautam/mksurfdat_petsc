@@ -265,10 +265,8 @@ program mksurfdat_petsc
 
   ! Make soil texture [pctsand, pctclay]  [fsoitex]
 
-  if (npes == 1) then
-     call mksoiltex (ldomain, mapfname=map_fsoitex, datfname=mksrf_fsoitex, &
+   call mksoiltex_pio (ldomain_pio, mapfname=map_fsoitex, datfname=mksrf_fsoitex, &
           ndiag=ndiag, sand_o=pctsand, clay_o=pctclay)
-  endif
 
   ! Make soil color classes [soicol] [fsoicol]
 
