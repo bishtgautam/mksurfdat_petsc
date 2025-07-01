@@ -1,9 +1,8 @@
 # Import variables/options/rules from PETSc.
+#include ${PETSC_DIR}/${PETSC_ARCH}/lib/petsc/conf/petscvariables
+#include ${PETSC_DIR}/${PETSC_ARCH}/lib/petsc/conf/petscrules
 include ${PETSC_DIR}/lib/petsc/conf/variables
 include ${PETSC_DIR}/lib/petsc/conf/rules
-
-PETSC_DIR=/Users/bish218/projects/petsc/petsc_main
-PETSC_ARCH=clang20-95934b0d393
 
 PETSC_MAKE_STOP_ON_ERROR=
 
@@ -15,10 +14,11 @@ MYFLAGS = -I.
 
 # These flags are supplemental to the PETSc flags
 
-MYFLAGS=-DCPRAPPLECLANG -DCPRGNU -DHAVE_MPI -DINCLUDE_CMAKE_FCI -DMPICH_SKIP_MPICXX -DMPI_NO_CPPBIND -DOMPI_SKIP_MPICXX -DTIMING -DUSE_PNETCDF_VARN -DUSE_PNETCDF_VARN_ON_READ -D_NONETCDF -D_PNETCDF -I/Users/bish218/projects/e3sm/scorpio/src/flib -I/Users/bish218/projects/e3sm/scorpio/build-${PETSC_ARCH}/src/flib -I/opt/homebrew/include -I/Users/bish218/projects/petsc/petsc_main/gcc14-openmpi-9281ddf3762/include -I/Users/bish218/projects/e3sm/scorpio/src/gptl -I/Users/bish218/projects/e3sm/scorpio/build-${PETSC_ARCH}/src/gptl -I/Users/bish218/projects/e3sm/scorpio/src/clib -I/Users/bish218/projects/e3sm/scorpio/build-${PETSC_ARCH}/src/clib -g -O0 -isysroot /Applications/Xcode.app/Contents/Developer/Platforms/MacOSX.platform/Developer/SDKs/MacOSX13.3.sdk
+#MYFLAGS=-DCPRAPPLECLANG -DCPRGNU -DHAVE_MPI -DINCLUDE_CMAKE_FCI -DMPICH_SKIP_MPICXX -DMPI_NO_CPPBIND -DOMPI_SKIP_MPICXX -DTIMING -DUSE_PNETCDF_VARN -DUSE_PNETCDF_VARN_ON_READ -D_NONETCDF -D_PNETCDF -I/Users/bish218/projects/e3sm/scorpio/src/flib -I/Users/bish218/projects/e3sm/scorpio/build-${PETSC_ARCH}/src/flib -I/opt/homebrew/include -I/Users/bish218/projects/petsc/petsc_main/gcc14-openmpi-9281ddf3762/include -I/Users/bish218/projects/e3sm/scorpio/src/gptl -I/Users/bish218/projects/e3sm/scorpio/build-${PETSC_ARCH}/src/gptl -I/Users/bish218/projects/e3sm/scorpio/src/clib -I/Users/bish218/projects/e3sm/scorpio/build-${PETSC_ARCH}/src/clib -g -O0 -isysroot /Applications/Xcode.app/Contents/Developer/Platforms/MacOSX.platform/Developer/SDKs/MacOSX13.3.sdk
+MYFLAGS=-I/opt/cray/pe/parallel-netcdf/1.12.3.9/gnu/12.3/include -I/global/cfs/cdirs/e3sm/gbisht/Projects/se-tasks/mksurfdat/scorpio/build-gcc12.3/include
 
 SCORPIO_LIB=/Users/bish218/projects/e3sm/scorpio/build-${PETSC_ARCH}/src/flib/libpiof.a /Users/bish218/projects/e3sm/scorpio/build-${PETSC_ARCH}/src/gptl/libgptl.a /Users/bish218/projects/e3sm/scorpio/build-${PETSC_ARCH}/src/clib/libpioc.a
-#/Users/bish218/projects/e3sm/scorpio/build-${PETSC_ARCH}/pnetcdf-1.12.3/lib/libpnetcdf.a -lmpi_cxx -lc++
+SCORPIO_LIB=-L/global/cfs/cdirs/e3sm/gbisht/Projects/se-tasks/mksurfdat/scorpio/build-gcc12.3/lib -lpiof -lpioc -lgptl
 
 CFLAGS   =
 FFLAGS   = ${USER_FFLAGS} ${INC_NETCDF} -fallow-argument-mismatch
@@ -75,6 +75,11 @@ mksurfdat_petsc : $(mksurfdat_petsc_obj)
 	${FLINKER} -o mksurfdat_petsc $(mksurfdat_petsc_obj) ${PETSC_LIB} ${LIBS} ${FFLAGS} ${LDFLAGS}
 
 spmdMod.o :
+
+mkdataPIOMod.o : \
+  shr_kind_mod.o \
+  shr_sys_mod.o \
+  mkchecksMod.o
 
 mkfileMod.o : \
   shr_kind_mod.o \
@@ -276,7 +281,7 @@ mkchecksMod.o : \
 mkgdpMod.o : \
   shr_kind_mod.o \
   shr_sys_mod.o \
-  mkdataPIOmod.o \
+  mkdataPIOMod.o \
   mkdomainMod.o
 
 mkdiagnosticsMod.o : \
