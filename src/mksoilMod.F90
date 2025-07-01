@@ -715,7 +715,7 @@ subroutine mksoiltex_pio(ldomain_pio, mapfname, datfname, ndiag, sand_o, clay_o)
   end do
 
   ! Set the values in a Vec
-  PetscCallA(VecSetValues(tgridmap_pio%src_vec, tgridmap_pio%dim_na%nloc, vec_row_indices, mapunit1d_i, INSERT_VALUES, ierr))
+  PetscCallA(VecSetValues(tgridmap_pio%src_vec, ns_loc_i, vec_row_indices, mapunit1d_i, INSERT_VALUES, ierr))
   deallocate(mapunit1d_i)
   PetscCallA(VecAssemblyBegin(tgridmap_pio%src_vec, ierr))
   PetscCallA(VecAssemblyEnd(tgridmap_pio%src_vec, ierr))
