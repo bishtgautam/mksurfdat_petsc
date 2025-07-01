@@ -1506,11 +1506,13 @@ contains
     type(file_desc_t)     :: ncid
     type(io_desc_t)       :: iodesc
     type(io_desc_t)       :: iodesc_scalar, iodesc_rad, iodesc_urb
-    integer               :: i, j, k, count
+    type(var_desc_t)      :: varid
+    integer               :: i, j, k, n, count
     integer               :: ier
     integer, pointer      :: compdof(:)
     integer               :: dim2d(2), dim3d(3)
     integer               :: ncid_dummy
+    character(len=32)     :: subname = 'write_surface_dataset_pio'
 
     if (fsurdat == ' ') then
        write(6,*)' must specify fsurdat in namelist'
@@ -1525,11 +1527,19 @@ contains
 
     call OpenFilePIO(trim(fsurdat) // '.pio' , pioIoSystem, ncid, PIO_WRITE)
 
-    ! TOWRITE:
-    !   natpft
-    !   cft
-    !   mxsoil_color
-    !   mxsoil_order
+    call check_ret(PIO_inq_varid(ncid, 'mxsoil_order', varid), subname)
+    call check_ret(pio_put_var(ncid, varid, nsoiord), subname)
+
+    call check_ret(PIO_inq_varid(ncid, 'mxsoil_color', varid), subname)
+    call check_ret(pio_put_var(ncid, varid, nsoicol), subname)
+
+    call check_ret(PIO_inq_varid(ncid, 'natpft', varid), subname)
+    call check_ret(pio_put_var(ncid, varid, (/(n,n=natpft_lb,natpft_ub)/)), subname)
+
+    if (num_cft > 0) then
+       call check_ret(PIO_inq_varid(ncid, 'cft', varid), subname)
+       call check_ret(pio_put_var(ncid, varid, (/(n,n=cft_lb,cft_ub)/)), subname)
+    end if
 
     ! Write PIO_INT data with dim of (gridcell) or (lsmlat, lsmlon)
 
