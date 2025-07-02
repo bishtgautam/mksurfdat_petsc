@@ -387,7 +387,7 @@ contains
        end do
 
        ! Determine data_o on output grid
-       call gridmap_dominant_value_pio(tgridmap_pio, vec_row_indices, data1d_i(:), min_value, max_value, nodata_value, data_o)
+       call gridmap_dominant_value_pio(tgridmap_pio, ns_loc_i, vec_row_indices, data1d_i(:), min_value, max_value, nodata_value, data_o)
 
     else
        data_o(:) = 0._r8

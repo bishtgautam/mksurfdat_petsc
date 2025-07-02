@@ -489,11 +489,12 @@ contains
   end subroutine gridmap_areaave_srcmask_pio
 
   !------------------------------------------------------------------------------
-  subroutine gridmap_dominant_value_pio(gridmap_pio, row_indices, src_array, minval_int, maxval_int, nodata, dst_array)
+  subroutine gridmap_dominant_value_pio(gridmap_pio, nrow, row_indices, src_array, minval_int, maxval_int, nodata, dst_array)
 
     implicit none
 
     type(gridmap_pio_type)           , intent(in)  :: gridmap_pio
+    integer                          , intent(in)  :: nrow
     integer                , pointer , intent(in)  :: row_indices(:)
     integer                          , intent(in)  :: src_array(:)
     integer                          , intent(in)  :: minval_int
@@ -521,14 +522,14 @@ contains
     do ival = minval_int, maxval_int
 
        ! fill the value only for the cells that have values corresponding to 'ival'
-       do ni = 1, gridmap_pio%dim_na%nloc
+       do ni = 1, nrow
           if (src_array(ni) == ival) then
              src_values(ni) = 1._r8
           else
              src_values(ni) = 0._r8
           end if
        end do
-       PetscCallA(VecSetValues(gridmap_pio%src_vec, gridmap_pio%dim_na%nloc, row_indices, src_values, INSERT_VALUES, ierr))
+       PetscCallA(VecSetValues(gridmap_pio%src_vec, nrow, row_indices, src_values, INSERT_VALUES, ierr))
        PetscCallA(VecAssemblyBegin(gridmap_pio%src_vec, ierr))
        PetscCallA(VecAssemblyEnd(gridmap_pio%src_vec, ierr))
 
