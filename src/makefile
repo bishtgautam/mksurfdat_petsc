@@ -1,6 +1,4 @@
 # Import variables/options/rules from PETSc.
-#include ${PETSC_DIR}/${PETSC_ARCH}/lib/petsc/conf/petscvariables
-#include ${PETSC_DIR}/${PETSC_ARCH}/lib/petsc/conf/petscrules
 include ${PETSC_DIR}/lib/petsc/conf/variables
 include ${PETSC_DIR}/lib/petsc/conf/rules
 
@@ -14,11 +12,9 @@ MYFLAGS = -I.
 
 # These flags are supplemental to the PETSc flags
 
-#MYFLAGS=-DCPRAPPLECLANG -DCPRGNU -DHAVE_MPI -DINCLUDE_CMAKE_FCI -DMPICH_SKIP_MPICXX -DMPI_NO_CPPBIND -DOMPI_SKIP_MPICXX -DTIMING -DUSE_PNETCDF_VARN -DUSE_PNETCDF_VARN_ON_READ -D_NONETCDF -D_PNETCDF -I/Users/bish218/projects/e3sm/scorpio/src/flib -I/Users/bish218/projects/e3sm/scorpio/build-${PETSC_ARCH}/src/flib -I/opt/homebrew/include -I/Users/bish218/projects/petsc/petsc_main/gcc14-openmpi-9281ddf3762/include -I/Users/bish218/projects/e3sm/scorpio/src/gptl -I/Users/bish218/projects/e3sm/scorpio/build-${PETSC_ARCH}/src/gptl -I/Users/bish218/projects/e3sm/scorpio/src/clib -I/Users/bish218/projects/e3sm/scorpio/build-${PETSC_ARCH}/src/clib -g -O0 -isysroot /Applications/Xcode.app/Contents/Developer/Platforms/MacOSX.platform/Developer/SDKs/MacOSX13.3.sdk
-MYFLAGS=-I/opt/cray/pe/parallel-netcdf/1.12.3.9/gnu/12.3/include -I/global/cfs/cdirs/e3sm/gbisht/Projects/se-tasks/mksurfdat/scorpio/build-gcc12.3/include
+MYFLAGS=-I/opt/cray/pe/parallel-netcdf/1.12.3.13/gnu/12.3/include -I/global/cfs/cdirs/e3sm/gbisht/Projects/se-tasks/mksurfdat/scorpio/build-${PETSC_ARCH}/include
 
-SCORPIO_LIB=/Users/bish218/projects/e3sm/scorpio/build-${PETSC_ARCH}/src/flib/libpiof.a /Users/bish218/projects/e3sm/scorpio/build-${PETSC_ARCH}/src/gptl/libgptl.a /Users/bish218/projects/e3sm/scorpio/build-${PETSC_ARCH}/src/clib/libpioc.a
-SCORPIO_LIB=-L/global/cfs/cdirs/e3sm/gbisht/Projects/se-tasks/mksurfdat/scorpio/build-gcc12.3/lib -lpiof -lpioc -lgptl
+SCORPIO_LIB=-L/global/cfs/cdirs/e3sm/gbisht/Projects/se-tasks/mksurfdat/scorpio/build-${PETSC_ARCH}/lib -lpiof -lpioc -lgptl
 
 CFLAGS   =
 FFLAGS   = ${USER_FFLAGS} ${INC_NETCDF} -fallow-argument-mismatch
