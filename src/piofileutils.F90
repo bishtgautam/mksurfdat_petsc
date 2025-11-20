@@ -12,6 +12,7 @@ module piofileutils
   public DefineDimPIO
   public read_integer_2d
   public read_float_or_double_2d
+  public read_float_or_double_2d_split_dim1
   public read_float_or_double_3d
   public read_float_or_double_4d
   public write_integer_1d
@@ -522,6 +523,93 @@ contains
 
 
  end subroutine get_float_or_double_2d
+
+  !-----------------------------------------------------------------------
+  subroutine read_float_or_double_2d_split_dim1(pioIoSystem, ncid, varname, dim_idx, vec_row_indices, data2d)
+
+   use mkdomainPIOMod, only : find_start_and_end_indices
+   use pio
+
+   implicit none
+
+   type(iosystem_desc_t) , intent(in)           :: pioIoSystem
+   type(file_desc_t)     , intent(in)           :: ncid
+   character(len=*)      , intent(in)           :: varname
+   integer               , intent(out)          :: dim_idx(2,2)
+   integer               , pointer, intent(out) :: vec_row_indices(:)
+   real(r8)              , pointer, intent(out) :: data2d(:,:)
+   !
+   type(var_desc_t)                             :: varid
+   type(io_desc_t)                              :: iodescNCells
+   integer                                      :: ndims, idim
+   integer                                      :: begi, endi, begj, endj
+   integer                                      :: numi, numj
+   integer                                      :: i, j, count
+   integer                                      :: vartype
+   integer                                      :: ierr
+   integer               , pointer              :: var_dim_ids(:), dim_glb(:), compdof(:)
+   real                  , pointer              :: dataReal2d(:,:)
+   character(len=32)                            :: subname = 'read_float_or_double_2d'
+
+   call check_ret(PIO_inq_varid(ncid, varname, varid), subname)
+
+   call check_ret(PIO_inq_varndims(ncid, varid, ndims), subname)
+   if (ndims /= 2) then
+      write(6,*)trim(varname),' is not a 2D variable.'
+      call abort()
+   end if
+
+   allocate(var_dim_ids(ndims))
+   allocate(dim_glb(ndims))
+
+   call check_ret(PIO_inq_vardimid(ncid, varid, var_dim_ids), subname)
+
+   do idim = 1, ndims
+      call check_ret(PIO_inq_dimlen(ncid, var_dim_ids(idim), dim_glb(idim)), subname)
+   end do
+
+   call check_ret(PIO_inq_vartype(ncid, varid, vartype), subname)
+
+   call find_start_and_end_indices(dim_glb(1), iam, npes, begi, endi)
+   begj = 1
+   endj = dim_glb(2)
+
+   dim_idx(1,1) = begi; dim_idx(1,2) = endi
+   dim_idx(2,1) = begj; dim_idx(2,2) = endj
+
+   numi = endi - begi + 1
+   numj = endj - begj + 1
+
+   allocate(compdof(numi * numj))
+   allocate(vec_row_indices(numi * numj))
+
+   count = 0;
+   do j = 1, numj
+      do i = 1, numi
+         count = count + 1
+         compdof(count) = (begi - 1) + i + (j-1)*dim_glb(1)
+         vec_row_indices(count) = compdof(count) - 1
+      end do
+   end do
+
+   call PIO_initdecomp(pioIoSystem, vartype, dim_glb, compdof, iodescNCells)
+
+   allocate(data2d(begi:endi, begj:endj))
+
+   if (vartype == PIO_REAL) then
+      allocate(dataReal2d(begi:endi, begj:endj))
+      call PIO_read_darray(ncid, varid, iodescNCells, dataReal2d, ierr)
+      data2d = dble(dataReal2d)
+      deallocate(dataReal2d)
+   else
+      call PIO_read_darray(ncid, varid, iodescNCells, data2d, ierr)
+   end if
+
+   ! Free up memory
+   deallocate(compdof)
+   call PIO_freedecomp(pioIoSystem, iodescNCells)
+
+ end subroutine read_float_or_double_2d_split_dim1
 
  !-----------------------------------------------------------------------
   subroutine read_float_or_double_3d(domain, pioIoSystem, ncid, varname, start_id_for_dim3, dim_idx, vec_row_indices, data3d)
