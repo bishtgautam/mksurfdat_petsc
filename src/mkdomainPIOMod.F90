@@ -67,6 +67,7 @@ module mkdomainPIOMod
   public domain_read_pio
   public domain_read_map_pio
   public domain_clean_pio
+  public find_start_and_end_indices
 
   character*16,parameter :: set   = 'domain_set      '
   character*16,parameter :: unset = 'NOdomain_unsetNO'
