@@ -551,8 +551,7 @@ subroutine mksoiltex_pio(ldomain_pio, mapfname, datfname, ndiag, sand_o, clay_o)
   ! make %sand and %clay from IGBP soil data, which includes
   ! igbp soil 'mapunits' and their corresponding textures
   !
-  ! !USES:
-  use mkdomainPIOMod, only : domain_pio_type, domain_read_pio, domain_clean_pio
+  ! !USES:  use mkdomainPIOMod, only : domain_pio_type, domain_read_pio, domain_clean_pio
   use mkgridmapMod
   use mkgridmapPIOMod
   use mkvarpar
@@ -588,8 +587,9 @@ subroutine mksoiltex_pio(ldomain_pio, mapfname, datfname, ndiag, sand_o, clay_o)
   real(r8), allocatable  :: kwgt(:,:)
   integer , allocatable  :: kmax(:)
   real(r8), allocatable  :: wst(:)
-  real(r8), pointer      :: sand_i(:,:)            ! input grid: percent sand
-  real(r8), pointer      :: clay_i(:,:)            ! input grid: percent clay
+  real(r8), pointer      :: sand_i_dist(:,:)       ! input grid: percent sand (distributed across MPI ranks)
+  real(r8), pointer      :: clay_i_dist(:,:)       ! input grid: percent clay (distributed across MPI ranks)
+  real(r8), pointer      :: sand_o_v2(:,:), clay_o_v2(:,:)
   real(r8), pointer      :: mapunit2d_i(:,:)       ! input grid: igbp soil mapunits
   real(r8), pointer      :: mapunit1d_i(:)         ! input grid: igbp soil mapunits
   integer, parameter     :: num=2                  ! set soil mapunit number
@@ -605,13 +605,13 @@ subroutine mksoiltex_pio(ldomain_pio, mapfname, datfname, ndiag, sand_o, clay_o)
   integer                :: kmap_max               ! maximum overlap weights
   integer, parameter     :: kmap_max_min   = 90    ! kmap_max mininum value
   integer, parameter     :: km_mx_ns_prod = 160000 ! product of kmap_max*ns_o to keep constant
-  integer, pointer       :: vec_row_indices(:)
+  integer, pointer       :: vec_row_indices(:), vec_row_indicies_dist(:)
 
   type(gridmap_pio_type) :: tgridmap_pio
   type(file_desc_t)      :: ncid
   type(iosystem_desc_t)  :: pioIoSystem
   integer                :: count, i, j
-  integer                :: dim_idx_2d(2,2), dim_idx_2d_seq(2,2)
+  integer                :: dim_idx_2d(2,2), dim_idx_2d_dist(2,2)
   PetscInt, pointer      :: ia_ptr(:), ja_ptr(:)
   PetscInt               :: num_rows, istart, iend
   PetscBool              :: success
@@ -621,9 +621,13 @@ subroutine mksoiltex_pio(ldomain_pio, mapfname, datfname, ndiag, sand_o, clay_o)
   PetscInt               :: num_nonzero_wts, offset, ns_len
   IS                     :: is_from, is_to
   Vec                    :: frac_src_dst_vec, mapunit_dst_vec, wts_glb_vec, wts_dst_vec
+  Vec                    :: src_vec, dst_vec
+  PetscInt               :: n, nblocks
   VecScatter             :: vec_scatter
   PetscInt               :: num_nonzero_for_a_row
   PetscScalar, pointer   :: frac_src_p(:), mapunit_p(:), wt_p(:)
+  PetscScalar, pointer   :: kmax_array_p(:)
+  PetscBool, pointer     :: kmax_valid_p(:)
   PetscInt               :: ns_o
   !-----------------------------------------------------------------------
 
@@ -654,9 +658,10 @@ subroutine mksoiltex_pio(ldomain_pio, mapfname, datfname, ndiag, sand_o, clay_o)
 
   call read_float_or_double_2d(tdomain_pio, pioIoSystem, ncid, 'MAPUNITS', dim_idx_2d, vec_row_indices, mapunit2d_i)
 
-  call get_float_or_double_2d(ncid, 'PCT_SAND',dim_idx_2d_seq, sand_i)
-  call get_float_or_double_2d(ncid, 'PCT_CLAY',dim_idx_2d_seq, clay_i)
-  nlay = dim_idx_2d_seq(2,2)
+  call read_float_or_double_2d_split_dim1(pioIoSystem, ncid, 'PCT_SAND',dim_idx_2d_dist, vec_row_indicies_dist, sand_i_dist)
+  nlay = dim_idx_2d_dist(2,2)
+  deallocate(vec_row_indicies_dist)
+  call read_float_or_double_2d_split_dim1(pioIoSystem, ncid, 'PCT_CLAY',dim_idx_2d_dist, vec_row_indicies_dist, clay_i_dist)
 
   call PIO_closefile(ncid)
   call PIO_finalize(pioIoSystem, ier)
@@ -853,6 +858,8 @@ subroutine mksoiltex_pio(ldomain_pio, mapfname, datfname, ndiag, sand_o, clay_o)
      enddo
   end if
 
+  allocate(kmax_array_p(ns_o))
+  allocate(kmax_valid_p(ns_o))
   do no = 1, ns_o
      if (soil_sand==unset .and. soil_clay==unset) then
         wst(:) = 0.
@@ -876,36 +883,16 @@ subroutine mksoiltex_pio(ldomain_pio, mapfname, datfname, ndiag, sand_o, clay_o)
         end if
      end if
 
-     ! Set soil texture as follows:
-     !   a. Use dominant igbp soil mapunit based on area of overlap unless
-     !     'no data' is dominant
-     !   b. In this case use second most dominant mapunit if it has data
-     !   c. If this has no data or if there isn't a second most dominant
-     !      mapunit, use loam for soil texture
-
-     if (soil_sand/=unset .and. soil_clay/=unset) then  !---soil texture is input
-        do l = 1, nlay
-           sand_o(no,l) = soil_sand
-           clay_o(no,l) = soil_clay
-        end do
-     else if (k1 /= 0) then           !---not 'no data'
-        do l = 1, nlay
-           sand_o(no,l) = sand_i(k1,l)
-           clay_o(no,l) = clay_i(k1,l)
-        end do
-     else                                  !---if (k1 == 0) then
-        if (k2 == 0 .or. k2 == miss) then     !---no data
-           do l = 1, nlay
-              sand_o(no,l) = 43.           !---use loam
-              clay_o(no,l) = 18.
-           end do
-        else                               !---if (k2 /= 0 and /= miss)
-           do l = 1, nlay
-              sand_o(no,l) = sand_i(k2,l)
-              clay_o(no,l) = clay_i(k2,l)
-           end do
-        end if       !---end of k2 if-block
-     end if          !---end of k1 if-block
+     if (k1 /= 0) then
+        kmax_array_p(no) = k1
+        kmax_valid_p(no) = PETSC_TRUE
+     else if (k2 == 0 .or. k2 == miss) then
+        kmax_array_p(no) = 1
+        kmax_valid_p(no) = PETSC_FALSE
+     else
+        kmax_array_p(no) = k2
+        kmax_valid_p(no) = PETSC_TRUE
+     end if
 
   end do
 
@@ -925,6 +912,89 @@ subroutine mksoiltex_pio(ldomain_pio, mapfname, datfname, ndiag, sand_o, clay_o)
      deallocate(kwgt)
      deallocate(wst)
   end if
+
+  allocate(sand_o_v2(ns_o, nlay))
+  allocate(clay_o_v2(ns_o, nlay))
+
+  n       = dim_idx_2d_dist(1,2) - dim_idx_2d_dist(1,1) + 1
+  nblocks = 2 * nlay ! sand + clay
+
+  ! source Vec
+
+  PetscCallA(VecCreate(PETSC_COMM_WORLD, src_vec, ierr))
+  PetscCallA(VecSetSizes(src_vec, n * nblocks, PETSC_DECIDE, ierr))
+  PetscCallA(VecSetBlockSize(src_vec, nblocks, ierr))
+  PetscCallA(VecSetFromOptions(src_vec, ierr))
+
+  ! is_from
+  allocate(int_array(ns_o))
+  do i = 1, ns_o
+     int_array(i) = int(kmax_array_p(i)) - 1
+  end do
+
+  PetscCallA(ISCreateBlock(PETSC_COMM_WORLD, nblocks, ns_o, int_array, PETSC_COPY_VALUES, is_from, ierr))
+  deallocate(int_array)
+
+  ! destination Vec
+  PetscCallA(VecCreate(PETSC_COMM_SELF, dst_vec, ierr))
+  PetscCallA(VecSetSizes(dst_vec, ns_o * nblocks, PETSC_DECIDE, ierr))
+  PetscCallA(VecSetBlockSize(dst_vec, nblocks, ierr))
+  PetscCallA(VecSetFromOptions(dst_vec, ierr))
+
+  ! is_to
+  allocate(int_array(ns_o))
+  do i = 1, ns_o
+     int_array(i) = i - 1
+  end do
+  PetscCallA(ISCreateBlock(PETSC_COMM_WORLD, nblocks, ns_o, int_array, PETSC_COPY_VALUES, is_to, ierr))
+  deallocate(int_array)
+
+  ! VecScatter
+  PetscCallA(VecScatterCreate(src_vec, is_from, dst_vec, is_to, vec_scatter, ierr))
+  PetscCallA(ISDestroy(is_from, ierr))
+  PetscCallA(ISDestroy(is_to, ierr))
+
+  ! fill source Vec: sand + clay
+  PetscCallA(VecGetArray(src_vec, vec_p, ierr))
+  count = 0
+  do i = dim_idx_2d_dist(1,1), dim_idx_2d_dist(1,2)
+     do j = 1, nlay
+        count = count + 1
+        vec_p(count) = sand_i_dist(i,j)
+     end do
+     do j = 1, nlay
+        count = count + 1
+        vec_p(count) = clay_i_dist(i,j)
+     end do
+  end do
+  PetscCallA(VecRestoreArray(src_vec, vec_p, ierr))
+
+  ! scatter the source Vec to destination Vec
+  PetscCallA(VecScatterBegin(vec_scatter, src_vec, dst_vec, INSERT_VALUES, SCATTER_FORWARD, ierr))
+  PetscCallA(VecScatterEnd(vec_scatter, src_vec, dst_vec, INSERT_VALUES, SCATTER_FORWARD, ierr))
+
+  ! unpack the data
+  PetscCallA(VecGetArray(dst_vec, vec_p, ierr))
+  count = 0
+  do no = 1, ns_o
+     do j = 1, nlay
+        count = count + 1
+        sand_o_v2(no, j) = vec_p(count);
+     end do
+     do j = 1, nlay
+        count = count + 1
+        clay_o_v2(no, j) = vec_p(count);
+     end do
+     if (.not.kmax_valid_p(no)) then
+        sand_o_v2(no,:) = 43._r8
+        clay_o_v2(no,:) = 18._r8
+     end if
+  end do
+  PetscCallA(VecRestoreArray(dst_vec, vec_p, ierr))
+
+  PetscCallA(VecDestroy(src_vec, ierr))
+  PetscCallA(VecDestroy(dst_vec, ierr))
+  PetscCallA(VecScatterDestroy(vec_scatter, ierr))
 
   if (masterproc) write (6,*) 'Successfully made %sand and %clay'
   call shr_sys_flush(6)
