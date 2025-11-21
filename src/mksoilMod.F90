@@ -589,7 +589,6 @@ subroutine mksoiltex_pio(ldomain_pio, mapfname, datfname, ndiag, sand_o, clay_o)
   real(r8), allocatable  :: wst(:)
   real(r8), pointer      :: sand_i_dist(:,:)       ! input grid: percent sand (distributed across MPI ranks)
   real(r8), pointer      :: clay_i_dist(:,:)       ! input grid: percent clay (distributed across MPI ranks)
-  real(r8), pointer      :: sand_o_v2(:,:), clay_o_v2(:,:)
   real(r8), pointer      :: mapunit2d_i(:,:)       ! input grid: igbp soil mapunits
   real(r8), pointer      :: mapunit1d_i(:)         ! input grid: igbp soil mapunits
   integer, parameter     :: num=2                  ! set soil mapunit number
@@ -913,9 +912,6 @@ subroutine mksoiltex_pio(ldomain_pio, mapfname, datfname, ndiag, sand_o, clay_o)
      deallocate(wst)
   end if
 
-  allocate(sand_o_v2(ns_o, nlay))
-  allocate(clay_o_v2(ns_o, nlay))
-
   n       = dim_idx_2d_dist(1,2) - dim_idx_2d_dist(1,1) + 1
   nblocks = 2 * nlay ! sand + clay
 
@@ -979,15 +975,15 @@ subroutine mksoiltex_pio(ldomain_pio, mapfname, datfname, ndiag, sand_o, clay_o)
   do no = 1, ns_o
      do j = 1, nlay
         count = count + 1
-        sand_o_v2(no, j) = vec_p(count);
+        sand_o(no, j) = vec_p(count);
      end do
      do j = 1, nlay
         count = count + 1
-        clay_o_v2(no, j) = vec_p(count);
+        clay_o(no, j) = vec_p(count);
      end do
      if (.not.kmax_valid_p(no)) then
-        sand_o_v2(no,:) = 43._r8
-        clay_o_v2(no,:) = 18._r8
+        sand_o(no,:) = 43._r8
+        clay_o(no,:) = 18._r8
      end if
   end do
   PetscCallA(VecRestoreArray(dst_vec, vec_p, ierr))
