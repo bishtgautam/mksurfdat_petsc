@@ -583,8 +583,8 @@ subroutine mksoiltex_pio(ldomain_pio, mapfname, datfname, ndiag, sand_o, clay_o)
   integer                :: nlay                   ! number of soil layers
   integer                :: maxovr
   integer , allocatable  :: novr(:)
-  integer , allocatable  :: kmap(:,:)
-  real(r8), allocatable  :: kwgt(:,:)
+  integer , allocatable  :: kmap_1d(:)
+  real(r8), allocatable  :: kwgt_1d(:)
   integer , allocatable  :: kmax(:)
   real(r8), allocatable  :: wst(:)
   real(r8), pointer      :: sand_i_dist(:,:)       ! input grid: percent sand (distributed across MPI ranks)
@@ -788,98 +788,88 @@ subroutine mksoiltex_pio(ldomain_pio, mapfname, datfname, ndiag, sand_o, clay_o)
 
   ns_o = num_rows
 
-  ! Compute local fields _o
-  if (soil_sand==unset .and. soil_clay==unset) then
+  allocate(novr(ns_o))
+  novr(:) = 0
+  do i = 1, num_rows
+     novr(i) = ia_ptr(i+1) - ia_ptr(i)
+  end do
+  maxovr = maxval(novr(:))
+  kmap_max = maxovr
+  deallocate(novr)
 
-     ! kmap_max are the maximum number of mapunits that will consider on
-     ! any output gridcell - this is set currently above and can be changed
-     ! kmap(:) are the mapunit values on the input grid
-     ! kwgt(:) are the weights on the input grid
-
-     allocate(novr(ns_o))
-     novr(:) = 0
-     do i = 1, num_rows
-        novr(i) = ia_ptr(i+1) - ia_ptr(i)
-     end do
-     maxovr = maxval(novr(:))
-     kmap_max = maxovr !min(maxovr,max(kmap_max_min,km_mx_ns_prod/ns_o))
-     deallocate(novr)
-
-     allocate(kmap(0:kmap_max,ns_o), stat=ier)
-     if (ier/=0) call abort()
-     allocate(kwgt(0:kmap_max,ns_o), stat=ier)
-     if (ier/=0) call abort()
-     allocate(kmax(ns_o), stat=ier)
-     if (ier/=0) call abort()
-     allocate(wst(0:kmap_max), stat=ier)
-     if (ier/=0) call abort()
-
-     kwgt(:,:) = 0._r8
-     kmap(:,:) = 0._r8
-     kmax(:) = 0
-
-     count = 0
-     do i = 1, num_rows
-        num_nonzero_for_a_row = ia_ptr(i+1) - ia_ptr(i)
-        do j = 1, num_nonzero_for_a_row
-           count = count + 1
-           wt = wt_p(count)
-           if (frac_src_p(count) > 0._r8) then
-              k = int(mapunit_p(count))
-           else
-              k = 0
-           endif
-
-           no = i
-           found = .false.
-           do l = 0,kmax(no)
-              if (k == kmap(l,no)) then
-                 kwgt(l,no) = kwgt(l,no) + wt
-                 kmap(l,no) = k
-                 found = .true.
-                 exit
-              end if
-           end do
-
-           if (.not. found) then
-              kmax(no) = kmax(no) + 1
-              if (kmax(no) > kmap_max) then
-                 write(6,*)'kmax is > kmap_max= ',kmax(no), 'kmap_max = ', &
-                      kmap_max,' for no = ',no
-                 write(6,*)'reset kmap_max in mksoilMod to a greater value'
-                 stop
-              end if
-              kmap(kmax(no),no) = k
-              kwgt(kmax(no),no) = wt
-           end if
-
-        enddo
-     enddo
-  end if
+  allocate(kmap_1d(0:kmap_max), stat=ier)
+  if (ier/=0) call abort()
+  allocate(kwgt_1d(0:kmap_max), stat=ier)
+  if (ier/=0) call abort()
+  allocate(kmax(ns_o), stat=ier)
+  if (ier/=0) call abort()
+  allocate(wst(0:kmap_max), stat=ier)
+  if (ier/=0) call abort()
 
   allocate(kmax_array_p(ns_o))
   allocate(kmax_valid_p(ns_o))
-  do no = 1, ns_o
-     if (soil_sand==unset .and. soil_clay==unset) then
-        wst(:) = 0.
-        wst(0:kmax(no)) = kwgt(0:kmax(no),no)
 
-        ! Rank non-zero weights by soil mapunit.
-        ! k1 is the most extensive mapunit.
-        ! k2 is the second most extensive mapunit.
+  kmax(:) = 0
 
-        if (maxval(wst(:)) > 0) then
-           call mkrank (kmax(no)+1, wst(0:kmax(no)), miss, wsti, num)
-           k1 = kmap(wsti(1),no)
-           if (wsti(2) == miss) then
-              k2 = miss
-           else
-              k2 = kmap(wsti(2),no)
-           end if
+  count = 0
+  do i = 1, num_rows
+     num_nonzero_for_a_row = ia_ptr(i+1) - ia_ptr(i)
+
+     kwgt_1d(:) = 0._r8
+     kmap_1d(:) = 0._r8
+
+     do j = 1, num_nonzero_for_a_row
+        count = count + 1
+        wt = wt_p(count)
+        if (frac_src_p(count) > 0._r8) then
+           k = int(mapunit_p(count))
         else
-           k1 = 0
-           k2 = 0
+           k = 0
+        endif
+
+        no = i
+        found = .false.
+        do l = 0,kmax(no)
+           if (k == kmap_1d(l)) then
+              kwgt_1d(l) = kwgt_1d(l) + wt
+              kmap_1d(l) = k
+              found = .true.
+              exit
+           end if
+        end do
+
+        if (.not. found) then
+           kmax(no) = kmax(no) + 1
+           if (kmax(no) > kmap_max) then
+              write(6,*)'kmax is > kmap_max= ',kmax(no), 'kmap_max = ', &
+                   kmap_max,' for no = ',no
+              write(6,*)'reset kmap_max in mksoilMod to a greater value'
+              stop
+           end if
+           kmap_1d(kmax(no)) = k
+           kwgt_1d(kmax(no)) = wt
         end if
+     enddo ! j-loop
+
+     no = i
+     wst(:) = 0._r8
+     wst(0:kmax(no)) = kwgt_1d(0:kmax(no))
+
+     ! Rank non-zero weights by soil mapunit.
+     ! k1 is the most extensive mapunit.
+     ! k2 is the second most extensive mapunit.
+
+     if (maxval(wst(:)) > 0) then
+        call mkrank (kmax(no)+1, wst(0:kmax(no)), miss, wsti, num)
+        k1 = kmap_1d(wsti(1))
+        if (wsti(2) == miss) then
+           k2 = miss
+        else
+           k2 = kmap_1d(wsti(2))
+        end if
+     else
+        k1 = 0
+        k2 = 0
      end if
 
      if (k1 /= 0) then
@@ -893,7 +883,7 @@ subroutine mksoiltex_pio(ldomain_pio, mapfname, datfname, ndiag, sand_o, clay_o)
         kmax_valid_p(no) = PETSC_TRUE
      end if
 
-  end do
+  enddo ! i-loop
 
   ! restore access back
   PetscCallA(MatRestoreRowIJ(tgridmap_pio%map_mat, 0, PETSC_FALSE, PETSC_FALSE, num_rows, ia_ptr,ja_ptr, success, ierr))
@@ -906,11 +896,9 @@ subroutine mksoiltex_pio(ldomain_pio, mapfname, datfname, ndiag, sand_o, clay_o)
   PetscCallA(VecDestroy(wts_dst_vec, ierr))
   PetscCallA(VecDestroy(frac_src_dst_vec, ierr))
   PetscCallA(VecDestroy(mapunit_dst_vec, ierr))
-  if (soil_sand==unset .and. soil_clay==unset) then
-     deallocate(kmap)
-     deallocate(kwgt)
-     deallocate(wst)
-  end if
+  deallocate(kmap_1d)
+  deallocate(kwgt_1d)
+  deallocate(wst)
 
   n       = dim_idx_2d_dist(1,2) - dim_idx_2d_dist(1,1) + 1
   nblocks = 2 * nlay ! sand + clay
