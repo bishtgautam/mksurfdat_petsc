@@ -901,7 +901,7 @@ subroutine mksoiltex_pio(ldomain_pio, mapfname, datfname, ndiag, sand_o, clay_o)
   deallocate(wst)
 
   n       = dim_idx_2d_dist(1,2) - dim_idx_2d_dist(1,1) + 1
-  nblocks = 2 * nlay ! sand + clay
+  nblocks = 1
 
   ! source Vec
 
@@ -939,42 +939,58 @@ subroutine mksoiltex_pio(ldomain_pio, mapfname, datfname, ndiag, sand_o, clay_o)
   PetscCallA(ISDestroy(is_to, ierr))
 
   ! fill source Vec: sand + clay
-  PetscCallA(VecGetArray(src_vec, vec_p, ierr))
-  count = 0
-  do i = dim_idx_2d_dist(1,1), dim_idx_2d_dist(1,2)
-     do j = 1, nlay
-        count = count + 1
-        vec_p(count) = sand_i_dist(i,j)
-     end do
-     do j = 1, nlay
-        count = count + 1
-        vec_p(count) = clay_i_dist(i,j)
-     end do
-  end do
-  PetscCallA(VecRestoreArray(src_vec, vec_p, ierr))
+  do k = 1, 20
 
-  ! scatter the source Vec to destination Vec
-  PetscCallA(VecScatterBegin(vec_scatter, src_vec, dst_vec, INSERT_VALUES, SCATTER_FORWARD, ierr))
-  PetscCallA(VecScatterEnd(vec_scatter, src_vec, dst_vec, INSERT_VALUES, SCATTER_FORWARD, ierr))
+     PetscCallA(VecGetArray(src_vec, vec_p, ierr))
 
-  ! unpack the data
-  PetscCallA(VecGetArray(dst_vec, vec_p, ierr))
-  count = 0
-  do no = 1, ns_o
-     do j = 1, nlay
-        count = count + 1
-        sand_o(no, j) = vec_p(count);
-     end do
-     do j = 1, nlay
-        count = count + 1
-        clay_o(no, j) = vec_p(count);
-     end do
-     if (.not.kmax_valid_p(no)) then
-        sand_o(no,:) = 43._r8
-        clay_o(no,:) = 18._r8
+     if (k <= 10) then
+        ! pack sand data
+        j = k
+        count = 0
+        do i = dim_idx_2d_dist(1,1), dim_idx_2d_dist(1,2)
+           count = count + 1
+           vec_p(count) = sand_i_dist(i,j)
+        end do
+     else
+        j = k - 10
+        ! pack clay data
+        count = 0
+        do i = dim_idx_2d_dist(1,1), dim_idx_2d_dist(1,2)
+           count = count + 1
+           vec_p(count) = clay_i_dist(i,j)
+        end do
      end if
+
+     PetscCallA(VecRestoreArray(src_vec, vec_p, ierr))
+
+     ! scatter the source Vec to destination Vec
+     PetscCallA(VecScatterBegin(vec_scatter, src_vec, dst_vec, INSERT_VALUES, SCATTER_FORWARD, ierr))
+     PetscCallA(VecScatterEnd(vec_scatter, src_vec, dst_vec, INSERT_VALUES, SCATTER_FORWARD, ierr))
+
+     ! unpack the data
+
+     PetscCallA(VecGetArray(dst_vec, vec_p, ierr))
+     if (k <= 10) then
+        ! unpack sand data
+        do no = 1, ns_o
+           sand_o(no, j) = vec_p(no);
+           if (.not.kmax_valid_p(no)) then
+              sand_o(no,j) = 43._r8
+              clay_o(no,j) = 18._r8
+           end if
+        end do
+     else
+        ! unpack clay data
+        do no = 1, ns_o
+           clay_o(no, j) = vec_p(no);
+           if (.not.kmax_valid_p(no)) then
+              sand_o(no,j) = 43._r8
+              clay_o(no,j) = 18._r8
+           end if
+        end do
+     end if
+     PetscCallA(VecRestoreArray(dst_vec, vec_p, ierr))
   end do
-  PetscCallA(VecRestoreArray(dst_vec, vec_p, ierr))
 
   PetscCallA(VecDestroy(src_vec, ierr))
   PetscCallA(VecDestroy(dst_vec, ierr))
