@@ -939,11 +939,11 @@ subroutine mksoiltex_pio(ldomain_pio, mapfname, datfname, ndiag, sand_o, clay_o)
   PetscCallA(ISDestroy(is_to, ierr))
 
   ! fill source Vec: sand + clay
-  do k = 1, 20
+  do k = 1, nlay * 2
 
      PetscCallA(VecGetArray(src_vec, vec_p, ierr))
 
-     if (k <= 10) then
+     if (k <= nlay) then
         ! pack sand data
         j = k
         count = 0
@@ -952,7 +952,7 @@ subroutine mksoiltex_pio(ldomain_pio, mapfname, datfname, ndiag, sand_o, clay_o)
            vec_p(count) = sand_i_dist(i,j)
         end do
      else
-        j = k - 10
+        j = k - nlay
         ! pack clay data
         count = 0
         do i = dim_idx_2d_dist(1,1), dim_idx_2d_dist(1,2)
@@ -974,22 +974,22 @@ subroutine mksoiltex_pio(ldomain_pio, mapfname, datfname, ndiag, sand_o, clay_o)
         ! unpack sand data
         do no = 1, ns_o
            sand_o(no, j) = vec_p(no);
-           if (.not.kmax_valid_p(no)) then
-              sand_o(no,j) = 43._r8
-              clay_o(no,j) = 18._r8
-           end if
         end do
      else
         ! unpack clay data
         do no = 1, ns_o
            clay_o(no, j) = vec_p(no);
-           if (.not.kmax_valid_p(no)) then
-              sand_o(no,j) = 43._r8
-              clay_o(no,j) = 18._r8
-           end if
         end do
      end if
      PetscCallA(VecRestoreArray(dst_vec, vec_p, ierr))
+  end do
+  do no = 1, ns_o
+     if (.not.kmax_valid_p(no)) then
+        do j = 1, nlay
+           sand_o(no,j) = 43._r8
+           clay_o(no,j) = 18._r8
+        enddo
+    end if
   end do
 
   PetscCallA(VecDestroy(src_vec, ierr))
