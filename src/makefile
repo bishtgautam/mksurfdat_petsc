@@ -75,6 +75,11 @@ mksurfdat_petsc : $(mksurfdat_petsc_obj)
 
 spmdMod.o :
 
+mkdataPIOMod.o : \
+  shr_kind_mod.o \
+  shr_sys_mod.o \
+  mkchecksMod.o
+
 mkfileMod.o : \
   shr_kind_mod.o \
   shr_sys_mod.o \
@@ -275,7 +280,7 @@ mkchecksMod.o : \
 mkgdpMod.o : \
   shr_kind_mod.o \
   shr_sys_mod.o \
-  mkdataPIOmod.o \
+  mkdataPIOMod.o \
   mkdomainMod.o
 
 mkdiagnosticsMod.o : \
