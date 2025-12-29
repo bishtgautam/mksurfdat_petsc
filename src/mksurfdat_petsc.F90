@@ -28,6 +28,7 @@ program mksurfdat_petsc
   use spmdMod
   use mkdataPIOMod
   use mkfileMod
+  use mktopradMod
 
   implicit none
 
@@ -110,6 +111,10 @@ program mksurfdat_petsc
   real(r8), pointer  :: ero_c3(:)          ! ELM-Erosion c3 parameter (unitless)
   real(r8), pointer  :: tillage(:)         ! conserved tillage fraction (fraction)
   real(r8), pointer  :: litho(:)           ! lithology erodiblity index (unitless)
+  real(r8), pointer  :: sinsl_sinas(:)     ! output topography data
+  real(r8), pointer  :: sinsl_cosas(:)     ! output topography data
+  real(r8), pointer  :: sky_view(:)        ! output topography data
+  real(r8), pointer  :: terrain_config(:)  ! output topography data
 
   type(domain_type) :: ldomain
   type(domain_pio_type) :: ldomain_pio
@@ -142,6 +147,7 @@ program mksurfdat_petsc
        mksrf_fgrvl,              &
        mksrf_fslp10,             &
        mksrf_fero,               &
+       mksrf_ftoprad,            &
        nglcec,                   &
        numpft,                   &
        soil_color,               &
@@ -178,6 +184,7 @@ program mksurfdat_petsc
        map_fgrvl,                &
        map_fslp10,               &
        map_fero,                 &
+       map_ftoprad,              &
        outnc_large_files,        &
        outnc_double,             &
        outnc_dims,               &
@@ -358,6 +365,9 @@ program mksurfdat_petsc
        ero_c1_o=ero_c1, ero_c2_o=ero_c2, ero_c3_o=ero_c3, tillage_o=tillage, &
        litho_o=litho)
 
+  call mktoprad_pio(ldomain_pio, map_ftoprad, mksrf_ftoprad, ndiag, sinsl_sinas_o=sinsl_sinas, &
+       sinsl_cosas_o=sinsl_cosas, sky_view_o=sky_view, terrain_config_o=terrain_config)
+
   ! Do landuse changes such as for the poles, etc.
 
   call change_landuse( ldomain_pio%ns_loc, dynpft=.false. )
@@ -418,6 +428,7 @@ contains
     mksrf_fgrvl       = ' '
     mksrf_fslp10      = ' '
     mksrf_fero        = ' '
+    mksrf_ftoprad     = ' '
 
     map_flakwat     = ' '
     map_fwetlnd     = ' '
@@ -443,6 +454,7 @@ contains
     map_fgrvl       = ' '
     map_fslp10      = ' '
     map_fero        = ' '
+    map_ftoprad     = ' '
 
     fsurlog        = ' '
     map_fpft       = ' '
@@ -485,6 +497,7 @@ contains
        call check_namelist_variable(mksrf_fgrvl       ,'mksrf_fgrvl'       )
        call check_namelist_variable(mksrf_fslp10      ,'mksrf_fslp10'      )
        call check_namelist_variable(mksrf_fero        ,'mksrf_fero'        )
+       call check_namelist_variable(mksrf_ftoprad     ,'mksrf_ftoprad'     )
 
        call check_namelist_variable(map_flakwat       ,'map_flakwat'       )
        call check_namelist_variable(map_fwetlnd       ,'map_fwetlnd'       )
@@ -510,6 +523,7 @@ contains
        call check_namelist_variable(map_fgrvl         ,'map_fgrvl'         )
        call check_namelist_variable(map_fslp10        ,'map_fslp10'        )
        call check_namelist_variable(map_fero          ,'map_fero'          )
+       call check_namelist_variable(map_ftoprad       ,'map_ftoprad'       )
 
        call check_namelist_variable(fsurlog, 'fsurlog')
        ndiag = getavu()
@@ -564,6 +578,7 @@ contains
     call mpi_bcast(mksrf_fgrvl       , len(mksrf_fgrvl)       , MPI_CHARACTER, 0, PETSC_COMM_WORLD, ier) 
     call mpi_bcast(mksrf_fslp10      , len(mksrf_fslp10)      , MPI_CHARACTER, 0, PETSC_COMM_WORLD, ier) 
     call mpi_bcast(mksrf_fero        , len(mksrf_fero)        , MPI_CHARACTER, 0, PETSC_COMM_WORLD, ier) 
+    call mpi_bcast(mksrf_ftoprad     , len(mksrf_ftoprad)     , MPI_CHARACTER, 0, PETSC_COMM_WORLD, ier)
     call mpi_bcast(map_fpft          , len(map_fpft)          , MPI_CHARACTER, 0, PETSC_COMM_WORLD, ier)
     call mpi_bcast(map_flakwat       , len(map_flakwat)       , MPI_CHARACTER, 0, PETSC_COMM_WORLD, ier) 
     call mpi_bcast(map_fwetlnd       , len(map_fwetlnd)       , MPI_CHARACTER, 0, PETSC_COMM_WORLD, ier) 
@@ -589,6 +604,7 @@ contains
     call mpi_bcast(map_fgrvl         , len(map_fgrvl)         , MPI_CHARACTER, 0, PETSC_COMM_WORLD, ier) 
     call mpi_bcast(map_fslp10        , len(map_fslp10)        , MPI_CHARACTER, 0, PETSC_COMM_WORLD, ier) 
     call mpi_bcast(map_fero          , len(map_fero)          , MPI_CHARACTER, 0, PETSC_COMM_WORLD, ier) 
+    call mpi_bcast(map_ftoprad       , len(map_ftoprad)       , MPI_CHARACTER, 0, PETSC_COMM_WORLD, ier)
 
     call mpi_bcast(fsurdat           , len(fsurdat)           , MPI_CHARACTER, 0, PETSC_COMM_WORLD, ier)
 
@@ -673,7 +689,11 @@ contains
          ef1_fdt(ns_o)                       , & 
          ef1_shr(ns_o)                       , & 
          ef1_grs(ns_o)                       , & 
-         ef1_crp(ns_o)                         &
+         ef1_crp(ns_o)                       , &
+         sinsl_sinas(ns_o)                   , &
+         sinsl_cosas(ns_o)                   , &
+         sky_view(ns_o)                      , &
+         terrain_config(ns_o)                  &
          )
 
     landfrac_pft(:)       = spval
@@ -728,6 +748,10 @@ contains
     ef1_shr(:) = 0._r8
     ef1_grs(:) = 0._r8
     ef1_crp(:) = 0._r8
+    sinsl_sinas(:)    = 0._r8
+    sinsl_cosas(:)    = 0._r8
+    sky_view(:)       = 1._r8
+    terrain_config(:) = 0._r8
 
     if ( .not. all_urban .and. .not. all_veg )then
        allocate(elev(ns_o))
@@ -759,6 +783,7 @@ contains
     deallocate ( apatiteP, labileP, occludedP, secondaryP )
     deallocate ( grvl, slp10 )
     deallocate ( ero_c1, ero_c2, ero_c3, tillage, litho )
+    deallocate ( sinsl_sinas, sinsl_cosas, sky_view, terrain_config )
 
   end subroutine deallocate_memory
 
@@ -1458,6 +1483,18 @@ contains
     call check_ret(nf_inq_varid(ncid, 'Litho', varid), subname)
     call check_ret(nf_put_var_double(ncid, varid, litho), subname)
 
+    call check_ret(nf_inq_varid(ncid, 'SINSL_SINAS', varid), subname)
+    call check_ret(nf_put_var_double(ncid, varid, sinsl_sinas), subname)
+
+    call check_ret(nf_inq_varid(ncid, 'SINSL_COSAS', varid), subname)
+    call check_ret(nf_put_var_double(ncid, varid, sinsl_cosas), subname)
+
+    call check_ret(nf_inq_varid(ncid, 'SKY_VIEW', varid), subname)
+    call check_ret(nf_put_var_double(ncid, varid, sky_view), subname)
+
+    call check_ret(nf_inq_varid(ncid, 'TERRAIN_CONFIG', varid), subname)
+    call check_ret(nf_put_var_double(ncid, varid, terrain_config), subname)
+
     ! Synchronize the disk copy of a netCDF dataset with in-memory buffers
 
     call check_ret(nf_sync(ncid), subname)
@@ -1511,7 +1548,6 @@ contains
     integer               :: ier
     integer, pointer      :: compdof(:)
     integer               :: dim2d(2), dim3d(3)
-    integer               :: ncid_dummy
     character(len=32)     :: subname = 'write_surface_dataset_pio'
 
     if (fsurdat == ' ') then
@@ -1598,6 +1634,10 @@ contains
     call write_double_1d(ncid, iodesc, 'LABILE_P'   , labileP)
     call write_double_1d(ncid, iodesc, 'OCCLUDED_P' , occludedP)
     call write_double_1d(ncid, iodesc, 'SECONDARY_P', secondaryP)
+    call write_double_1d(ncid, iodesc, 'SINSL_SINAS', sinsl_sinas)
+    call write_double_1d(ncid, iodesc, 'SINSL_COSAS', sinsl_cosas)
+    call write_double_1d(ncid, iodesc, 'SKY_VIEW', sky_view)
+    call write_double_1d(ncid, iodesc, 'TERRAIN_CONFIG', terrain_config)
 
     call PIO_freedecomp(pioIoSystem, iodesc)
 

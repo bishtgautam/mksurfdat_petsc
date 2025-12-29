@@ -40,6 +40,7 @@ contains
     use mkpftMod     , only : mkpftAtt
     use mksoilMod    , only : mksoilAtt
     use mkSedMod     , only : mksedAtt
+    use mktopradMod  , only : mktopradAtt
     use mkharvestMod , only : mkharvest_fieldname, mkharvest_numtypes, mkharvest_longname
     use mkncdio      , only : check_ret, ncd_defvar
     use mkdomainMod  
@@ -320,7 +321,11 @@ contains
     str = get_filename(map_fero)
     call check_ret(nf_put_att_text(ncid, NF_GLOBAL, &
          'map_erosion_file', len_trim(str), trim(str)), subname)
-    
+
+    str = get_filename(map_ftoprad)
+    call check_ret(nf_put_att_text(ncid, NF_GLOBAL, &
+         'map_toprad_file', len_trim(str), trim(str)), subname)
+
     ! ----------------------------------------------------------------------
     ! Define variables
     ! ----------------------------------------------------------------------
@@ -337,6 +342,8 @@ contains
     call mkpftAtt(  ncid, dynlanduse, xtype )
 
     call mksedAtt(  ncid, dynlanduse, xtype )
+
+    call mktopradAtt(  ncid, dynlanduse, xtype )
 
     if (outnc_1d) then
        call ncd_defvar(ncid=ncid, varname='AREA' , xtype=nf_double, &
@@ -1045,6 +1052,7 @@ contains
     use mksoilMod      , only : mksoilAttPIO
     use mkpftMod       , only : mkpftAttPIO
     use mksedMod       , only : mksedAttPIO
+    use mktopradMod    , only : mktopradAttPIO
     use mkvarctl
     use pio
     use piofileutils
@@ -1081,6 +1089,8 @@ contains
          dim_id%time, dim_id%lsmpft, dim_id%natpft, dim_id%cft)
 
     call mksedAttPIO(ncid, dynlanduse, xtype, dim_id%gridcell, dim_id%lsmlon, dim_id%lsmlat, dim_id%nlevsoi, dim_id%nlevslp)
+
+    call mktopradAttPIO(ncid, dynlanduse, xtype, dim_id%gridcell, dim_id%lsmlon, dim_id%lsmlat)
 
     call mkfile_define_variables(ncid, dynlanduse, xtype)
 
@@ -1304,6 +1314,9 @@ contains
 
     str = get_filename(map_fero)
     call check_ret(PIO_put_att(ncid, PIO_GLOBAL, 'map_erosion_file', trim(str)), subname)
+
+    str = get_filename(map_ftoprad)
+    call check_ret(PIO_put_att(ncid, PIO_GLOBAL, 'map_toprad_file', trim(str)), subname)
 
   end subroutine mkfile_write_global_attibutes
 

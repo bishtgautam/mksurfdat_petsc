@@ -68,6 +68,7 @@ mksurfdat_petsc_obj = mksurfdat_petsc.o \
   mkharvestMod.o \
   mklaiMod.o \
   mkdataPIOMod.o \
+  mktopradMod.o \
   spmdMod.o
 
 mksurfdat_petsc : $(mksurfdat_petsc_obj)
@@ -94,6 +95,7 @@ mkfileMod.o : \
   mkharvestMod.o \
   mkncdio.o \
   mkdomainMod.o \
+  mktopradMod.o \
   spmdMod.o
 
 mklaiMod.o : \
@@ -108,6 +110,12 @@ mkharvestMod.o : \
   mkdomainMod.o
 
 mkSedMod.o : \
+  shr_kind_mod.o \
+  shr_sys_mod.o \
+  mkdataPIOMod.o \
+  mkdomainMod.o
+
+mktopradMod.o : \
   shr_kind_mod.o \
   shr_sys_mod.o \
   mkdataPIOMod.o \
@@ -254,6 +262,7 @@ mksurfdat_petsc.o : \
   mkharvestMod.o \
   mklaiMod.o \
   mkdataPIOMod.o \
+  mktopradMod.o \
   spmdMod.o
 
 mkdataPIOMod.o : \
