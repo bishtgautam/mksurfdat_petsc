@@ -1,9 +1,11 @@
+# Sanity checks for required environment variables
+$(if $(strip $(PETSC_DIR)),,$(error PETSC_DIR is not set. Set PETSC_DIR=/path/to/petsc_main))
+$(if $(strip $(PETSC_ARCH)),,$(error PETSC_ARCH is not set. Set PETSC_ARCH=your-arch))
+$(if $(strip $(SCORPIO_INSTALL)),,$(error SCORPIO_INSTALL is not set))
+
 # Import variables/options/rules from PETSc.
 include ${PETSC_DIR}/lib/petsc/conf/variables
 include ${PETSC_DIR}/lib/petsc/conf/rules
-
-PETSC_DIR=/Users/bish218/projects/petsc/petsc_main
-PETSC_ARCH=clang20-b522cb8c110
 
 PETSC_MAKE_STOP_ON_ERROR=
 
@@ -14,11 +16,8 @@ MYFLAGS = -I.
 ###############################################################################
 
 # These flags are supplemental to the PETSc flags
-
-MYFLAGS=-DCPRAPPLECLANG -DCPRGNU -DHAVE_MPI -DINCLUDE_CMAKE_FCI -DMPICH_SKIP_MPICXX -DMPI_NO_CPPBIND -DOMPI_SKIP_MPICXX -DTIMING -DUSE_PNETCDF_VARN -DUSE_PNETCDF_VARN_ON_READ -D_NONETCDF -D_PNETCDF -I/Users/bish218/projects/e3sm/scorpio/src/flib -I/Users/bish218/projects/e3sm/scorpio/build-${PETSC_ARCH}/src/flib -I/opt/homebrew/include -I/Users/bish218/projects/petsc/petsc_main/gcc14-openmpi-9281ddf3762/include -I/Users/bish218/projects/e3sm/scorpio/src/gptl -I/Users/bish218/projects/e3sm/scorpio/build-${PETSC_ARCH}/src/gptl -I/Users/bish218/projects/e3sm/scorpio/src/clib -I/Users/bish218/projects/e3sm/scorpio/build-${PETSC_ARCH}/src/clib -g -O0 -isysroot /Applications/Xcode.app/Contents/Developer/Platforms/MacOSX.platform/Developer/SDKs/MacOSX13.3.sdk
-
-SCORPIO_LIB=/Users/bish218/projects/e3sm/scorpio/build-${PETSC_ARCH}/src/flib/libpiof.a /Users/bish218/projects/e3sm/scorpio/build-${PETSC_ARCH}/src/gptl/libgptl.a /Users/bish218/projects/e3sm/scorpio/build-${PETSC_ARCH}/src/clib/libpioc.a
-#/Users/bish218/projects/e3sm/scorpio/build-${PETSC_ARCH}/pnetcdf-1.12.3/lib/libpnetcdf.a -lmpi_cxx -lc++
+MYFLAGS = -I${SCORPIO_INSTALL}/include 
+SCORPIO_LIB=-L${SCORPIO_INSTALL}/lib -lpiof -lgptl -lpioc
 
 CFLAGS   =
 FFLAGS   = ${USER_FFLAGS} ${INC_NETCDF} -fallow-argument-mismatch
