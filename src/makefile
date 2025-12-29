@@ -3,7 +3,7 @@ include ${PETSC_DIR}/lib/petsc/conf/variables
 include ${PETSC_DIR}/lib/petsc/conf/rules
 
 PETSC_DIR=/Users/bish218/projects/petsc/petsc_main
-PETSC_ARCH=clang20-95934b0d393
+PETSC_ARCH=clang20-b522cb8c110
 
 PETSC_MAKE_STOP_ON_ERROR=
 
