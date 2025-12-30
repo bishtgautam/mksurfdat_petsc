@@ -16,7 +16,7 @@ contains
 
   !-----------------------------------------------------------------------
   subroutine mkdata_double_2d_pio(ldomain_pio, mapfname, datfname, varname, data_descrip, &
-       ndiag, zero_out, nodata_value, data_o, threshold_o, min_valid_value, max_valid_value)
+       ndiag, zero_out, nodata_value, data_o, threshold_o, min_valid_value, max_valid_value, mask_o)
     !
     ! !DESCRIPTION:
     !
@@ -44,6 +44,7 @@ contains
     real(r8)              , intent(in), optional :: threshold_o       !
     real(r8)              , intent(in), optional :: min_valid_value   !
     real(r8)              , intent(in), optional :: max_valid_value
+    real(r8)              , intent(in), optional :: mask_o(:)
                                                                       !
     type(gridmap_pio_type)                       :: tgridmap_pio
     type(domain_pio_type)                        :: tdomain_pio       ! local domain
@@ -59,6 +60,7 @@ contains
     logical                                      :: threshold_specified
     logical                                      :: min_valid_specified
     logical                                      :: max_valid_specified
+    logical                                      :: mask_specified
     integer                                      :: i, j, count
     integer  , pointer                           :: vec_row_indices(:)
 
@@ -70,10 +72,12 @@ contains
     threshold_specified = .false.
     min_valid_specified = .false.
     max_valid_specified = .false.
+    mask_specified      = .false.
 
     if (present(threshold_o    )) threshold_specified = .true.
     if (present(min_valid_value)) min_valid_specified = .true.
     if (present(max_valid_value)) max_valid_specified = .true.
+    if (present(mask_o)) mask_specified = .true.
 
     ! -----------------------------------------------------------------
     ! Read input file
@@ -112,7 +116,11 @@ contains
        end do
 
        ! Determine data_o on output grid
-       call gridmap_areaave_pio(tgridmap_pio, ns_loc_i, vec_row_indices, data1d_i(:), data_o, nodata=nodata_value)
+       if (mask_specified) then
+          call gridmap_areaave_pio(tgridmap_pio, ns_loc_i, vec_row_indices, data1d_i(:), data_o, nodata=nodata_value, mask_src=mask_o)
+       else
+          call gridmap_areaave_pio(tgridmap_pio, ns_loc_i, vec_row_indices, data1d_i(:), data_o, nodata=nodata_value)
+       end if
 
        if (min_valid_specified) then
           if (min_bad(data_o, min_valid_value, data_descrip)) then

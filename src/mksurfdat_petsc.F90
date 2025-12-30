@@ -748,10 +748,10 @@ contains
     ef1_shr(:) = 0._r8
     ef1_grs(:) = 0._r8
     ef1_crp(:) = 0._r8
-    sinsl_sinas(:)    = 0._r8
-    sinsl_cosas(:)    = 0._r8
-    sky_view(:)       = 1._r8
-    terrain_config(:) = 0._r8
+    sinsl_sinas(:)    = spval
+    sinsl_cosas(:)    = spval
+    sky_view(:)       = spval
+    terrain_config(:) = spval
 
     if ( .not. all_urban .and. .not. all_veg )then
        allocate(elev(ns_o))
@@ -826,6 +826,10 @@ contains
           ero_c3(n)        = 0._r8
           tillage(n)       = 0._r8
           litho(n)         = 0._r8
+          sinsl_sinas(n)   = 0._r8
+          sinsl_cosas(n)   = 0._r8
+          sky_view(n)      = 1._r8
+          terrain_config(n) = 0._r8
        else
           pftdata_mask(n) = 1
        end if

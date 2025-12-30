@@ -183,8 +183,11 @@ subroutine mktoprad_pio(ldomain_pio, mapfname, datfname, ndiag, sinsl_sinas_o, s
 ! Make topography data for TOP solar radiation parameterization
 !
 ! !USES:
-  use mkdomainPIOMod, only : domain_pio_type
+  use mkdomainPIOMod, only : domain_pio_type, domain_read_pio, domain_clean_pio
   use mkdataPIOMod
+  use mkgridmapPIOMod
+  use piofileutils
+  use pio
 !
   type(domain_pio_type), intent(in) :: ldomain_pio
   character(len=*)  , intent(in) :: mapfname          ! input mapping file name
@@ -194,35 +197,86 @@ subroutine mktoprad_pio(ldomain_pio, mapfname, datfname, ndiag, sinsl_sinas_o, s
   real(r8)          , intent(out):: sinsl_cosas_o(:)  ! output topography data
   real(r8)          , intent(out):: sky_view_o(:)     ! output topography data
   real(r8)          , intent(out):: terrain_config_o(:)  ! output topography data
-!
+  ! !LOCAL VARIABLES:
+  !EOP
+  type(domain_pio_type)  :: tdomain_pio            ! local domain
   real(r8), parameter   :: nodata_value = 0._r8
   real(r8), parameter   :: min_valid    = 0._r8
+  type(file_desc_t)      :: ncid
+  type(iosystem_desc_t)  :: pioIoSystem
+  integer                :: dim_idx_2d(2,2)
+  integer, pointer       :: vec_row_indices(:)
+  real(r8), pointer      :: sinsl_sinas2d_i(:,:), sinsl_sinas1d_i(:)
+  real(r8), pointer      :: sinsl_cosas2d_i(:,:), sinsl_cosas1d_i(:)
+  real(r8), pointer      :: sky_view2d_i(:,:), sky_view1d_i(:)
+  real(r8), pointer      :: terrain_config2d_i(:,:), terrain_config1d_i(:)
+  real(r8), pointer      :: mask_o(:)          ! input grid: mask (0, 1)
+  integer                :: count, i, j, ni, ns_loc_i
 !-----------------------------------------------------------------------
 
   if (masterproc) write (6,*) 'Attempting to make topography .....'
   call shr_sys_flush(6)
   
+  call domain_read_pio(tdomain_pio, datfname)
+
+  call OpenFilePIO(datfname, pioIoSystem, ncid, PIO_NOWRITE)
+
+  call read_float_or_double_2d(tdomain_pio, pioIoSystem, ncid, 'SINSL_SINAS', dim_idx_2d, vec_row_indices, sinsl_sinas2d_i)
+  deallocate(vec_row_indices)
+  call read_float_or_double_2d(tdomain_pio, pioIoSystem, ncid, 'SINSL_COSAS', dim_idx_2d, vec_row_indices, sinsl_cosas2d_i)
+  deallocate(vec_row_indices)
+  call read_float_or_double_2d(tdomain_pio, pioIoSystem, ncid, 'SKY_VIEW', dim_idx_2d, vec_row_indices, sky_view2d_i)
+  deallocate(vec_row_indices)
+  call read_float_or_double_2d(tdomain_pio, pioIoSystem, ncid, 'TERRAIN_CONFIG', dim_idx_2d, vec_row_indices, terrain_config2d_i)
+
+  ! Convert 2D vector to 1D vector
+  ns_loc_i = (dim_idx_2d(1,2) - dim_idx_2d(1,1) + 1) * (dim_idx_2d(2,2) - dim_idx_2d(2,1) + 1)
+  allocate(sinsl_sinas1d_i(ns_loc_i))
+  allocate(sinsl_cosas1d_i(ns_loc_i))
+  allocate(sky_view1d_i(ns_loc_i))
+  allocate(terrain_config1d_i(ns_loc_i))
+  allocate(mask_o(ns_loc_i))
+
+  count = 0
+  do j = dim_idx_2d(2,1), dim_idx_2d(2,2)
+     do i = dim_idx_2d(1,1), dim_idx_2d(1,2)
+        count = count + 1
+        sinsl_sinas1d_i(count) = sinsl_sinas2d_i(i,j)
+        sinsl_cosas1d_i(count) = sinsl_cosas2d_i(i,j)
+        sky_view1d_i(count) = sky_view2d_i(i,j)
+        terrain_config1d_i(count) = terrain_config2d_i(i,j)
+     end do
+  end do
+
+  mask_o(:) = 1._r8
+  do ni = 1,ns_loc_i
+      if (sinsl_sinas1d_i(ni) < -1000._r8 .or. sinsl_cosas1d_i(ni) < -1000._r8 .or. sky_view1d_i(ni) < -1000._r8 .or. terrain_config1d_i(ni) < -1000._r8) then
+         mask_o(ni) = 0._r8
+     end if
+  enddo
+
   call mkdata_double_2d_pio(ldomain_pio, mapfname=mapfname, datfname=datfname, varname='SINSL_SINAS', &
      data_descrip='SINSL_SINAS', ndiag=ndiag, zero_out=.false., nodata_value=nodata_value, data_o=sinsl_sinas_o, &
-     min_valid_value=min_valid)
+     min_valid_value=min_valid, mask_o=mask_o)
 
   call mkdata_double_2d_pio(ldomain_pio, mapfname=mapfname, datfname=datfname, varname='SINSL_COSAS', &
      data_descrip='SINSL_COSAS', ndiag=ndiag, zero_out=.false., nodata_value=nodata_value, data_o=sinsl_cosas_o, &
-     min_valid_value=min_valid)
+     min_valid_value=min_valid, mask_o=mask_o)
 
   call mkdata_double_2d_pio(ldomain_pio, mapfname=mapfname, datfname=datfname, varname='SKY_VIEW', &
      data_descrip='SKY_VIEW', ndiag=ndiag, zero_out=.false., nodata_value=nodata_value, data_o=sky_view_o, &
-     min_valid_value=min_valid)
+     min_valid_value=min_valid, mask_o=mask_o)
 
   call mkdata_double_2d_pio(ldomain_pio, mapfname=mapfname, datfname=datfname, varname='TERRAIN_CONFIG', &
      data_descrip='TERRAIN_CONFIG', ndiag=ndiag, zero_out=.false., nodata_value=nodata_value, data_o=terrain_config_o, &
-     min_valid_value=min_valid)
+     min_valid_value=min_valid, mask_o=mask_o)
 
-    if (masterproc) then
-       write (6,*) 'Successfully made topography parameters'
-       write (6,*)
-    end if
-    call shr_sys_flush(6)
+  call domain_clean_pio(tdomain_pio)
+  if (masterproc) then
+     write (6,*) 'Successfully made topography parameters'
+     write (6,*)
+  end if
+  call shr_sys_flush(6)
 
 end subroutine mktoprad_pio
 
