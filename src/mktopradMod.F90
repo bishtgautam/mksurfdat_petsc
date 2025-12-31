@@ -200,8 +200,7 @@ subroutine mktoprad_pio(ldomain_pio, mapfname, datfname, ndiag, sinsl_sinas_o, s
   ! !LOCAL VARIABLES:
   !EOP
   type(domain_pio_type)  :: tdomain_pio            ! local domain
-  real(r8), parameter   :: nodata_value = 0._r8
-  real(r8), parameter   :: min_valid    = 0._r8
+  real(r8), parameter    :: min_valid    = -1._r8
   type(file_desc_t)      :: ncid
   type(iosystem_desc_t)  :: pioIoSystem
   integer                :: dim_idx_2d(2,2)
@@ -210,7 +209,7 @@ subroutine mktoprad_pio(ldomain_pio, mapfname, datfname, ndiag, sinsl_sinas_o, s
   real(r8), pointer      :: sinsl_cosas2d_i(:,:), sinsl_cosas1d_i(:)
   real(r8), pointer      :: sky_view2d_i(:,:), sky_view1d_i(:)
   real(r8), pointer      :: terrain_config2d_i(:,:), terrain_config1d_i(:)
-  real(r8), pointer      :: mask_o(:)          ! input grid: mask (0, 1)
+  real(r8), pointer      :: mask_i(:)          ! input grid: mask (0, 1)
   integer                :: count, i, j, ni, ns_loc_i
 !-----------------------------------------------------------------------
 
@@ -235,7 +234,7 @@ subroutine mktoprad_pio(ldomain_pio, mapfname, datfname, ndiag, sinsl_sinas_o, s
   allocate(sinsl_cosas1d_i(ns_loc_i))
   allocate(sky_view1d_i(ns_loc_i))
   allocate(terrain_config1d_i(ns_loc_i))
-  allocate(mask_o(ns_loc_i))
+  allocate(mask_i(ns_loc_i))
 
   count = 0
   do j = dim_idx_2d(2,1), dim_idx_2d(2,2)
@@ -248,28 +247,32 @@ subroutine mktoprad_pio(ldomain_pio, mapfname, datfname, ndiag, sinsl_sinas_o, s
      end do
   end do
 
-  mask_o(:) = 1._r8
+  mask_i(:) = 1._r8
   do ni = 1,ns_loc_i
       if (sinsl_sinas1d_i(ni) < -1000._r8 .or. sinsl_cosas1d_i(ni) < -1000._r8 .or. sky_view1d_i(ni) < -1000._r8 .or. terrain_config1d_i(ni) < -1000._r8) then
-         mask_o(ni) = 0._r8
-     end if
+         mask_i(ni) = 0._r8
+         sinsl_sinas1d_i(ni) = 0._r8
+         sinsl_cosas1d_i(ni) = 0._r8
+         sky_view1d_i(ni) = 0._r8
+         terrain_config1d_i(ni) = 0._r8
+      end if
   enddo
 
   call mkdata_double_2d_pio(ldomain_pio, mapfname=mapfname, datfname=datfname, varname='SINSL_SINAS', &
-     data_descrip='SINSL_SINAS', ndiag=ndiag, zero_out=.false., nodata_value=nodata_value, data_o=sinsl_sinas_o, &
-     min_valid_value=min_valid, mask_o=mask_o)
+     data_descrip='SINSL_SINAS', ndiag=ndiag, zero_out=.false., nodata_value=0._r8, data_o=sinsl_sinas_o, &
+     min_valid_value=min_valid, mask_i=mask_i)
 
   call mkdata_double_2d_pio(ldomain_pio, mapfname=mapfname, datfname=datfname, varname='SINSL_COSAS', &
-     data_descrip='SINSL_COSAS', ndiag=ndiag, zero_out=.false., nodata_value=nodata_value, data_o=sinsl_cosas_o, &
-     min_valid_value=min_valid, mask_o=mask_o)
+     data_descrip='SINSL_COSAS', ndiag=ndiag, zero_out=.false., nodata_value=0._r8, data_o=sinsl_cosas_o, &
+     min_valid_value=min_valid, mask_i=mask_i)
 
   call mkdata_double_2d_pio(ldomain_pio, mapfname=mapfname, datfname=datfname, varname='SKY_VIEW', &
-     data_descrip='SKY_VIEW', ndiag=ndiag, zero_out=.false., nodata_value=nodata_value, data_o=sky_view_o, &
-     min_valid_value=min_valid, mask_o=mask_o)
+     data_descrip='SKY_VIEW', ndiag=ndiag, zero_out=.false., nodata_value=1._r8, data_o=sky_view_o, &
+     min_valid_value=min_valid, mask_i=mask_i)
 
   call mkdata_double_2d_pio(ldomain_pio, mapfname=mapfname, datfname=datfname, varname='TERRAIN_CONFIG', &
-     data_descrip='TERRAIN_CONFIG', ndiag=ndiag, zero_out=.false., nodata_value=nodata_value, data_o=terrain_config_o, &
-     min_valid_value=min_valid, mask_o=mask_o)
+     data_descrip='TERRAIN_CONFIG', ndiag=ndiag, zero_out=.false., nodata_value=0._r8, data_o=terrain_config_o, &
+     min_valid_value=min_valid, mask_i=mask_i)
 
   call domain_clean_pio(tdomain_pio)
   if (masterproc) then

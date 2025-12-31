@@ -16,7 +16,7 @@ contains
 
   !-----------------------------------------------------------------------
   subroutine mkdata_double_2d_pio(ldomain_pio, mapfname, datfname, varname, data_descrip, &
-       ndiag, zero_out, nodata_value, data_o, threshold_o, min_valid_value, max_valid_value, mask_o)
+       ndiag, zero_out, nodata_value, data_o, threshold_o, min_valid_value, max_valid_value, mask_i)
     !
     ! !DESCRIPTION:
     !
@@ -44,7 +44,7 @@ contains
     real(r8)              , intent(in), optional :: threshold_o       !
     real(r8)              , intent(in), optional :: min_valid_value   !
     real(r8)              , intent(in), optional :: max_valid_value
-    real(r8)              , intent(in), optional :: mask_o(:)
+    real(r8)              , intent(in), optional :: mask_i(:)
                                                                       !
     type(gridmap_pio_type)                       :: tgridmap_pio
     type(domain_pio_type)                        :: tdomain_pio       ! local domain
@@ -77,7 +77,7 @@ contains
     if (present(threshold_o    )) threshold_specified = .true.
     if (present(min_valid_value)) min_valid_specified = .true.
     if (present(max_valid_value)) max_valid_specified = .true.
-    if (present(mask_o)) mask_specified = .true.
+    if (present(mask_i)) mask_specified = .true.
 
     ! -----------------------------------------------------------------
     ! Read input file
@@ -117,7 +117,7 @@ contains
 
        ! Determine data_o on output grid
        if (mask_specified) then
-          call gridmap_areaave_pio(tgridmap_pio, ns_loc_i, vec_row_indices, data1d_i(:), data_o, nodata=nodata_value, mask_src=mask_o)
+          call gridmap_areaave_pio(tgridmap_pio, ns_loc_i, vec_row_indices, data1d_i(:), data_o, nodata=nodata_value, mask_src=mask_i)
        else
           call gridmap_areaave_pio(tgridmap_pio, ns_loc_i, vec_row_indices, data1d_i(:), data_o, nodata=nodata_value)
        end if
